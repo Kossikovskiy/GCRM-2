@@ -177,9 +177,9 @@ SessionFactory = get_session_factory(engine)
 # --------------------------------------------------------------------------
 # 3. АВТОРИЗАЦИЯ
 # --------------------------------------------------------------------------
-AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "YOUR_TENANT.auth0.com")
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-80umollds5sbkqku.us.auth0.com")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "https://grass-crm/api")
-AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "YOUR_CLIENT_ID")
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "tWfznxnflmcDEitZfkzlesHJ9YjZAZkN")
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET", "YOUR_CLIENT_SECRET")
 AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL", "https://crmpokos.ru/api/auth/callback")
 
