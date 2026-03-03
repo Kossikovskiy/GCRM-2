@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "grass-crm": {
+      "command": "python",
+      "args": ["/d:/grass-crm/mcp_server/server.py"],
+      "env": {
+        "DATABASE_URL": "sqlite:////d:/grass-crm/crm.db"
+      }
+    }
+  }
+}
