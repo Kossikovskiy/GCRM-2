@@ -2002,7 +2002,7 @@ async function checkAuth() {
     return;
   }
   try {
-    const resp = await fetch('/api/auth/me', {
+    const resp = await fetch('/api/me', {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!resp.ok) throw new Error();
