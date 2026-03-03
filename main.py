@@ -158,18 +158,9 @@ def seed_database(session):
     session.commit()
     print("🎉 База данных успешно инициализирована!")
 
-DB_FILE_PATH = "./crm.db"
-if not os.path.exists(DB_FILE_PATH):
-    print("База данных не найдена. Создаю новую...")
-    try:
-        engine = get_engine()
-        init_db(engine)
-        Session = get_session_factory(engine)
-        with Session() as session:
-            seed_database(session)
-    except Exception as e:
-        print(f"ОШИБКА при инициализации БД: {e}")
-        sys.exit(1)
+
+# Блок автоматического создания БД удален.
+# Приложение теперь будет ожидать существующий файл crm.db
 
 engine = get_engine()
 SessionFactory = get_session_factory(engine)
