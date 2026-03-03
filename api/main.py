@@ -22,16 +22,96 @@ import io
 from models.user import User
 from api.auth_module import get_current_user, require_admin
 from models.database import (
-    get_engine, get_session_factory, init_db, DB_PATH,
+    get_engine, get_session_factory, init_db,
     Stage, Service, ServiceCategory, Deal, DealService,
     Equipment, Maintenance, ExpenseCategory, Expense
 )
-from scripts.init_db import seed_database
+
+# --------------------------------------------------------------------------
+# НАЧАЛЬНЫЕ ДАННЫЕ (ранее в data/seed_data.py)
+# --------------------------------------------------------------------------
+STAGES = [
+    {"name": "Согласовать", "order": 1, "type": "regular",  "is_final": False, "color": "#3B82F6"},
+    {"name": "Ожидание",    "order": 2, "type": "regular",  "is_final": False, "color": "#F59E0B"},
+    {"name": "Запланировано","order":3, "type": "regular",  "is_final": False, "color": "#8B5CF6"},
+    {"name": "В работе",    "order": 4, "type": "regular",  "is_final": False, "color": "#EC4899"},
+    {"name": "Успешно",     "order": 5, "type": "success",  "is_final": True,  "color": "#10B981"},
+    {"name": "Провалена",   "order": 6, "type": "failed",   "is_final": True,  "color": "#EF4444"},
+]
+
+EXPENSE_CATEGORIES = [
+    "Техника", "Тех. жидкости/запчасти", "Расходники", "Топливо",
+    "Реклама", "Инструмент", "Оснастка", "Прочее",
+]
+
+SERVICE_CATEGORIES = [
+    {"name": "Покос травы",            "icon": "🌿"},
+    {"name": "Уборка и вывоз",         "icon": "🧹"},
+    {"name": "Газон и почва",          "icon": "🌱"},
+    {"name": "Обработки",              "icon": "💧"},
+    {"name": "Деревья и кустарники",   "icon": "🌳"},
+    {"name": "Посадка растений",       "icon": "🌺"},
+    {"name": "Удобрение газона",       "icon": "🌾"},
+    {"name": "Прочие работы",          "icon": "🔧"},
+]
+
+SERVICES = [
+    ("Покос травы (до 20 см)", "Покос травы", "сотка", 350, 3),
+    ("Покос травы (20-40 см)", "Покос травы", "сотка", 450, 3),
+    ("Покос травы (40-70 см)", "Покос травы", "сотка", 600, 3),
+    ("Покос травы (более 70 см)", "Покос травы", "сотка", 800, 3),
+    ("Сгребание и сборка травы", "Уборка и вывоз", "сотка", 200, 3),
+]
+
+EQUIPMENT = [
+    {"name": "Газонокосилка #1", "model": "Nocord NLG-46.144. S", "purchase_date": "2024-06-01", "purchase_cost": 26481, "status": "active"},
+    {"name": "Триммер #1", "model": "NOCORD NTG-52S", "purchase_date": "2024-06-01", "purchase_cost": 8052, "status": "repair"},
+]
+
+EXPENSES = [
+    {"date": "2024-07-06", "name": "Триммер NOCORD", "category": "Техника", "amount": 8052},
+    {"date": "2024-07-15", "name": "Газонокосилка", "category": "Техника", "amount": 26481},
+]
+# --------------------------------------------------------------------------
+
+def seed_database(session):
+    if session.query(Stage).count() == 0:
+        for s in STAGES:
+            session.add(Stage(**s))
+        print(f"✅ Добавлено {len(STAGES)} этапов")
+
+    if session.query(ExpenseCategory).count() == 0:
+        for name in EXPENSE_CATEGORIES:
+            session.add(ExpenseCategory(name=name))
+        print(f"✅ Добавлено {len(EXPENSE_CATEGORIES)} категорий расходов")
+
+    if session.query(ServiceCategory).count() == 0:
+        for cat in SERVICE_CATEGORIES:
+            session.add(ServiceCategory(**cat))
+        print(f"✅ Добавлено {len(SERVICE_CATEGORIES)} категорий услуг")
+    session.commit()
+
+    if session.query(Service).count() == 0:
+        for (name, cat_name, unit, price, min_vol) in SERVICES:
+            cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
+            if cat:
+                session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
+        print(f"✅ Добавлено {len(SERVICES)} услуг")
+
+    if session.query(Equipment).count() == 0:
+        for eq_data in EQUIPMENT:
+            if eq_data.get("purchase_date"):
+                eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
+            session.add(Equipment(**eq_data))
+        print(f"✅ Добавлено {len(EQUIPMENT)} единиц техники")
+
+    session.commit()
+    print("\n🎉 База данных успешно инициализирована!\n")
 
 # --- ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ---
-# Проверяем, существует ли файл БД. Если нет, создаем и наполняем его.
-if not os.path.exists(DB_PATH):
-    print(f"База данных не найдена по пути {DB_PATH}. Создаю новую...")
+DB_FILE_PATH = "./crm.db"
+if not os.path.exists(DB_FILE_PATH):
+    print(f"База данных не найдена по пути {DB_FILE_PATH}. Создаю новую...")
     try:
         engine = get_engine()
         init_db(engine)
@@ -40,20 +120,22 @@ if not os.path.exists(DB_PATH):
             seed_database(session)
     except Exception as e:
         print(f"ОШИБКА при инициализации БД: {e}")
-        # В случае ошибки при создании БД, приложение не сможет работать,
-        # поэтому лучше остановить его.
         sys.exit(1)
 else:
     print("База данных найдена.")
 
 enge = get_engine()
-init_db(enge)
-
-from models.database import Base
-from models.user import User as UserModel
-Base.metadata.create_all(enge)
-
 SessionFactory = get_session_factory(enge)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ... (код для scheduler)
+    yield
+
+app = FastAPI(title="Grass CRM API", version="1.0.0", lifespan=lifespan)
+
+
 
 
 # ════════════════════════════════════════
@@ -168,35 +250,6 @@ def send_morning_report():
         tg_send(report)
     except Exception as e:
         print(f"[Scheduler] ❌ Ошибка при формировании отчёта: {e}")
-
-
-# ════════════════════════════════════════
-#  LIFESPAN
-# ════════════════════════════════════════
-@asynccontextmanager
-async def lifespan(app):
-    try:
-        from apscheduler.schedulers.asyncio import AsyncIOScheduler
-        from apscheduler.triggers.cron import CronTrigger
-
-        scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-        scheduler.add_job(
-            send_morning_report,
-            CronTrigger(hour=NOTIFY_HOUR, minute=NOTIFY_MINUTE),
-            id="morning_report",
-            replace_existing=True,
-        )
-        scheduler.start()
-        print(f"[Scheduler] ✅ Запущен — отчёт каждый день в {NOTIFY_HOUR:02d}:{NOTIFY_MINUTE:02d} МСК")
-    except ImportError:
-        print("[Scheduler] ⚠️  apscheduler не установлен. Запустите: pip install apscheduler")
-
-    yield
-
-    print("[Scheduler] Остановка...")
-
-
-app = FastAPI(title="Grass CRM API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "change-me"))
 app.add_middleware(
@@ -433,8 +486,8 @@ def get_deal(deal_id: int, db: DBSession = Depends(get_db)):
     if not deal:
         raise HTTPException(404, "Сделка не найдена")
     total = sum(ds.quantity * ds.price_at_moment for ds in deal.deal_services)
-    if total == 0 and hasattr(deal, 'total') and deal.total:
-        total = deal.total
+    if total == 0 and hasattr(deal, 'total') and d.total:
+        total = d.total
     return {
         "id": deal.id, "title": deal.title, "client": deal.client,
         "stage": deal.stage.name if deal.stage else None,
