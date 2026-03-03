@@ -272,7 +272,12 @@ async def login(request: Request):
 
 
 @app.get("/api/auth/callback")
-async def callback(request: Request, code: str):
+async def callback(request: Request, code: str = None, error: str = None, error_description: str = None):
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{error}: {error_description}")
+    if not code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing authorization code")
+
     token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
     payload = {
         "grant_type": "authorization_code",
@@ -282,10 +287,19 @@ async def callback(request: Request, code: str):
         "redirect_uri": AUTH0_CALLBACK_URL,
     }
     async with httpx.AsyncClient() as client:
-        response = await client.post(token_url, data=payload)
-    token_data = response.json()
-    request.session["token"] = token_data.get("id_token")
-    return RedirectResponse(url="/")
+        try:
+            response = await client.post(token_url, data=payload)
+            response.raise_for_status()
+            token_data = response.json()
+        except httpx.HTTPStatusError as e:
+            err_data = e.response.json()
+            raise HTTPException(status_code=e.response.status_code, detail=f"Error from Auth0: {err_data.get('error_description', e.response.text)}")
+    
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=400, detail="Could not get access token from Auth0.")
+        
+    return RedirectResponse(url=f"/?access_token={access_token}")
 
 
 @app.get("/api/auth/logout")
@@ -295,7 +309,7 @@ async def logout(request: Request):
         f"https://{AUTH0_DOMAIN}/v2/logout?"
         + urlencode(
             {
-                "returnTo": request.url_for("serve_frontend"),
+                "returnTo": str(request.base_url),
                 "client_id": AUTH0_CLIENT_ID,
             },
             quote_via=urllib.parse.quote,
