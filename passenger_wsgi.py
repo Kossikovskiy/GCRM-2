@@ -11,7 +11,7 @@ sys.stderr = open(LOG_FILE, 'a')
 try:
     # --- НАСТРОЙКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ---
     # ВАЖНО: Замените 'YOUR_CLIENT_SECRET' на ваш реальный ключ Auth0
-    os.environ['AUTH0_CLIENT_SECRET'] = 'YOUR_CLIENT_SECRET' 
+    os.environ['AUTH0_CLIENT_SECRET'] = '1FRpZiQxnpp8hF-xk7ihUCTof54kYXSw0x3RWzLbVD-sFrvSWQME-r13AYFVxCYL' 
     
     os.environ['AUTH0_DOMAIN'] = 'dev-80umollds5sbkqku.us.auth0.com'
     os.environ['AUTH0_AUDIENCE'] = 'https://grass-crm/api'
