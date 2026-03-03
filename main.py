@@ -179,6 +179,10 @@ SessionFactory = get_session_factory(engine)
 # --------------------------------------------------------------------------
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "YOUR_TENANT.auth0.com")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "https://grass-crm/api")
+AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "YOUR_CLIENT_ID")
+AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET", "YOUR_CLIENT_SECRET")
+AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL", "https://crmpokos.ru/api/auth/callback")
+
 ROLE_CLAIM = "https://grass-crm/role"
 bearer = HTTPBearer(auto_error=False)
 
@@ -248,6 +252,56 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@app.get("/api/auth/login")
+async def login(request: Request):
+    redirect_uri = AUTH0_CALLBACK_URL
+    return RedirectResponse(
+        f"https://{AUTH0_DOMAIN}/authorize?"
+        + urlencode(
+            {
+                "response_type": "code",
+                "client_id": AUTH0_CLIENT_ID,
+                "redirect_uri": redirect_uri,
+                "scope": "openid profile email",
+                "audience": AUTH0_AUDIENCE,
+            }
+        )
+    )
+
+
+@app.get("/api/auth/callback")
+async def callback(request: Request, code: str):
+    token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
+    payload = {
+        "grant_type": "authorization_code",
+        "client_id": AUTH0_CLIENT_ID,
+        "client_secret": AUTH0_CLIENT_SECRET,
+        "code": code,
+        "redirect_uri": AUTH0_CALLBACK_URL,
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(token_url, data=payload)
+    token_data = response.json()
+    request.session["token"] = token_data.get("id_token")
+    return RedirectResponse(url="/")
+
+
+@app.get("/api/auth/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(
+        f"https://{AUTH0_DOMAIN}/v2/logout?"
+        + urlencode(
+            {
+                "returnTo": request.url_for("serve_frontend"),
+                "client_id": AUTH0_CLIENT_ID,
+            },
+            quote_via=urllib.parse.quote,
+        )
+    )
+
 
 # --- Pydantic Schemas ---
 class DealCreate(BaseModel):
