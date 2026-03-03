@@ -1,5 +1,6 @@
 # База данных
 sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9 # Драйвер для PostgreSQL
 
 # REST API
 fastapi>=0.110.0
@@ -11,6 +12,9 @@ httpx
 starlette
 python-jose[cryptography]>=3.3.0
 itsdangerous
+
+# Для Telegram бота
+python-telegram-bot>=20.0
 
 # Планировщик задач (Telegram уведомления)
 apscheduler>=3.10.0

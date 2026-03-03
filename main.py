@@ -27,11 +27,22 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 from jose import jwt, JWTError
 
 # --------------------------------------------------------------------------
-# 1. МОДЕЛИ БАЗЫ ДАННЫХ (объединенные)
+# 1. НАСТРОЙКА БАЗЫ ДАННЫХ
 # --------------------------------------------------------------------------
-Base = declarative_base()
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./crm.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    print("Ошибка: Переменная окружения DATABASE_URL не установлена.")
+    print("Приложение не может запуститься без подключения к базе данных PostgreSQL.")
+    sys.exit(1)
 
+Base = declarative_base()
+engine = create_engine(DATABASE_URL, echo=False)
+SessionFactory = sessionmaker(bind=engine)
+
+
+# --------------------------------------------------------------------------
+# 2. МОДЕЛИ БАЗЫ ДАННЫХ
+# --------------------------------------------------------------------------
 class Stage(Base):
     __tablename__ = "stages"
     id = Column(Integer, primary_key=True)
@@ -102,17 +113,9 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
 
-def get_engine(url: str = DATABASE_URL):
-    return create_engine(url, echo=False)
-
-def get_session_factory(engine):
-    return sessionmaker(bind=engine)
-
-def init_db(engine):
-    Base.metadata.create_all(engine)
 
 # --------------------------------------------------------------------------
-# 2. НАЧАЛЬНЫЕ ДАННЫЕ И ИНИЦИАЛИЗАЦИЯ
+# 3. ИНИЦИАЛИЗАЦИЯ И НАЧАЛЬНЫЕ ДАННЫЕ
 # --------------------------------------------------------------------------
 STAGES_DATA = [
     {"name": "Согласовать", "order": 1, "type": "regular", "is_final": False, "color": "#3B82F6"},
@@ -135,43 +138,44 @@ EQUIPMENT_DATA = [
 ]
 EXPENSE_CATEGORIES_DATA = ["Техника", "Топливо"]
 
-def seed_database(session):
-    if session.query(Stage).count() == 0:
-        for s_data in STAGES_DATA:
-            session.add(Stage(**s_data))
-    if session.query(ServiceCategory).count() == 0:
-        for sc_data in SERVICE_CATEGORIES_DATA:
-            session.add(ServiceCategory(**sc_data))
-    session.commit()
-    if session.query(Service).count() == 0:
-        for name, cat_name, unit, price, min_vol in SERVICES_DATA:
-            cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
-            if cat:
-                session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
-    if session.query(Equipment).count() == 0:
-        for eq_data in EQUIPMENT_DATA:
-            eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
-            session.add(Equipment(**eq_data))
-    if session.query(ExpenseCategory).count() == 0:
-        for name in EXPENSE_CATEGORIES_DATA:
-            session.add(ExpenseCategory(name=name))
-    session.commit()
-    print("🎉 База данных успешно инициализирована!")
+def init_and_seed_db():
+    """Создает таблицы и наполняет их начальными данными, если они пусты."""
+    print("Проверка и инициализация базы данных...")
+    Base.metadata.create_all(engine)
+    with SessionFactory() as session:
+        if session.query(Stage).count() == 0:
+            print("База пуста. Добавляю начальные данные (стадии, услуги)...")
+            for s_data in STAGES_DATA:
+                session.add(Stage(**s_data))
+            for sc_data in SERVICE_CATEGORIES_DATA:
+                session.add(ServiceCategory(**sc_data))
+            session.commit()
+            
+            for name, cat_name, unit, price, min_vol in SERVICES_DATA:
+                cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
+                if cat:
+                    session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
+            
+            for eq_data in EQUIPMENT_DATA:
+                eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
+                session.add(Equipment(**eq_data))
+            
+            for name in EXPENSE_CATEGORIES_DATA:
+                session.add(ExpenseCategory(name=name))
+                
+            session.commit()
+            print("🎉 База данных успешно инициализирована!")
+        else:
+            print("База данных уже содержит данные. Инициализация не требуется.")
 
-
-# Блок автоматического создания БД удален.
-# Приложение теперь будет ожидать существующий файл crm.db
-
-engine = get_engine()
-SessionFactory = get_session_factory(engine)
 
 # --------------------------------------------------------------------------
-# 3. АВТОРИЗАЦИЯ
+# 4. АВТОРИЗАЦИЯ
 # --------------------------------------------------------------------------
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-80umollds5sbkqku.us.auth0.com")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "https://grass-crm/api")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID", "tWfznxnflmcDEitZfkzlesHJ9YjZAZkN")
-AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET", "YOUR_CLIENT_SECRET")
+AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL", "https://crmpokos.ru/api/auth/callback")
 
 ROLE_CLAIM = "https://grass-crm/role"
@@ -217,17 +221,19 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Требуется роль admin.")
     return current_user
 
+
 # --------------------------------------------------------------------------
-# 4. FASTAPI ПРИЛОЖЕНИЕ
+# 5. FASTAPI ПРИЛОЖЕНИЕ
 # --------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Приложение запускается...")
+    init_and_seed_db()
     yield
     print("Приложение останавливается...")
 
-app = FastAPI(title="Grass CRM API", version="2.0.0", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "a-very-secret-key"))
+app = FastAPI(title="Grass CRM API", version="2.1.0", lifespan=lifespan)
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", secrets.token_hex(32)))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 HTML_PATH = "./index.html"
@@ -244,31 +250,22 @@ def get_db():
     finally:
         db.close()
 
-
+# --- Эндпоинты Auth0 ---
 @app.get("/api/auth/login")
 async def login(request: Request):
     redirect_uri = AUTH0_CALLBACK_URL
-    return RedirectResponse(
-        f"https://{AUTH0_DOMAIN}/authorize?"
-        + urlencode(
-            {
-                "response_type": "code",
-                "client_id": AUTH0_CLIENT_ID,
-                "redirect_uri": redirect_uri,
-                "scope": "openid profile email",
-                "audience": AUTH0_AUDIENCE,
-            }
-        )
-    )
-
+    return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?" + urlencode({
+        "response_type": "code",
+        "client_id": AUTH0_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": "openid profile email",
+        "audience": AUTH0_AUDIENCE,
+    }))
 
 @app.get("/api/auth/callback")
 async def callback(request: Request, code: str = None, error: str = None, error_description: str = None):
-    if AUTH0_CLIENT_SECRET == "YOUR_CLIENT_SECRET" or not AUTH0_CLIENT_SECRET:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Секретный ключ Auth0 не настроен на сервере. Установите переменную окружения AUTH0_CLIENT_SECRET."
-        )
+    if not AUTH0_CLIENT_SECRET:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Секретный ключ Auth0 не настроен.")
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{error}: {error_description}")
     if not code:
@@ -276,11 +273,8 @@ async def callback(request: Request, code: str = None, error: str = None, error_
 
     token_url = f"https://{AUTH0_DOMAIN}/oauth/token"
     payload = {
-        "grant_type": "authorization_code",
-        "client_id": AUTH0_CLIENT_ID,
-        "client_secret": AUTH0_CLIENT_SECRET,
-        "code": code,
-        "redirect_uri": AUTH0_CALLBACK_URL,
+        "grant_type": "authorization_code", "client_id": AUTH0_CLIENT_ID,
+        "client_secret": AUTH0_CLIENT_SECRET, "code": code, "redirect_uri": AUTH0_CALLBACK_URL,
     }
     async with httpx.AsyncClient() as client:
         try:
@@ -297,20 +291,13 @@ async def callback(request: Request, code: str = None, error: str = None, error_
         
     return RedirectResponse(url=f"/?access_token={access_token}")
 
-
 @app.get("/api/auth/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(
-        f"https://{AUTH0_DOMAIN}/v2/logout?"
-        + urlencode(
-            {
-                "returnTo": str(request.base_url),
-                "client_id": AUTH0_CLIENT_ID,
-            },
-            quote_via=urllib.parse.quote,
-        )
-    )
+    return RedirectResponse(f"https://{AUTH0_DOMAIN}/v2/logout?" + urlencode({
+        "returnTo": str(request.base_url),
+        "client_id": AUTH0_CLIENT_ID,
+    }, quote_via=urllib.parse.quote))
 
 
 # --- Pydantic Schemas ---
@@ -318,19 +305,23 @@ class DealCreate(BaseModel):
     title: str
     client: str
 
-# --- Endpoints ---
+# --- API Эндпоинты ---
 @app.get("/api/deals")
 def get_deals(db: DBSession = Depends(get_db)):
     deals = db.query(Deal).order_by(Deal.created_at.desc()).all()
-    return [{ "id": d.id, "title": d.title, "client": d.client, "stage": d.stage.name if d.stage else None } for d in deals]
+    return [{"id": d.id, "title": d.title, "client": d.client, "stage": d.stage.name if d.stage else None} for d in deals]
 
 @app.post("/api/deals", status_code=201)
 def create_deal(body: DealCreate, db: DBSession = Depends(get_db)):
-    stage = db.query(Stage).order_by(Stage.order).first()
-    deal = Deal(title=body.title, client=body.client, stage_id=stage.id if stage else None)
+    # Находим первую стадию по ее порядку
+    first_stage = db.query(Stage).order_by(Stage.order).first()
+    if not first_stage:
+        raise HTTPException(status_code=500, detail="В системе нет ни одной стадии для создания сделки.")
+        
+    deal = Deal(title=body.title, client=body.client, stage_id=first_stage.id)
     db.add(deal)
     db.commit()
-    return {"id": deal.id}
+    return {"id": deal.id, "stage": first_stage.name}
 
 @app.get("/api/stages")
 def get_stages(db: DBSession = Depends(get_db)):
@@ -340,4 +331,4 @@ def get_stages(db: DBSession = Depends(get_db)):
 def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
 
-print("Главный модуль main.py успешно загружен.")
+print("Главный модуль main.py успешно загружен и готов к работе с PostgreSQL.")
