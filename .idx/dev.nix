@@ -1,35 +1,61 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://developers.google.com/idx/guides/customize-idx-env
-{ pkgs, ... }: {
+{ pkgs, ... }:
+
+let
+  # Define the Python environment with all required packages
+  pythonEnv = pkgs.python3.withPackages (ps: with ps; [
+    (ps.mcp.overrideAttrs (old: {
+      version = "1.0.0";
+      src = ps.fetchPypi {
+        pname = "mcp";
+        inherit (old) version;
+        sha256 = "07f917b960a7e0f2d807a1114b3fcf3560b2d6d0c7542f7c3272d5f6e85d8985";
+      };
+    }))
+    sqlalchemy
+    fastapi
+    (uvicorn.override {-
+      dependencies = [ pkgs.python3Packages.standard ];
+    })
+    pydantic
+    httpx
+    starlette
+    (python-jose.override {
+      extraBuildInputs = [ pkgs.python3Packages.cryptography ];
+    })
+    apscheduler
+    python-dotenv
+  ]);
+in
+{
   # Which nixpkgs channel to use.
-  channel = "stable-24.05"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
-  packages = [
-    pkgs.python3
-    pkgs.python3Packages.pip
-    pkgs.uvicorn
-  ];
+  channel = "stable-24.05";
+
+  # Use the Python environment we defined above.
+  # This makes `python`, `pip`, and all packages available in the shell.
+  packages = [ pythonEnv ];
+
   # Sets environment variables in the workspace
   env = {
     # This is the public URL of your workspace, used for auth redirects.
     APP_BASE_URL = "https://$IDX_WORKSPACE_URL";
 
     # ---------------- DANGER ----------------
-    # It is not recommended to store secrets in this file.
-    # Instead, use the IDX secrets manager.
-    # For now, replace these with your actual Auth0 credentials.
-    AUTH0_DOMAIN = "your-auth0-domain.auth0.com";
-    AUTH0_CLIENT_ID = "your-auth0-client-id";
-    AUTH0_CLIENT_SECRET = "your-auth0-client-secret";
-    SESSION_SECRET = "a-very-secret-key-that-you-should-change";
+    # Storing secrets in this file is not recommended for production
+    # or shared projects. Please replace the placeholder values below
+    # with your actual credentials.
+AUTH0_DOMAIN=dev-80umollds5sbkqku.us.auth0.com
+AUTH0_CLIENT_ID=tWfznxnflmcDEitZfkzlesHJ9YjZAZkN
+AUTH0_CLIENT_SECRET=1FRpZiQxnpp8hF-xk7ihUCTof54kYXSw0x3RWzLbVD-sFrvSWQME-r13AYFVxCYL
+SESSION_SECRET=56012663825725266809458956460929
     # ----------------------------------------
   };
+
   idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
+    # Search for the extensions you want on https://open-vsx.org/
     extensions = [
       "ms-python.python"
-      "google.gemini-cli-vscode-ide-companion"
     ];
+
     # Enable previews
     previews = {
       enable = true;
@@ -40,15 +66,13 @@
         };
       };
     };
+
     # Workspace lifecycle hooks
     workspace = {
-      # Runs when a workspace is first created
+      # No need to run "pip install" anymore, Nix handles it.
       onCreate = {
-        install-deps = "pip install -r requirements.txt";
-        # Open editors for the following files by default, if they exist:
         default.openFiles = [ ".idx/dev.nix" "README.md" "api/main.py" ];
       };
-      # Runs when the workspace is (re)started
       onStart = {
         # The web preview will start automatically
       };
