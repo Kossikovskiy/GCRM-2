@@ -22,10 +22,29 @@ import io
 from models.user import User
 from api.auth_module import get_current_user, require_admin
 from models.database import (
-    get_engine, get_session_factory, init_db,
+    get_engine, get_session_factory, init_db, DB_PATH,
     Stage, Service, ServiceCategory, Deal, DealService,
     Equipment, Maintenance, ExpenseCategory, Expense
 )
+from scripts.init_db import seed_database
+
+# --- ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ---
+# Проверяем, существует ли файл БД. Если нет, создаем и наполняем его.
+if not os.path.exists(DB_PATH):
+    print(f"База данных не найдена по пути {DB_PATH}. Создаю новую...")
+    try:
+        engine = get_engine()
+        init_db(engine)
+        Session = get_session_factory(engine)
+        with Session() as session:
+            seed_database(session)
+    except Exception as e:
+        print(f"ОШИБКА при инициализации БД: {e}")
+        # В случае ошибки при создании БД, приложение не сможет работать,
+        # поэтому лучше остановить его.
+        sys.exit(1)
+else:
+    print("База данных найдена.")
 
 enge = get_engine()
 init_db(enge)
