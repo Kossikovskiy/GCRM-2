@@ -1194,15 +1194,12 @@ const AUTH0_CLIENT_ID = 'tWfznxnflmcDEitZfkzlesHJ9YjZAZkN';
 
 // ── При загрузке страницы — подхватить токен из URL ──────────
 (function () {
-  // Handles the redirect from Auth0. Checks for token in URL hash.
-  if (window.location.hash.includes("access_token")) {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1)); // remove #
-    const token = hashParams.get("access_token");
-    if (token) {
-      sessionStorage.setItem('token', token);
-      // Clean the URL for security and to prevent the code from running again
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('access_token');
+  if (token) {
+    sessionStorage.setItem('token', token);
+    // Убрать токен из URL (безопасность)
+    window.history.replaceState({}, document.title, '/');
   }
 })();
 
