@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import extract, func
@@ -27,14 +27,14 @@ from models.database import (
     Equipment, Maintenance, ExpenseCategory, Expense
 )
 
-engine = get_engine()
-init_db(engine)
+enge = get_engine()
+init_db(enge)
 
 from models.database import Base
 from models.user import User as UserModel
-Base.metadata.create_all(engine)
+Base.metadata.create_all(enge)
 
-SessionFactory = get_session_factory(engine)
+SessionFactory = get_session_factory(enge)
 
 
 # ════════════════════════════════════════
@@ -53,7 +53,7 @@ AUTH0_DOMAIN        = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID     = os.getenv("AUTH0_CLIENT_ID")
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 AUTH0_AUDIENCE      = os.getenv("AUTH0_AUDIENCE", "https://grass-crm/api")
-APP_BASE_URL        = os.getenv("APP_BASE_URL", "http://localhost:8000")
+APP_BASE_URL        = os.getenv("APP_BASE_URL", "https://pokoscrm.ru")
 
 
 # ════════════════════════════════════════
@@ -76,7 +76,6 @@ def tg_send(text: str) -> bool:
     except Exception as e:
         print(f"[TG] ❌ Ошибка: {e}")
         return False
-
 
 def build_morning_report() -> str:
     today   = date.today()
@@ -143,7 +142,6 @@ def build_morning_report() -> str:
     lines += ["", "━━━━━━━━━━━━━━━━━━━━", "🌿 Хорошего рабочего дня!"]
     return "\n".join(lines)
 
-
 def send_morning_report():
     print(f"[Scheduler] Запуск утреннего отчёта ({datetime.now().strftime('%H:%M')})")
     try:
@@ -181,7 +179,6 @@ async def lifespan(app):
 
 app = FastAPI(title="Grass CRM API", version="1.0.0", lifespan=lifespan)
 
-# SessionMiddleware должен быть до CORSMiddleware
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "change-me"))
 app.add_middleware(
     CORSMiddleware,
@@ -191,6 +188,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ── FRONTEND ────────────────────────────────
+# ИЗМЕНЕНО: Путь к файлу index.html
+HTML_PATH = os.path.join(os.path.dirname(__file__), "..", "index.html")
+
+@app.get("/", response_class=FileResponse, include_in_schema=False)
+async def serve_frontend():
+    return HTML_PATH
+# ────────────────────────────────────────────────────────
 
 def get_db():
     db = SessionFactory()
@@ -203,7 +209,6 @@ def get_db():
 # ── Auth endpoints ────────────────────────────────────────────
 @app.get("/api/auth/login")
 def login(request: Request):
-    """Редирект на Auth0 Universal Login."""
     state = secrets.token_urlsafe(16)
     request.session["oauth_state"] = state
     params = {
@@ -221,7 +226,6 @@ def login(request: Request):
 
 @app.get("/callback")
 async def auth_callback(request: Request, code: str, state: str):
-    """OAuth callback — обменивает code на токены."""
     if state != request.session.get("oauth_state"):
         raise HTTPException(400, "Неверный state параметр.")
 
@@ -416,8 +420,8 @@ def get_deal(deal_id: int, db: DBSession = Depends(get_db)):
         "id": deal.id, "title": deal.title, "client": deal.client,
         "stage": deal.stage.name if deal.stage else None,
         "manager": deal.manager, "address": deal.address,
-        "notes": deal.notes if hasattr(deal, 'notes') else "",
-        "vat_rate": deal.vat_rate if hasattr(deal, 'vat_rate') else "no_vat",
+        "notes": d.notes if hasattr(d, 'notes') else "",
+        "vat_rate": deal.vat_rate if hasattr(d, 'vat_rate') else "no_vat",
         "total": total,
         "services": [{"id": ds.id, "service_id": ds.service_id,
                       "name": ds.service.name if ds.service else "?",
@@ -742,7 +746,7 @@ def export_report(report_type: str, year: int, db: DBSession = Depends(get_db)):
         writer.writerow(["Выручка (₽)", revenue])
         writer.writerow(["Расходы (₽)", total_exp])
         writer.writerow(["Прибыль (₽)", revenue - total_exp])
-        writer.writerow(["Маржа (%)", round((revenue - total_exp) / revenue * 100, 1) if revenue else 0])
+        writer.writerow(["Маржа (% demol)", round((revenue - total_exp) / revenue * 100, 1) if revenue else 0])
         writer.writerow([])
         writer.writerow(["Категория расходов", "Сумма"])
         for r in exp_rows:
