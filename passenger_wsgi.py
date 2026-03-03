@@ -15,7 +15,7 @@ try:
     
     os.environ['AUTH0_DOMAIN'] = 'dev-80umollds5sbkqku.us.auth0.com'
     os.environ['AUTH0_AUDIENCE'] = 'https://grass-crm/api'
-    os.environ['SESSION_SECRET'] = 'a_very_strong_and_long_secret_string_32_chars' 
+    os.environ['SESSION_SECRET'] = '56012663825725266809458956460929' 
     os.environ['APP_BASE_URL'] = 'https://www.crm.покос-ропша.рф'
 
     # --- ЗАПУСК ПРИЛОЖЕНИЯ ---
