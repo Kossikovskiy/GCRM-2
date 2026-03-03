@@ -5,49 +5,52 @@
   channel = "stable-24.05"; # or "unstable"
   # Use https://search.nixos.org/packages to find packages
   packages = [
-    # pkgs.go
-    # pkgs.python311
-    # pkgs.python311Packages.pip
-    # pkgs.nodejs_20
-    # pkgs.nodePackages.nodemon
+    pkgs.python3
+    pkgs.python3Packages.pip
+    pkgs.uvicorn
   ];
   # Sets environment variables in the workspace
-  env = {};
+  env = {
+    # This is the public URL of your workspace, used for auth redirects.
+    APP_BASE_URL = "https://$IDX_WORKSPACE_URL";
+
+    # ---------------- DANGER ----------------
+    # It is not recommended to store secrets in this file.
+    # Instead, use the IDX secrets manager.
+    # For now, replace these with your actual Auth0 credentials.
+    AUTH0_DOMAIN = "your-auth0-domain.auth0.com";
+    AUTH0_CLIENT_ID = "your-auth0-client-id";
+    AUTH0_CLIENT_SECRET = "your-auth0-client-secret";
+    SESSION_SECRET = "a-very-secret-key-that-you-should-change";
+    # ----------------------------------------
+  };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [
-      # "vscodevim.vim"
+      "ms-python.python"
       "google.gemini-cli-vscode-ide-companion"
     ];
     # Enable previews
     previews = {
       enable = true;
       previews = {
-        # web = {
-        #   # Example: run "npm run dev" with PORT set to IDX's defined port for previews,
-        #   # and show it in IDX's web preview panel
-        #   command = ["npm" "run" "dev"];
-        #   manager = "web";
-        #   env = {
-        #     # Environment variables to set for your server
-        #     PORT = "$PORT";
-        #   };
-        # };
+        web = {
+          command = ["uvicorn" "api.main:app" "--host" "0.0.0.0" "--port" "$PORT"];
+          manager = "web";
+        };
       };
     };
     # Workspace lifecycle hooks
     workspace = {
       # Runs when a workspace is first created
       onCreate = {
-        # Example: install JS dependencies from NPM
-        # npm-install = "npm install";
+        install-deps = "pip install -r requirements.txt";
         # Open editors for the following files by default, if they exist:
-        default.openFiles = [ ".idx/dev.nix" "README.md" ];
+        default.openFiles = [ ".idx/dev.nix" "README.md" "api/main.py" ];
       };
       # Runs when the workspace is (re)started
       onStart = {
-        # Example: start a background task to watch and re-build backend code
-        # watch-backend = "npm run watch-backend";
+        # The web preview will start automatically
       };
     };
   };

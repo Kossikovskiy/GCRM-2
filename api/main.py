@@ -1,7 +1,3 @@
-"""
-FastAPI REST API для CRM
-Запуск: uvicorn api.main:app --reload --port 8000
-"""
 
 import sys
 import os
@@ -10,8 +6,6 @@ import urllib.parse
 import httpx
 import secrets
 from urllib.parse import urlencode
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
@@ -770,8 +764,3 @@ def telegram_test():
     report = build_morning_report()
     ok = tg_send(report)
     return {"sent": ok, "preview": report[:300] + "..."}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
