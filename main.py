@@ -273,6 +273,11 @@ async def login(request: Request):
 
 @app.get("/api/auth/callback")
 async def callback(request: Request, code: str = None, error: str = None, error_description: str = None):
+    if AUTH0_CLIENT_SECRET == "YOUR_CLIENT_SECRET" or not AUTH0_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Секретный ключ Auth0 не настроен на сервере. Установите переменную окружения AUTH0_CLIENT_SECRET."
+        )
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{error}: {error_description}")
     if not code:
