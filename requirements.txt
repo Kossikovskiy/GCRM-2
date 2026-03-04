@@ -1,20 +1,11 @@
-# База данных
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.9 # Драйвер для PostgreSQL
-
-# REST API
-fastapi>=0.110.0
-uvicorn>=0.27.0
-pydantic>=2.0.0
-
-# Авторизация
-httpx
-starlette
-python-jose[cryptography]>=3.3.0
-itsdangerous
-
-# Для Telegram бота
-python-telegram-bot>=20.0
-
-# Планировщик задач (Telegram уведомления)
-apscheduler>=3.10.0
+Authlib==1.3.0
+fastapi==0.110.0
+itsdangerous==2.1.2
+Jinja2==3.1.3
+python-dotenv==1.0.1
+python-jose==3.3.0
+requests==2.31.0
+SQLAlchemy==2.0.29
+uvicorn==0.28.0
+gunicorn==22.0.0
+httpx==0.27.0
