@@ -169,9 +169,10 @@ html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
 html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
 
 /* KANBAN */
-.kanban{display:flex;gap:11px;overflow-x:auto;padding-bottom:12px}
-.kanban::-webkit-scrollbar{height:5px}
-.k-col{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);width:265px;flex-shrink:0;display:flex;flex-direction:column;max-height:calc(100vh - 200px);box-shadow:var(--sh-s)}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;padding-bottom:12px}
+.k-col{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 200px);box-shadow:var(--sh-s);transition:background .15s,border-color .15s}
+.k-col.drag-over{background:var(--leaf);border-color:var(--sage)}
+html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color:var(--fern)}
 .k-head{padding:13px 15px 11px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px}
 .k-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .k-name{font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;flex:1}
@@ -179,8 +180,11 @@ html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
 .k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
 .k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
 .k-cards::-webkit-scrollbar{width:3px}
-.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:grab;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
 .k-card:hover{box-shadow:var(--sh-m);transform:translateY(-2px);background:var(--surface)}
+.k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
+.k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
+html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px}
 .k-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
 .k-client{font-size:11px;color:var(--fern);font-weight:300}
@@ -191,6 +195,28 @@ html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
 .empty{padding:56px 32px;text-align:center}
 .empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
 .empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
+
+
+/* ADD BUTTON */
+.add-btn{display:inline-flex;align-items:center;gap:7px;background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;box-shadow:var(--sh-s)}
+.add-btn:hover{background:var(--moss);transform:translateY(-1px);box-shadow:var(--sh-m)}
+/* MODAL */
+.overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:400px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
+.overlay.open .modal{transform:none}
+.modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--ink);margin-bottom:24px}
+.modal-title em{font-style:italic;color:var(--fern)}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:7px}
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--fern)}
+.field input.err{border-color:var(--red)}
+.modal-row{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s}
+.btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
+.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s}
+.btn-pri:hover{background:var(--moss)}
 
 /* TOAST */
 .toast{
@@ -285,9 +311,12 @@ html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
 </div>
 
 <div class="page" id="page-tasks">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Управление</span></div>
-    <div class="ph-title">Задачи<span class="ph-year year-display"></span></div>
+  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+    <div>
+      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Управление</span></div>
+      <div class="ph-title">Задачи<span class="ph-year year-display"></span></div>
+    </div>
+    <button class="add-btn" onclick="openTaskModal()">＋&nbsp;Новая задача</button>
   </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
@@ -350,6 +379,25 @@ html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
   </div>
 </div>
 
+<!-- MODAL: новая задача -->
+<div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
+  <div class="modal">
+    <div class="modal-title">Новая <em>задача</em></div>
+    <div class="field">
+      <label>Название</label>
+      <input type="text" id="t-title" placeholder="Что нужно сделать?" />
+    </div>
+    <div class="field">
+      <label>Срок</label>
+      <input type="date" id="t-date" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-sec" onclick="closeTaskModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveTask()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -370,27 +418,110 @@ async function api(ep,opts={}){
   }catch(e){showToast('❌ '+e.message);throw e}
 }
 
+// ── KANBAN STATE ──
+let _deals=[], _dragEl=null, _dragSrcStage=null;
+
 function renderKanban(deals=[]){
+  _deals=[...deals];
   const board=document.getElementById('kanban-board');
   if(!STAGES.length){board.innerHTML='<p style="color:var(--ink4);padding:24px">Нет этапов</p>';return}
   board.innerHTML=STAGES.map(st=>{
     const c=st.color||'#7ab566';
     const cards=deals.filter(d=>d.stage===st.name);
     const total=cards.reduce((s,d)=>s+d.total,0);
-    return`<div class="k-col">
-      <div class="k-head"><div class="k-dot" style="background:${c}"></div><span class="k-name" style="color:${c}">${st.name}</span><span class="k-count">${cards.length}</span></div>
-      ${cards.length?`<div class="k-total">${fmt(total)}</div>`:''}
-      <div class="k-cards">${cards.length?cards.map(d=>`
-        <div class="k-card" style="--c:${c}">
+    const cardsHtml=cards.length
+      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" data-stage="${escH(st.name)}" style="--c:${c}">
           <div class="k-sum">${fmt(d.total)}</div>
           <div class="k-title">${d.title}</div>
           <div class="k-client">${d.client}</div>
           <div class="k-hr"></div>
           <div class="k-date">${fmtDate(d.created_at)}</div>
-        </div>`).join(''):`<div class="empty"><div class="empty-ico" style="font-size:20px">🌿</div><div class="empty-txt">Пусто</div></div>`}
-      </div>
-    </div>`
-  }).join('')
+        </div>`).join('')
+      :`<div class="empty"><div class="empty-ico" style="font-size:20px">🌿</div><div class="empty-txt">Пусто</div></div>`;
+    return`<div class="k-col" data-stage="${escH(st.name)}">
+      <div class="k-head"><div class="k-dot" style="background:${c}"></div><span class="k-name" style="color:${c}">${st.name}</span><span class="k-count">${cards.length}</span></div>
+      <div class="k-total" style="${cards.length?'':'visibility:hidden'}">${fmt(total)}</div>
+      <div class="k-cards">${cardsHtml}</div>
+    </div>`;
+  }).join('');
+  initDrag();
+}
+
+function escH(s){return s.replace(/"/g,'&quot;')}
+
+function initDrag(){
+  const board=document.getElementById('kanban-board');
+  board.querySelectorAll('.k-card[draggable]').forEach(el=>{
+    el.addEventListener('dragstart',e=>{
+      _dragEl=el; _dragSrcStage=el.dataset.stage;
+      requestAnimationFrame(()=>el.classList.add('dragging'));
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',el.dataset.id);
+    });
+    el.addEventListener('dragend',()=>{
+      if(_dragEl)_dragEl.classList.remove('dragging');
+      board.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
+      board.querySelectorAll('.k-col').forEach(c=>c.classList.remove('drag-over'));
+      _dragEl=null;
+    });
+  });
+  board.querySelectorAll('.k-col').forEach(col=>{
+    col.addEventListener('dragover',e=>{
+      e.preventDefault(); e.dataTransfer.dropEffect='move';
+      col.classList.add('drag-over');
+      const cards=col.querySelector('.k-cards');
+      const ph=col.querySelector('.k-placeholder');
+      if(!ph){const p=document.createElement('div');p.className='k-placeholder';cards.appendChild(p);}
+    });
+    col.addEventListener('dragleave',e=>{
+      if(!col.contains(e.relatedTarget)){
+        col.classList.remove('drag-over');
+        col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
+      }
+    });
+    col.addEventListener('drop',e=>{
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
+      const id=e.dataTransfer.getData('text/plain');
+      const newStage=col.dataset.stage;
+      if(!id||_dragSrcStage===newStage)return;
+      const deal=_deals.find(d=>String(d.id)===String(id));
+      if(!deal)return;
+      const oldStage=deal.stage;
+      deal.stage=newStage;
+      renderKanban(_deals);
+      api(`/deals/${id}/stage`,{method:'PATCH',body:JSON.stringify({stage_name:newStage})})
+        .then(()=>showToast('✅ → '+newStage))
+        .catch(()=>{deal.stage=oldStage;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+    });
+  });
+}
+
+// ── TASK MODAL ──
+function openTaskModal(){
+  document.getElementById('t-title').value='';
+  document.getElementById('t-date').value='';
+  document.getElementById('t-title').classList.remove('err');
+  document.getElementById('task-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('t-title').focus(),100);
+}
+function closeTaskModal(){document.getElementById('task-overlay').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
+
+async function saveTask(){
+  const title=document.getElementById('t-title').value.trim();
+  const date=document.getElementById('t-date').value;
+  if(!title){document.getElementById('t-title').classList.add('err');return}
+  try{
+    await api('/tasks',{method:'POST',body:JSON.stringify({title,due_date:date||null})});
+    closeTaskModal();
+    showToast('✅ Задача добавлена');
+    // invalidate cache then reload
+    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
+    const data=await api('/tasks?year='+SELECTED_YEAR);
+    renderTasks(data?.tasks||[]);
+  }catch{}
 }
 
 function renderTasks(tasks=[]){
