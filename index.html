@@ -58,12 +58,28 @@ nav button {
 }
 nav button.active { color: var(--sage); }
 
+#year-selector-container {
+  margin-left: 24px; display: flex; align-items: center; gap: 10px;
+}
+#year-selector {
+  background-color: var(--moss);
+  color: var(--dew);
+  border: 1px solid var(--fern);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+}
+#year-selector:focus { outline: 2px solid var(--sage); }
+
 .page { display: none; padding: 40px; animation: fadeUp .3s ease; }
 .page.active { display: block; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 .page-title { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); margin-bottom: 28px; }
 .page-title em { font-style: italic; color: var(--fern); }
+.page-title .year-display { font-size: 24px; color: var(--sage); }
 
 .card { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 
@@ -86,6 +102,7 @@ td { padding: 13px 16px; border-bottom: 1px solid var(--mist); color: #777; }
 .kpi .icon { font-size: 22px; margin-bottom: 16px; opacity: .7; }
 .kpi .val { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); line-height: 1; }
 .kpi .lbl { font-size: 9px; color: var(--fern); text-transform: uppercase; letter-spacing: 2px; margin-top: 6px; font-weight: 600; }
+.kpi .lbl .year-display { font-weight: 700; }
 .kpi .sub { font-size: 11px; color: #aaa; margin-top: 10px; }
 
 .kanban { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 16px; }
@@ -128,33 +145,37 @@ td { padding: 13px 16px; border-bottom: 1px solid var(--mist); color: #777; }
     <button onclick="showPage('stock',this)">Склад</button>
     <button onclick="showPage('contacts',this)">Контакты</button>
   </nav>
+  <div id="year-selector-container">
+    <select id="year-selector"></select>
+    <button class="icon-btn" id="year-refresh" title="Обновить">🔄</button>
+  </div>
   <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
   <button class="icon-btn" onclick="window.location='/api/auth/logout'" title="Выйти">↩</button>
 </header>
 
 <div class="page active" id="page-dash">
   <div class="section-label"><div class="label-line"></div><span class="label-text">Обзор</span></div>
-  <div class="page-title">Ключевые <em>показатели</em></div>
+  <div class="page-title">Ключевые <em>показатели</em> <span class="year-display"></span></div>
   <div class="dash-grid">
-    <div class="kpi"><div class="icon">💰</div><div class="val" id="kpi-revenue">—</div><div class="lbl">Выручка</div><div class="sub" id="kpi-deals-count">— сделок</div></div>
-    <div class="kpi"><div class="icon">📉</div><div class="val" id="kpi-expenses">—</div><div class="lbl">Расходы</div><div class="sub" id="kpi-exp-count">— записей</div></div>
-    <div class="kpi"><div class="icon">📈</div><div class="val" id="kpi-profit">—</div><div class="lbl">Прибыль</div><div class="sub" id="kpi-margin">маржа —%</div></div>
+    <div class="kpi"><div class="icon">💰</div><div class="val" id="kpi-revenue">—</div><div class="lbl">Выручка <span class="year-display"></span></div><div class="sub" id="kpi-deals-count">— сделок</div></div>
+    <div class="kpi"><div class="icon">📉</div><div class="val" id="kpi-expenses">—</div><div class="lbl">Расходы <span class="year-display"></span></div><div class="sub" id="kpi-exp-count">— записей</div></div>
+    <div class="kpi"><div class="icon">📈</div><div class="val" id="kpi-profit">—</div><div class="lbl">Прибыль <span class="year-display"></span></div><div class="sub" id="kpi-margin">маржа —%</div></div>
     <div class="kpi"><div class="icon">🔧</div><div class="val" id="kpi-equip">—</div><div class="lbl">Единиц техники</div><div class="sub" id="kpi-repair">— в ремонте</div></div>
   </div>
 </div>
 
 <div class="page" id="page-kanban">
-  <div class="page-title">Воронка <em>продаж</em></div>
+  <div class="page-title">Воронка <em>продаж</em> <span class="year-display"></span></div>
   <div class="kanban" id="kanban-board"></div>
 </div>
 
 <div class="page" id="page-tasks">
-  <div class="page-title">Задачи</div>
+  <div class="page-title">Задачи <span class="year-display"></span></div>
   <div class="card"><table><thead><tr><th>ID</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-expenses">
-  <div class="page-title">Расходы</div>
+  <div class="page-title">Расходы <span class="year-display"></span></div>
   <div class="card"><table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table></div>
 </div>
 
@@ -184,13 +205,13 @@ td { padding: 13px 16px; border-bottom: 1px solid var(--mist); color: #777; }
 <script>
 const API_BASE = '/api';
 let STAGES = [];
+let SELECTED_YEAR = new Date().getFullYear();
 
-// Fetch с кукой сессии — без Bearer токена
 async function api(endpoint, options = {}) {
   try {
     const resp = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
-      credentials: 'include',   // отправляем куку сессии
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     });
     if (resp.status === 401) {
@@ -234,7 +255,7 @@ function renderKanban(deals = []) {
           `).join('')}
         </div>
       </div>`;
-  }).join('');
+  }).join('') || '<p>Сделок не найдено.</p>';
 }
 
 function renderTasks(tasks = []) {
@@ -294,20 +315,39 @@ function buildDash(deals, expenses, equipment) {
   const profit = revenue - totalExp;
   const margin = revenue ? Math.round(profit / revenue * 100) : 0;
 
-  document.getElementById('kpi-revenue').textContent     = `${(revenue/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-revenue').textContent     = `${(revenue/1).toLocaleString('ru')} ₽`;
   document.getElementById('kpi-deals-count').textContent = `${won.length} сделок`;
-  document.getElementById('kpi-expenses').textContent    = `${(totalExp/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-expenses').textContent    = `${(totalExp/1).toLocaleString('ru')} ₽`;
   document.getElementById('kpi-exp-count').textContent   = `${expenses.length} записей`;
-  document.getElementById('kpi-profit').textContent      = `${(profit/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-profit').textContent      = `${(profit/1).toLocaleString('ru')} ₽`;
   document.getElementById('kpi-margin').textContent      = `маржа ${margin}%`;
   document.getElementById('kpi-equip').textContent       = equipment.length;
   document.getElementById('kpi-repair').textContent      = `${equipment.filter(e => e.status === 'repair').length} в ремонте`;
 }
 
-async function loadData() {
-  showToast('⏳ Загрузка данных...');
-  const keys = ['stages','deals','tasks','expenses','equipment','services','consumables','contacts'];
-  const results = await Promise.allSettled(keys.map(k => api(`/${k}`)));
+async function loadData(year) {
+    if (!year) {
+        console.error("loadData called without a year.");
+        showToast("❌ Ошибка: Год не выбран.");
+        return;
+    }
+  showToast(`⏳ Загрузка данных за ${year} год...`);
+  document.querySelectorAll('.year-display').forEach(el => { el.textContent = `(${year})` });
+
+  const yearParam = `?year=${year}`;
+  const endpoints = {
+      stages: '/stages',
+      deals: `/deals${yearParam}`,
+      tasks: `/tasks${yearParam}`,
+      expenses: `/expenses${yearParam}`,
+      equipment: '/equipment',
+      services: '/services',
+      consumables: '/consumables',
+      contacts: '/contacts'
+  };
+  
+  const keys = Object.keys(endpoints);
+  const results = await Promise.allSettled(keys.map(k => api(endpoints[k])));
   const data = {};
   let hasErrors = false;
   results.forEach((r, i) => {
@@ -334,16 +374,46 @@ async function loadData() {
   showToast(hasErrors ? '⚠️ Часть данных не загрузилась' : '✅ Данные загружены');
 }
 
+async function populateYearSelector() {
+    const selector = document.getElementById('year-selector');
+    try {
+        const years = await api('/years');
+        if (!years || years.length === 0) {
+            selector.innerHTML = `<option>${SELECTED_YEAR}</option>`;
+            return;
+        }
+        
+        SELECTED_YEAR = years[0]; // Default to the most recent year
+        selector.innerHTML = years.map(y => `<option value="${y}" ${y === SELECTED_YEAR ? 'selected' : ''}>${y}</option>`).join('');
+
+    } catch (e) {
+        console.error("Failed to load years", e);
+        selector.innerHTML = `<option>${SELECTED_YEAR}</option>`;
+    }
+}
+
+function handleYearChange() {
+    const selector = document.getElementById('year-selector');
+    const newYear = parseInt(selector.value, 10);
+    if (newYear && newYear !== SELECTED_YEAR) {
+        SELECTED_YEAR = newYear;
+        loadData(SELECTED_YEAR);
+    }
+}
+
 async function checkAuth() {
-  // Проверяем сессию через /api/me (куки)
   try {
     await api('/me');
-    // Сессия есть — показываем приложение
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    await loadData();
+    
+    await populateYearSelector();
+    await loadData(SELECTED_YEAR);
+    
+    document.getElementById('year-selector').addEventListener('change', handleYearChange);
+    document.getElementById('year-refresh').addEventListener('click', () => loadData(SELECTED_YEAR));
+
   } catch {
-    // Не залогинен — показываем экран входа (кнопка ведёт на /api/auth/login)
     document.getElementById('login-screen').style.display = 'flex';
   }
 }

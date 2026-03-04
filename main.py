@@ -14,7 +14,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Date,
-    DateTime, Boolean, ForeignKey, Text, text, MetaData
+    DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
 import httpx
@@ -182,12 +182,12 @@ def get_current_user(request: Request) -> dict:
 # ── 5. ПРИЛОЖЕНИЕ ─────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.6)...", flush=True)
+    print("App starting (v3.8)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.6.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.8.0", lifespan=lifespan)
 
 # FIX: Changed https_only to False to allow session cookies over HTTP
 app.add_middleware(SessionMiddleware,
@@ -274,6 +274,21 @@ def logout(request: Request):
 
 # ── 7. DATA ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
 
+@app.get("/api/years")
+def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal_years = db.query(extract('year', Deal.created_at)).distinct().all()
+    expense_years = db.query(extract('year', Expense.date)).distinct().all()
+    task_years = db.query(extract('year', Task.due_date)).distinct().all()
+    
+    all_years = {year[0] for year in deal_years if year[0]}
+    all_years.update({year[0] for year in expense_years if year[0]})
+    all_years.update({year[0] for year in task_years if year[0]})
+
+    if not all_years:
+        all_years.add(datetime.now().year)
+    
+    return sorted(list(all_years), reverse=True)
+
 @app.get("/api/me")
 def get_me(user: dict = Depends(get_current_user)):
     return {"username": user["sub"], "role": user["role"]}
@@ -285,12 +300,16 @@ def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
             for s in db.query(Stage).order_by(Stage.order).all()]
 
 @app.get("/api/deals")
-def get_deals(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    deals = (db.query(Deal)
+def get_deals(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
+    query = (db.query(Deal)
                .outerjoin(Deal.contact)
                .outerjoin(Deal.stage)
-               .order_by(Deal.created_at.desc())
-               .all())
+               .order_by(Deal.created_at.desc()))
+    
+    if year:
+        query = query.filter(extract('year', Deal.created_at) == year)
+        
+    deals = query.all()
     result = []
     for d in deals:
         client_name = d.contact.name if d.contact else "Нет клиента" 
@@ -305,16 +324,24 @@ def get_deals(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     return {"deals": result}
 
 @app.get("/api/tasks")
-def get_tasks(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_tasks(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
+    query = db.query(Task).order_by(Task.due_date.asc())
+    if year:
+        query = query.filter(Task.due_date != None, extract('year', Task.due_date) == year)
+    
+    tasks = query.all()
     return {"tasks": [{
         "id": t.id, "title": t.title,
         "status":   "Выполнено" if t.is_done else "В работе",
         "due_date": t.due_date.isoformat() if t.due_date else None,
-    } for t in db.query(Task).order_by(Task.due_date.asc()).all()]}
+    } for t in tasks]}
 
 @app.get("/api/expenses")
-def get_expenses(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    rows = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc()).all()
+def get_expenses(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
+    query = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc())
+    if year:
+        query = query.filter(extract('year', Expense.date) == year)
+    rows = query.all()
     return {"expenses": [{
         "id": e.id, "name": e.name, "amount": e.amount,
         "category": e.category.name if e.category else "Без категории",
@@ -378,4 +405,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.6) loaded.", flush=True)
+print("main.py (v3.8) loaded.", flush=True)
