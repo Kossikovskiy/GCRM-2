@@ -169,12 +169,10 @@ class Task(Base):
 def init_and_seed_db():
     print("--- STARTING DB INIT (SCHEMA 2.0) ---", flush=True)
     try:
-        print("!!! DROPPING ALL EXISTING TABLES !!!", flush=True)
-        Base.metadata.drop_all(engine)
-        
-        print("Creating all new tables...", flush=True)
+        # We only create tables if they don't exist. We don't drop them anymore.
+        print("Creating all tables if they don't exist...", flush=True)
         Base.metadata.create_all(engine)
-        print("Tables created successfully.", flush=True)
+        print("Tables checked/created successfully.", flush=True)
 
         with SessionFactory() as session:
             # Seed Stages
@@ -210,13 +208,14 @@ def init_and_seed_db():
                 for name in EXP_CATS: session.add(ExpenseCategory(name=name))
                 session.commit()
                 
-            print("--- DB SEEDING COMPLETE! ---", flush=True)
+            print("--- DB SEEDING COMPLETE! ---
+", flush=True)
 
     except Exception as e:
         print(f"---!! ERROR DURING DB INIT: {e} !!----", flush=True)
-        # sys.exit(1) # Don't exit on error, allow app to run and show logs
     finally:
-        print("--- FINISHED DB INIT ---", flush=True)
+        print("--- FINISHED DB INIT ---
+", flush=True)
 
 # 4. АВТОРИЗАЦИЯ (Без изменений)
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-80umollds5sbkqku.us.auth0.com")
@@ -248,11 +247,12 @@ def get_current_user(token: Optional[str] = Depends(bearer)) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("App is starting...", flush=True)
-    init_and_seed_db()
+    # We don't run init_and_seed_db() on startup anymore to preserve migrated data
+    # init_and_seed_db()
     yield
     print("App is shutting down...", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="2.0.1", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 def get_db():
@@ -271,13 +271,19 @@ def get_stages(db: DBSession = Depends(get_db)):
 
 @app.get("/api/deals", tags=["Deals"])
 def get_deals(db: DBSession = Depends(get_db)):
-    deals = db.query(Deal).join(Contact).outerjoin(Stage).order_by(Deal.created_at.desc()).all()
-    return [{
-        "id": d.id, "title": d.title, "total": d.total,
-        "client": d.contact.name if d.contact else "Нет клиента",
-        "stage": d.stage.name if d.stage else "Без статуса",
-        "created_at": d.created_at.isoformat() if d.created_at else None
-    } for d in deals]
+    deals = db.query(Deal).outerjoin(Contact).outerjoin(Stage).order_by(Deal.created_at.desc()).all()
+    
+    result = []
+    for d in deals:
+        result.append({
+            "id": d.id,
+            "title": d.title or "Без названия",
+            "total": d.total or 0.0,
+            "client": d.contact.name if d.contact else "Нет клиента",
+            "stage": d.stage.name if d.stage else "Без статуса",
+            "created_at": (d.created_at or datetime.utcnow()).isoformat()
+        })
+    return result
 
 @app.get("/api/tasks", tags=["Tasks"])
 def get_tasks(db: DBSession = Depends(get_db)):
