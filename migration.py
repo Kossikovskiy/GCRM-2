@@ -69,7 +69,7 @@ def migrate_deals(session):
     print(f"\n--- Начало миграции сделок из файла: {DEALS_FILE_PATH} ---")
     
     try:
-        df = pd.read_excel(DEALS_FILE_PATH)
+        df = pd.read_excel(DEALS_FILE_PATH, engine='xlrd')
         print(f"Успешно прочитано {len(df)} строк из файла сделок.")
     except FileNotFoundError:
         print(f"ОШИБКА: Файл {DEALS_FILE_PATH} не найден.")
