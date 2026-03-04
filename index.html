@@ -1997,27 +1997,51 @@ async function loadAll() {
 /* ── АВТОРИЗАЦИЯ ── */
 async function checkAuth() {
   const token = sessionStorage.getItem('token');
+  // Если токена нет, просто отправляем на логин.
   if (!token) {
     window.location.href = '/api/auth/login';
     return;
   }
+
+  // Если токен есть, пытаемся его проверить.
   try {
     const resp = await fetch('/api/me', {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!resp.ok) throw new Error();
+
+    // *** НАЧАЛО ИЗМЕНЕНИЙ ДЛЯ ОТЛАДКИ ***
+    if (!resp.ok) {
+        // Если ответ не ОК, пытаемся прочитать текст ошибки.
+        const errorText = await resp.text();
+        // Показываем ошибку в alert() вместо бесконечной перезагрузки.
+        alert(`Ошибка проверки токена (статус ${resp.status}):
+
+${errorText}`);
+        // Очищаем "плохой" токен, чтобы не было цикла.
+        sessionStorage.removeItem('token');
+        // Останавливаем выполнение, чтобы пользователь увидел alert.
+        return; 
+    }
+    // *** КОНЕЦ ИЗМЕНЕНИЙ ДЛЯ ОТЛАДКИ ***
+
     const user = await resp.json();
     sessionStorage.setItem('crm_user', JSON.stringify({
       username: user.username || user.email || '',
       full_name: user.full_name || user.name || '',
       role: user.role || 'user'
     }));
+
+    // Если всё успешно, показываем приложение.
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     await loadAll();
-  } catch {
+
+  } catch (e) {
+    // Если произошла сетевая ошибка или другая проблема с fetch.
+    alert(`Критическая ошибка при запросе /api/me:
+
+${e.message}`);
     sessionStorage.removeItem('token');
-    window.location.href = '/api/auth/login';
   }
 }
 
