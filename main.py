@@ -243,6 +243,11 @@ async def serve_frontend():
         return HTML_PATH
     return "Frontend file not found."
 
+@app.get("/health", status_code=status.HTTP_200_OK, tags=["System"])
+async def health_check():
+    """Проверка работоспособности сервиса."""
+    return {"status": "ok"}
+    
 def get_db():
     db = SessionFactory()
     try:
