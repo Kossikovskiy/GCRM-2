@@ -11,3 +11,4 @@ gunicorn==22.0.0
 httpx==0.27.0
 psycopg2-binary==2.9.9
 python-dotenv
+cachetools==5.3.3
