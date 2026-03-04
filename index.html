@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -11,222 +10,79 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ink: #141a10;
-  --forest: #1e3d18;
-  --moss: #3a6b2e;
-  --fern: #5a9448;
-  --sage: #8cbf76;
-  --dew: #d4ead0;
-  --mist: #eef7ec;
-  --parchment: #f6f3ea;
-  --cream: #fffdf5;
-  --gold: #b8882a;
-  --gold-light: #e8c96a;
-  --rust: #8b3a2a;
-  --shadow: rgba(20,40,16,.12);
-  --shadow-deep: rgba(20,40,16,.22);
-  --border: #dde8d9;
+  --ink: #141a10; --forest: #1e3d18; --moss: #3a6b2e; --fern: #5a9448;
+  --sage: #8cbf76; --dew: #d4ead0; --mist: #eef7ec; --parchment: #f6f3ea;
+  --cream: #fffdf5; --gold: #b8882a; --gold-light: #e8c96a; --rust: #8b3a2a;
+  --shadow: rgba(20,40,16,.12); --shadow-deep: rgba(20,40,16,.22); --border: #dde8d9;
 }
-
 html[data-theme="dark"] {
-  --ink: #e9f6e6;
-  --forest: #0f2311;
-  --moss: #1c3a18;
-  --fern: #7ccf6a;
-  --sage: #9fe089;
-  --dew: #132916;
-  --mist: #0c180d;
-  --parchment: #0b120b;
-  --cream: #070e07;
-  --gold: #e0b84a;
-  --gold-light: #f0d37a;
-  --rust: #ff7a64;
-  --shadow: rgba(0,0,0,.35);
-  --shadow-deep: rgba(0,0,0,.55);
-  --border: #203a22;
+  --ink: #e9f6e6; --forest: #0f2311; --moss: #1c3a18; --fern: #7ccf6a;
+  --sage: #9fe089; --dew: #132916; --mist: #0c180d; --parchment: #0b120b;
+  --cream: #070e07; --gold: #e0b84a; --gold-light: #f0d37a; --rust: #ff7a64;
+  --shadow: rgba(0,0,0,.35); --shadow-deep: rgba(0,0,0,.55); --border: #203a22;
 }
 
 html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'Geologica', sans-serif;
-  font-weight: 300;
-  background: var(--cream);
-  color: var(--ink);
-  overflow-x: hidden;
-  min-height: 100vh;
-}
+body { font-family: 'Geologica', sans-serif; font-weight: 300; background: var(--cream); color: var(--ink); overflow-x: hidden; min-height: 100vh; }
 
 #login-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: var(--forest);
-  position: fixed;
-  inset: 0;
-  z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: var(--forest); position: fixed; inset: 0; z-index: 999;
 }
+.login-box { text-align: center; }
+.login-logo { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.login-logo em { font-style: italic; color: var(--sage); }
+.login-sub { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 40px; }
+.login-btn {
+  display: inline-block; background: var(--sage); color: var(--forest);
+  font-family: 'Geologica', sans-serif; font-size: 11px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase; padding: 14px 40px;
+  border-radius: 6px; text-decoration: none; transition: opacity .2s;
+}
+.login-btn:hover { opacity: .85; }
 
 #app { display: none; }
 
 header {
-  background: var(--forest);
-  height: 58px;
-  display: flex;
-  align-items: center;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  background: var(--forest); height: 58px; display: flex; align-items: center;
+  padding: 0 32px; position: sticky; top: 0; z-index: 100;
 }
-
-.logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: #fff;
-  margin-right: auto;
-  text-decoration: none;
-}
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: #fff; margin-right: auto; text-decoration: none; }
 .logo em { font-style: italic; color: var(--sage); }
-
 nav { display: flex; }
-
 nav button {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.45);
-  font-family: 'Geologica', sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: color .2s;
+  background: none; border: none; color: rgba(255,255,255,.45);
+  font-family: 'Geologica', sans-serif; font-size: 10px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase; padding: 10px 18px;
+  cursor: pointer; transition: color .2s;
 }
 nav button.active { color: var(--sage); }
 
 .page { display: none; padding: 40px; animation: fadeUp .3s ease; }
 .page.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.page-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 38px;
-  font-weight: 700;
-  color: var(--forest);
-  margin-bottom: 28px;
-}
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); margin-bottom: 28px; }
 .page-title em { font-style: italic; color: var(--fern); }
 
-.card {
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
+.card { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 
-.table-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: var(--fern); padding: 12px 16px; border-bottom: 1px solid var(--dew); }
+td { padding: 13px 16px; border-bottom: 1px solid var(--mist); color: #777; }
 
-.search-input {
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 12px;
-  padding: 9px 14px;
-  width: 240px;
-}
+.toast { position: fixed; bottom: 28px; right: 28px; background: var(--forest); border-radius: 8px; padding: 14px 22px; font-size: 12px; color: rgba(255,255,255,.85); z-index: 300; transform: translateY(80px); opacity: 0; transition: all .35s ease; }
+.toast.show { transform: translateY(0); opacity: 1; }
 
-.btn {
-  background: var(--forest);
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 9px 20px;
-  cursor: pointer;
-}
-.btn.ml { margin-left: auto; }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-th {
-  text-align: left;
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--fern);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--dew);
-}
-td {
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--mist);
-  color: #777;
-}
-
-.toast {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  background: var(--forest);
-  border-radius: 8px;
-  padding: 14px 22px;
-  font-size: 12px;
-  color: rgba(255,255,255,.85);
-  z-index: 300;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all .35s ease;
-}
-.toast.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-.icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--cream);
-  color: var(--fern);
-  cursor: pointer;
-  font-family: 'Geologica', sans-serif;
-  font-size: 14px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s;
-  margin-left: 16px;
-}
-.icon-btn:hover { background: var(--mist); border-color: var(--dew); }
+.icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--cream); color: var(--fern); cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; transition: all .2s; margin-left: 8px; }
+.icon-btn:hover { background: var(--mist); }
 
 .section-label { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .label-line { width: 32px; height: 1px; background: var(--fern); }
 .label-text { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--fern); font-weight: 600; }
 
 .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--dew); border: 1px solid var(--dew); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
-.kpi { background: var(--cream); padding: 28px 24px; position: relative; }
+.kpi { background: var(--cream); padding: 28px 24px; }
 .kpi .icon { font-size: 22px; margin-bottom: 16px; opacity: .7; }
 .kpi .val { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); line-height: 1; }
 .kpi .lbl { font-size: 9px; color: var(--fern); text-transform: uppercase; letter-spacing: 2px; margin-top: 6px; font-weight: 600; }
@@ -239,46 +95,52 @@ td {
 .col-head h4 { font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; color: #888; }
 .col-count { background: var(--mist); color: #aaa; font-size: 10px; padding: 2px 8px; border-radius: 20px; }
 .col-cards { padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-.deal-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px 14px 12px; cursor: pointer; transition: all .2s; box-shadow: 0 1px 4px rgba(20,40,16,.05); }
-.deal-card:hover { border-color: var(--stage-color, var(--fern)); transform: translateY(-2px); box-shadow: 0 6px 20px var(--shadow); }
-.deal-sum { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; line-height: 1; }
-.deal-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 700; color: var(--forest); margin-bottom: 6px; }
-.deal-client { font-size: 12px; color: var(--moss); margin-bottom: 4px; font-weight: 500; }
+.deal-card { background: #fff; border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px; padding: 16px 14px 12px; cursor: pointer; transition: all .2s; box-shadow: 0 1px 4px rgba(20,40,16,.05); }
+.deal-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--shadow); }
+.deal-sum { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+.deal-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 700; color: var(--forest); margin-bottom: 4px; }
+.deal-client { font-size: 12px; color: var(--moss); font-weight: 500; }
 .deal-divider { height: 1px; background: var(--dew); margin: 8px 0; }
-.deal-footer { display: flex; justify-content: space-between; align-items: center; }
 .deal-date { font-size: 10px; color: #ccc; }
-
 </style>
 </head>
 <body>
 
-<div id="login-screen"><div class="login-box"><div class="logo">Green<em>CRM</em></div></div></div>
+<!-- Экран входа -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Green<em>CRM</em></div>
+    <div class="login-sub">Система управления</div>
+    <a class="login-btn" href="/api/auth/login">Войти через Auth0</a>
+  </div>
+</div>
 
 <div id="app">
 <header>
   <div class="logo">Green<em>CRM</em></div>
   <nav id="main-nav">
-    <button class="active" onclick="showPage('dash', this)">Дашборд</button>
+    <button class="active" onclick="showPage('dash',this)">Дашборд</button>
     <button onclick="showPage('kanban',this)">Сделки</button>
     <button onclick="showPage('tasks',this)">Задачи</button>
-    <button onclick="showPage('expenses', this)">Расходы</button>
-    <button onclick="showPage('equipment', this)">Техника</button>
-    <button onclick="showPage('services', this)">Прайс-лист</button>
+    <button onclick="showPage('expenses',this)">Расходы</button>
+    <button onclick="showPage('equipment',this)">Техника</button>
+    <button onclick="showPage('services',this)">Прайс-лист</button>
     <button onclick="showPage('stock',this)">Склад</button>
     <button onclick="showPage('contacts',this)">Контакты</button>
   </nav>
   <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
+  <button class="icon-btn" onclick="window.location='/api/auth/logout'" title="Выйти">↩</button>
 </header>
 
 <div class="page active" id="page-dash">
-    <div class="section-label"><div class="label-line"></div><span class="label-text">Обзор</span></div>
-    <div class="page-title">Ключевые <em>показатели</em></div>
-    <div class="dash-grid">
-        <div class="kpi"><div class="icon">💰</div><div class="val" id="kpi-revenue">—</div><div class="lbl">Выручка</div><div class="sub" id="kpi-deals-count">— сделок</div></div>
-        <div class="kpi"><div class="icon">📉</div><div class="val" id="kpi-expenses">—</div><div class="lbl">Расходы</div><div class="sub" id="kpi-exp-count">— записей</div></div>
-        <div class="kpi"><div class="icon">📈</div><div class="val" id="kpi-profit">—</div><div class="lbl">Прибыль</div><div class="sub" id="kpi-margin">маржа —%</div></div>
-        <div class="kpi"><div class="icon">🔧</div><div class="val" id="kpi-equip">—</div><div class="lbl">Единиц техники</div><div class="sub" id="kpi-repair">— в ремонте</div></div>
-    </div>
+  <div class="section-label"><div class="label-line"></div><span class="label-text">Обзор</span></div>
+  <div class="page-title">Ключевые <em>показатели</em></div>
+  <div class="dash-grid">
+    <div class="kpi"><div class="icon">💰</div><div class="val" id="kpi-revenue">—</div><div class="lbl">Выручка</div><div class="sub" id="kpi-deals-count">— сделок</div></div>
+    <div class="kpi"><div class="icon">📉</div><div class="val" id="kpi-expenses">—</div><div class="lbl">Расходы</div><div class="sub" id="kpi-exp-count">— записей</div></div>
+    <div class="kpi"><div class="icon">📈</div><div class="val" id="kpi-profit">—</div><div class="lbl">Прибыль</div><div class="sub" id="kpi-margin">маржа —%</div></div>
+    <div class="kpi"><div class="icon">🔧</div><div class="val" id="kpi-equip">—</div><div class="lbl">Единиц техники</div><div class="sub" id="kpi-repair">— в ремонте</div></div>
+  </div>
 </div>
 
 <div class="page" id="page-kanban">
@@ -288,251 +150,201 @@ td {
 
 <div class="page" id="page-tasks">
   <div class="page-title">Задачи</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-expenses">
   <div class="page-title">Расходы</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-equipment">
   <div class="page-title">Техника</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>Статус</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>Статус</th></tr></thead><tbody id="equipment-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-services">
   <div class="page-title">Прайс-лист</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-stock">
   <div class="page-title">Склад</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="consumables-tbody"></tbody></table></div>
 </div>
 
 <div class="page" id="page-contacts">
   <div class="page-title">Контакты</div>
-  <div class="card">
-    <table><thead><tr><th>ID</th><th>Имя</th><th>Телефон</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
-  </div>
+  <div class="card"><table><thead><tr><th>ID</th><th>Имя</th><th>Телефон</th></tr></thead><tbody id="contacts-tbody"></tbody></table></div>
+</div>
 </div>
 
-</div>
 <div class="toast" id="toast"></div>
 
 <script>
 const API_BASE = '/api';
 let STAGES = [];
 
+// Fetch с кукой сессии — без Bearer токена
 async function api(endpoint, options = {}) {
-    const headers = { 'Content-Type': 'application/json' };
-    const token = sessionStorage.getItem('token');
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    try {
-        const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-        if (response.status === 401) {
-            sessionStorage.removeItem('token');
-            window.location.href = `${API_BASE}/auth/login`;
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(errorData.detail || 'API request failed');
-        }
-        return response.status === 204 ? null : response.json();
-    } catch (error) {
-        showToast(`❌ Ошибка: ${error.message}`);
-        console.error(`API Error at ${endpoint}:`, error);
-        throw error;
+  try {
+    const resp = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      credentials: 'include',   // отправляем куку сессии
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    });
+    if (resp.status === 401) {
+      window.location.href = '/api/auth/login';
+      throw new Error('Unauthorized');
     }
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || 'API error');
+    }
+    return resp.status === 204 ? null : resp.json();
+  } catch (e) {
+    showToast(`❌ ${e.message}`);
+    console.error(`API ${endpoint}:`, e);
+    throw e;
+  }
 }
 
 function renderKanban(deals = []) {
-    const board = document.getElementById('kanban-board');
-    if (!board) return;
-
-    board.innerHTML = STAGES.map(stage => {
-        const stageDeals = deals.filter(d => d.stage === stage.name);
-        const stageColor = stage.color || '#5a9448';
-        return `
-        <div class="kanban-col">
-            <div class="col-head" style="border-bottom-color:${stageColor}40">
-                <div class="col-dot" style="background:${stageColor}"></div>
-                <h4 style="color:${stageColor}">${stage.name}</h4>
-                <div class="col-count">${stageDeals.length}</div>
-            </div>
-            <div class="col-cards">
-            ${stageDeals.map(d => `
-                <div class="deal-card" style="--stage-color:${stageColor}; border-left-color:${stageColor}">
-                    <div class="deal-sum" style="color:${stageColor}">${d.total.toLocaleString('ru')} ₽</div>
-                    <div class="deal-title">${d.title}</div>
-                    <div class="deal-client">${d.client}</div>
-                    <div class="deal-divider"></div>
-                    <div class="deal-footer">
-                        <div class="deal-date">${new Date(d.created_at).toLocaleDateString()}</div>
-                    </div>
-                </div>
-            `).join('')}
-            </div>
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  board.innerHTML = STAGES.map(stage => {
+    const sd = deals.filter(d => d.stage === stage.name);
+    const c = stage.color || '#5a9448';
+    return `
+      <div class="kanban-col">
+        <div class="col-head" style="border-bottom-color:${c}40">
+          <div class="col-dot" style="background:${c}"></div>
+          <h4 style="color:${c}">${stage.name}</h4>
+          <div class="col-count">${sd.length}</div>
         </div>
-        `;
-    }).join('');
+        <div class="col-cards">
+          ${sd.map(d => `
+            <div class="deal-card" style="border-left-color:${c}">
+              <div class="deal-sum" style="color:${c}">${d.total.toLocaleString('ru')} ₽</div>
+              <div class="deal-title">${d.title}</div>
+              <div class="deal-client">${d.client}</div>
+              <div class="deal-divider"></div>
+              <div class="deal-date">${new Date(d.created_at).toLocaleDateString('ru')}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function renderTasks(tasks = []) {
-    const tbody = document.getElementById('tasks-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = tasks.map(t => `
-        <tr><td>${t.id}</td><td>${t.title}</td><td>${t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}</td><td>${t.status}</td></tr>
-    `).join('') || '<tr><td colspan="4">Задач не найдено</td></tr>';
+  const tb = document.getElementById('tasks-tbody');
+  if (!tb) return;
+  tb.innerHTML = tasks.map(t =>
+    `<tr><td>${t.id}</td><td>${t.title}</td><td>${t.due_date ? new Date(t.due_date).toLocaleDateString('ru') : '—'}</td><td>${t.status}</td></tr>`
+  ).join('') || '<tr><td colspan="4">Задач не найдено</td></tr>';
 }
 
 function renderExpenses(expenses = []) {
-    const tbody = document.getElementById('expenses-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = expenses.map(e => `
-        <tr><td>${e.id}</td><td>${e.name}</td><td>${e.category}</td><td>${e.amount}</td><td>${new Date(e.date).toLocaleDateString()}</td></tr>
-    `).join('') || '<tr><td colspan="5">Расходов не найдено</td></tr>';
+  const tb = document.getElementById('expenses-tbody');
+  if (!tb) return;
+  tb.innerHTML = expenses.map(e =>
+    `<tr><td>${e.id}</td><td>${e.name}</td><td>${e.category}</td><td>${e.amount.toLocaleString('ru')} ₽</td><td>${e.date ? new Date(e.date).toLocaleDateString('ru') : '—'}</td></tr>`
+  ).join('') || '<tr><td colspan="5">Расходов не найдено</td></tr>';
 }
 
-function renderEquipment(equipment = []) {
-    const tbody = document.getElementById('equipment-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = equipment.map(e => `
-        <tr><td>${e.id}</td><td>${e.name}</td><td>${e.model}</td><td>${e.status}</td></tr>
-    `).join('') || '<tr><td colspan="4">Техники не найдено</td></tr>';
+function renderEquipment(eq = []) {
+  const tb = document.getElementById('equipment-tbody');
+  if (!tb) return;
+  const labels = { active: 'Активна', repair: 'В ремонте', retired: 'Списана' };
+  tb.innerHTML = eq.map(e =>
+    `<tr><td>${e.id}</td><td>${e.name}</td><td>${e.model || '—'}</td><td>${labels[e.status] || e.status}</td></tr>`
+  ).join('') || '<tr><td colspan="4">Техники не найдено</td></tr>';
 }
 
 function renderServices(services = []) {
-    const tbody = document.getElementById('services-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = services.map(s => `
-        <tr><td>${s.id}</td><td>${s.name}</td><td>${s.category}</td><td>${s.price}</td><td>${s.unit}</td></tr>
-    `).join('') || '<tr><td colspan="5">Услуг не найдено</td></tr>';
+  const tb = document.getElementById('services-tbody');
+  if (!tb) return;
+  tb.innerHTML = services.map(s =>
+    `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.category || '—'}</td><td>${s.price.toLocaleString('ru')} ₽</td><td>${s.unit}</td></tr>`
+  ).join('') || '<tr><td colspan="5">Услуг не найдено</td></tr>';
 }
 
-function renderConsumables(consumables = []) {
-  const tbody = document.getElementById('consumables-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = consumables.map(c => `
-    <tr><td>${c.id}</td><td>${c.name}</td><td>${c.stock_quantity || 0} ${c.unit || ''}</td></tr>
-  `).join('') || '<tr><td colspan="3">Расходников не найдено</td></tr>';
+function renderConsumables(items = []) {
+  const tb = document.getElementById('consumables-tbody');
+  if (!tb) return;
+  tb.innerHTML = items.map(c =>
+    `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.stock_quantity || 0} ${c.unit || ''}</td></tr>`
+  ).join('') || '<tr><td colspan="3">Позиций не найдено</td></tr>';
 }
 
 function renderContacts(contacts = []) {
-  const tbody = document.getElementById('contacts-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = contacts.map(c => `
-    <tr><td>${c.id}</td><td>${c.name}</td><td>${c.phone || '—'}</td></tr>
-  `).join('') || '<tr><td colspan="3">Контактов не найдено</td></tr>';
+  const tb = document.getElementById('contacts-tbody');
+  if (!tb) return;
+  tb.innerHTML = contacts.map(c =>
+    `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.phone || '—'}</td></tr>`
+  ).join('') || '<tr><td colspan="3">Контактов не найдено</td></tr>';
 }
 
 function buildDash(deals, expenses, equipment) {
-    const successStage = STAGES.find(s => s.type === 'success');
-    const successDeals = successStage ? deals.filter(d => d.stage === successStage.name) : [];
-    const revenue = successDeals.reduce((sum, d) => sum + d.total, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const profit = revenue - totalExpenses;
-    const margin = revenue ? Math.round(profit / revenue * 100) : 0;
+  const successStage = STAGES.find(s => s.type === 'success');
+  const won = successStage ? deals.filter(d => d.stage === successStage.name) : [];
+  const revenue = won.reduce((s, d) => s + d.total, 0);
+  const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
+  const profit = revenue - totalExp;
+  const margin = revenue ? Math.round(profit / revenue * 100) : 0;
 
-    document.getElementById('kpi-revenue').textContent = `${(revenue/1000).toFixed(0)} тыс. ₽`;
-    document.getElementById('kpi-deals-count').textContent = `${successDeals.length} сделок`;
-    document.getElementById('kpi-expenses').textContent = `${(totalExpenses/1000).toFixed(0)} тыс. ₽`;
-    document.getElementById('kpi-exp-count').textContent = `${expenses.length} записей`;
-    document.getElementById('kpi-profit').textContent = `${(profit/1000).toFixed(0)} тыс. ₽`;
-    document.getElementById('kpi-margin').textContent = `маржа ${margin}%`;
-    document.getElementById('kpi-equip').textContent = equipment.length;
-    document.getElementById('kpi-repair').textContent = `${equipment.filter(e => e.status === 'repair').length} в ремонте`;
+  document.getElementById('kpi-revenue').textContent     = `${(revenue/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-deals-count').textContent = `${won.length} сделок`;
+  document.getElementById('kpi-expenses').textContent    = `${(totalExp/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-exp-count').textContent   = `${expenses.length} записей`;
+  document.getElementById('kpi-profit').textContent      = `${(profit/1000).toFixed(0)} тыс. ₽`;
+  document.getElementById('kpi-margin').textContent      = `маржа ${margin}%`;
+  document.getElementById('kpi-equip').textContent       = equipment.length;
+  document.getElementById('kpi-repair').textContent      = `${equipment.filter(e => e.status === 'repair').length} в ремонте`;
 }
 
 async function loadData() {
-    showToast('⏳ Загрузка данных...');
-    const endpoints = [
-        { key: 'stages', path: '/stages'},
-        { key: 'deals', path: '/deals' },
-        { key: 'tasks', path: '/tasks' },
-        { key: 'expenses', path: '/expenses' },
-        { key: 'equipment', path: '/equipment' },
-        { key: 'services', path: '/services' },
-        { key: 'consumables', path: '/consumables' },
-    ];
+  showToast('⏳ Загрузка данных...');
+  const keys = ['stages','deals','tasks','expenses','equipment','services','consumables','contacts'];
+  const results = await Promise.allSettled(keys.map(k => api(`/${k}`)));
+  const data = {};
+  let hasErrors = false;
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') data[keys[i]] = r.value;
+    else { hasErrors = true; console.error(`/${keys[i]}:`, r.reason); }
+  });
 
-    const results = await Promise.allSettled(endpoints.map(e => api(e.path)));
-    const data = {};
-    let hasErrors = false;
+  STAGES = data.stages || [];
+  const deals     = data.deals?.deals       || [];
+  const expenses  = data.expenses?.expenses || [];
+  const equipment = data.equipment          || [];
+  const tasks     = data.tasks?.tasks       || [];
+  const contacts  = data.contacts           || [];
 
-    results.forEach((result, index) => {
-        const endpoint = endpoints[index];
-        if (result.status === 'fulfilled') {
-            data[endpoint.key] = result.value;
-        } else {
-            hasErrors = true;
-            console.error(`Не удалось загрузить ${endpoint.path}:`, result.reason);
-        }
-    });
+  renderKanban(deals);
+  renderTasks(tasks);
+  renderExpenses(expenses);
+  renderEquipment(equipment);
+  renderServices(data.services   || []);
+  renderConsumables(data.consumables || []);
+  renderContacts(contacts);
+  buildDash(deals, expenses, equipment);
 
-    STAGES = data.stages || [];
-    const deals = data.deals?.deals || [];
-    const expenses = data.expenses?.expenses || [];
-    const equipment = data.equipment || [];
-
-    renderKanban(deals);
-    renderTasks(data.tasks?.tasks || []);
-    renderExpenses(expenses);
-    renderEquipment(equipment);
-    renderServices(data.services || []);
-    renderConsumables(data.consumables || []);
-    
-    // Render contacts from local storage or deals
-    let contacts = [];
-    try { contacts = JSON.parse(localStorage.getItem('crm_contacts') || '[]'); } catch {}
-    const dealContacts = [...new Set(deals.map(d => d.client.trim()).filter(Boolean))];
-    dealContacts.forEach(name => {
-        if (!contacts.some(c => c.name.toLowerCase() === name.toLowerCase())) {
-            contacts.push({ id: Date.now() + Math.random(), name: name });
-        }
-    });
-    localStorage.setItem('crm_contacts', JSON.stringify(contacts));
-    renderContacts(contacts);
-
-    buildDash(deals, expenses, equipment);
-
-    showToast(hasErrors ? '⚠️ Часть данных не загрузилась' : '✅ Данные загружены');
+  showToast(hasErrors ? '⚠️ Часть данных не загрузилась' : '✅ Данные загружены');
 }
 
 async function checkAuth() {
-  if (!sessionStorage.getItem('token')) {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('access_token');
-    if (token) {
-        sessionStorage.setItem('token', token);
-        window.history.replaceState({}, document.title, '/');
-    } else {
-        window.location.href = `${API_BASE}/auth/login`;
-        return;
-    }
-  }
-  
+  // Проверяем сессию через /api/me (куки)
   try {
     await api('/me');
+    // Сессия есть — показываем приложение
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     await loadData();
-  } catch (error) {
-    sessionStorage.clear();
-    window.location.href = `${API_BASE}/auth/login`;
+  } catch {
+    // Не залогинен — показываем экран входа (кнопка ведёт на /api/auth/login)
+    document.getElementById('login-screen').style.display = 'flex';
   }
 }
 
@@ -547,36 +359,25 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 4000);
+  setTimeout(() => t.classList.remove('show'), 4000);
 }
 
 function applyTheme(theme) {
-  const t = (theme === 'dark') ? 'dark' : 'light';
+  const t = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('crm_theme', t);
   const btn = document.getElementById('theme-toggle');
-  if (btn) {
-    btn.textContent = (t === 'dark') ? '☀️' : '🌙';
-    btn.title = (t === 'dark') ? 'Светлая тема' : 'Тёмная тема';
-  }
+  if (btn) { btn.textContent = t === 'dark' ? '☀️' : '🌙'; }
 }
 
 function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  applyTheme(cur === 'dark' ? 'light' : 'dark');
-}
-
-function initTheme() {
-  const saved = localStorage.getItem('crm_theme');
-  applyTheme(saved || 'light');
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    checkAuth();
+  applyTheme(localStorage.getItem('crm_theme') || 'light');
+  checkAuth();
 });
-
 </script>
-
 </body>
 </html>
