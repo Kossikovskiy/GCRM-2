@@ -49,9 +49,9 @@ SessionFactory = sessionmaker(bind=engine)
 class Stage(Base):
     __tablename__ = "stages"
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
     order = Column(Integer, default=0)
-    type = Column(String(50), default="regular")
+    type = Column(String(50), default="regular") # regular, success, failed
     is_final = Column(Boolean, default=False)
     color = Column(String(20), default="#6B7280")
     deals = relationship("Deal", back_populates="stage")
@@ -59,19 +59,20 @@ class Stage(Base):
 class ServiceCategory(Base):
     __tablename__ = "service_categories"
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
     icon = Column(String(50), default="🌿")
     services = relationship("Service", back_populates="category")
 
 class Service(Base):
     __tablename__ = "services"
     id = Column(Integer, primary_key=True)
-    name = Column(String(200), nullable=False)
+    name = Column(String(200), nullable=False, unique=True)
     category_id = Column(Integer, ForeignKey("service_categories.id"))
     unit = Column(String(50), default="ед")
     price = Column(Float, nullable=False)
     min_volume = Column(Float, default=1.0)
     category = relationship("ServiceCategory", back_populates="services")
+    deal_services = relationship("DealService", back_populates="service")
 
 class Deal(Base):
     __tablename__ = "deals"
@@ -80,7 +81,27 @@ class Deal(Base):
     client = Column(String(200), nullable=False)
     stage_id = Column(Integer, ForeignKey("stages.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    closed_at = Column(DateTime, nullable=True)
+    
+    address = Column(String(300), default="")
+    notes = Column(Text, default="")
+    total = Column(Float, default=0.0)
+    vat_rate = Column(String(20), default="no_vat")
+
     stage = relationship("Stage", back_populates="deals")
+    deal_services = relationship("DealService", back_populates="deal", cascade="all, delete-orphan")
+
+class DealService(Base):
+    __tablename__ = 'deal_services'
+    id = Column(Integer, primary_key=True)
+    deal_id = Column(Integer, ForeignKey('deals.id'), nullable=False)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
+    quantity = Column(Float, nullable=False)
+    price_at_moment = Column(Float, nullable=False)
+
+    deal = relationship("Deal", back_populates="deal_services")
+    service = relationship("Service", back_populates="deal_services")
 
 class Equipment(Base):
     __tablename__ = "equipment"
@@ -89,12 +110,12 @@ class Equipment(Base):
     model = Column(String(200), default="")
     purchase_date = Column(Date, nullable=True)
     purchase_cost = Column(Float, default=0.0)
-    status = Column(String(50), default="active")
+    status = Column(String(50), default="active") # active, repair, retired
 
 class ExpenseCategory(Base):
     __tablename__ = "expense_categories"
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -111,7 +132,7 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(120), unique=True, nullable=True)
     full_name = Column(String(100), default="")
-    role = Column(String(20), default="user")
+    role = Column(String(20), default="user") # user, admin
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -142,7 +163,6 @@ EQUIPMENT_DATA = [
 EXPENSE_CATEGORIES_DATA = ["Техника", "Топливо"]
 
 def init_and_seed_db():
-    """Создает таблицы и наполняет их начальными данными, если они пусты."""
     print("--- STARTING DB INIT ---", flush=True)
     try:
         print("Creating all tables (if they don't exist)...", flush=True)
@@ -150,27 +170,18 @@ def init_and_seed_db():
         print("Tables creation command finished.", flush=True)
 
         with SessionFactory() as session:
-            # Check Stages
             if session.query(Stage).count() == 0:
                 print("Seeding Stages...", flush=True)
                 for s_data in STAGES_DATA:
                     session.add(Stage(**s_data))
                 session.commit()
-                print("Stages seeded.", flush=True)
-            else:
-                print("Stages already exist.", flush=True)
 
-            # Check Service Categories
             if session.query(ServiceCategory).count() == 0:
                 print("Seeding Service Categories...", flush=True)
                 for sc_data in SERVICE_CATEGORIES_DATA:
                     session.add(ServiceCategory(**sc_data))
                 session.commit()
-                print("Service Categories seeded.", flush=True)
-            else:
-                print("Service Categories already exist.", flush=True)
 
-            # Check Services
             if session.query(Service).count() == 0:
                 print("Seeding Services...", flush=True)
                 for name, cat_name, unit, price, min_vol in SERVICES_DATA:
@@ -178,11 +189,7 @@ def init_and_seed_db():
                     if cat:
                         session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
                 session.commit()
-                print("Services seeded.", flush=True)
-            else:
-                print("Services already exist.", flush=True)
 
-            # Check Equipment
             if session.query(Equipment).count() == 0:
                 print("Seeding Equipment...", flush=True)
                 for eq_data in EQUIPMENT_DATA:
@@ -190,26 +197,17 @@ def init_and_seed_db():
                     eq_data_copy["purchase_date"] = datetime.strptime(eq_data_copy["purchase_date"], "%Y-%m-%d").date()
                     session.add(Equipment(**eq_data_copy))
                 session.commit()
-                print("Equipment seeded.", flush=True)
-            else:
-                print("Equipment already exists.", flush=True)
             
-            # Check Expense Categories
             if session.query(ExpenseCategory).count() == 0:
                 print("Seeding Expense Categories...", flush=True)
                 for name in EXPENSE_CATEGORIES_DATA:
                     session.add(ExpenseCategory(name=name))
                 session.commit()
-                print("Expense Categories seeded.", flush=True)
-            else:
-                print("Expense Categories already exist.", flush=True)
                 
             print("--- DB SEEDING COMPLETE! ---", flush=True)
 
     except Exception as e:
         print(f"---!! ERROR DURING DB INIT: {e} !!----", flush=True)
-        import traceback
-        traceback.print_exc(file=sys.stdout)
     finally:
         print("--- FINISHED DB INIT ---", flush=True)
 
@@ -276,7 +274,7 @@ async def lifespan(app: FastAPI):
     yield
     print("Приложение останавливается...", flush=True)
 
-app = FastAPI(title="Grass CRM API", version="2.1.0", lifespan=lifespan)
+app = FastAPI(title="Grass CRM API", version="2.2.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", secrets.token_hex(32)))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -289,7 +287,6 @@ async def serve_frontend():
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["System"])
 async def health_check():
-    """Проверка работоспособности сервиса."""
     return {"status": "ok"}
     
 def get_db():
@@ -299,15 +296,12 @@ def get_db():
     finally:
         db.close()
 
-# --- Эндпоинты Auth0 ---
+# --- Auth0 Endpoints ---
 @app.get("/api/auth/login")
 async def login(request: Request):
-    redirect_uri = AUTH0_CALLBACK_URL
     return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?" + urlencode({
-        "response_type": "code",
-        "client_id": AUTH0_CLIENT_ID,
-        "redirect_uri": redirect_uri,
-        "scope": "openid profile email",
+        "response_type": "code", "client_id": AUTH0_CLIENT_ID,
+        "redirect_uri": AUTH0_CALLBACK_URL, "scope": "openid profile email",
         "audience": AUTH0_AUDIENCE,
     }))
 
@@ -331,8 +325,7 @@ async def callback(request: Request, code: str = None, error: str = None, error_
             response.raise_for_status()
             token_data = response.json()
         except httpx.HTTPStatusError as e:
-            err_data = e.response.json()
-            raise HTTPException(status_code=e.response.status_code, detail=f"Error from Auth0: {err_data.get('error_description', e.response.text)}")
+            raise HTTPException(status_code=e.response.status_code, detail=f"Error from Auth0: {e.response.json().get('error_description', e.response.text)}")
     
     access_token = token_data.get("access_token")
     if not access_token:
@@ -344,40 +337,134 @@ async def callback(request: Request, code: str = None, error: str = None, error_
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(f"https://{AUTH0_DOMAIN}/v2/logout?" + urlencode({
-        "returnTo": str(request.base_url),
-        "client_id": AUTH0_CLIENT_ID,
+        "returnTo": str(request.base_url), "client_id": AUTH0_CLIENT_ID,
     }, quote_via=urllib.parse.quote))
 
 
 # --- Pydantic Schemas ---
-class DealCreate(BaseModel):
+class DealCreateOrUpdate(BaseModel):
     title: str
     client: str
+    notes: Optional[str] = ""
+    address: Optional[str] = ""
+    vat_rate: Optional[str] = "no_vat"
+    services: Optional[str] = "" 
+    total: Optional[float] = 0 # Будет пересчитано на сервере
 
-# --- API Эндпоинты ---
-@app.get("/api/deals")
-def get_deals(db: DBSession = Depends(get_db)):
-    deals = db.query(Deal).order_by(Deal.created_at.desc()).all()
-    return [{"id": d.id, "title": d.title, "client": d.client, "stage": d.stage.name if d.stage else None} for d in deals]
+class StageUpdate(BaseModel):
+    stage_name: str
 
-@app.post("/api/deals", status_code=201)
-def create_deal(body: DealCreate, db: DBSession = Depends(get_db)):
-    # Находим первую стадию по ее порядку
-    first_stage = db.query(Stage).order_by(Stage.order).first()
-    if not first_stage:
-        raise HTTPException(status_code=500, detail="В системе нет ни одной стадии для создания сделки.")
-        
-    deal = Deal(title=body.title, client=body.client, stage_id=first_stage.id)
-    db.add(deal)
-    db.commit()
-    return {"id": deal.id, "stage": first_stage.name}
+class ExpenseCreate(BaseModel):
+    date: str
+    name: str
+    category: str
+    amount: float
 
-@app.get("/api/stages")
+# --- API Endpoints ---
+@app.get("/api/me", tags=["Users"])
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+@app.get("/api/stages", tags=["Deals"])
 def get_stages(db: DBSession = Depends(get_db)):
     return db.query(Stage).order_by(Stage.order).all()
 
-@app.get("/api/me")
-def get_me(current_user: dict = Depends(get_current_user)):
-    return current_user
+@app.get("/api/deals", tags=["Deals"])
+def get_deals(db: DBSession = Depends(get_db)):
+    deals_data = db.query(Deal).order_by(Deal.created_at.desc()).all()
+    
+    deals_list = []
+    for d in deals_data:
+        services_str = ",".join([f"{ds.service.name}:{ds.quantity}" for ds in d.deal_services])
+        deals_list.append({
+            "id": d.id,
+            "title": d.title,
+            "client": d.client,
+            "stage": d.stage.name if d.stage else None,
+            "address": d.address,
+            "notes": d.notes,
+            "total": d.total,
+            "vat_rate": d.vat_rate,
+            "services": services_str,
+            "created_at": d.created_at.isoformat()
+        })
+    return {"deals": deals_list}
+
+@app.post("/api/deals", status_code=201, tags=["Deals"])
+def create_deal(body: DealCreateOrUpdate, db: DBSession = Depends(get_db)):
+    first_stage = db.query(Stage).order_by(Stage.order).first()
+    if not first_stage:
+        raise HTTPException(status_code=500, detail="В системе нет ни одной стадии для создания сделки.")
+
+    deal = Deal(
+        title=body.title, client=body.client, stage_id=first_stage.id,
+        address=body.address, notes=body.notes, vat_rate=body.vat_rate
+    )
+    db.add(deal)
+    db.flush()
+
+    calculated_total = 0.0
+    if body.services:
+        for pair in body.services.split(','):
+            parts = pair.split(':')
+            if len(parts) != 2: continue
+            
+            service_name, quantity_str = parts[0].strip(), parts[1].strip()
+            service = db.query(Service).filter(Service.name == service_name).first()
+            if service and quantity_str:
+                quantity = float(quantity_str)
+                db.add(DealService(
+                    deal_id=deal.id, service_id=service.id,
+                    quantity=quantity, price_at_moment=service.price
+                ))
+                calculated_total += quantity * service.price
+
+    deal.total = calculated_total
+    db.commit()
+    db.refresh(deal)
+
+    return {
+        "id": deal.id, "stage": first_stage.name, "title": deal.title,
+        "client": deal.client, "total": deal.total
+    }
+
+@app.patch("/api/deals/{deal_id}/stage", status_code=200, tags=["Deals"])
+def update_deal_stage(deal_id: int, body: StageUpdate, db: DBSession = Depends(get_db)):
+    deal = db.query(Deal).get(deal_id)
+    if not deal:
+        raise HTTPException(404, "Сделка не найдена")
+    
+    stage = db.query(Stage).filter(Stage.name == body.stage_name).first()
+    if not stage:
+        raise HTTPException(404, f"Стадия '{body.stage_name}' не найдена")
+        
+    deal.stage_id = stage.id
+    deal.updated_at = datetime.utcnow()
+    if stage.is_final and not deal.closed_at:
+        deal.closed_at = datetime.utcnow()
+        
+    db.commit()
+    return {"id": deal.id, "new_stage": stage.name}
+
+# Fallback for other endpoints to avoid crashes, returning empty data
+@app.get("/api/expenses")
+async def get_expenses_mock(): return {"expenses": []}
+
+@app.get("/api/equipment")
+async def get_equipment_mock(): return []
+
+@app.get("/api/maintenances")
+async def get_maintenances_mock(): return []
+
+@app.get("/api/consumables")
+async def get_consumables_mock(): return []
+
+@app.get("/api/services")
+def get_services(db: DBSession = Depends(get_db)):
+    services = db.query(Service).join(ServiceCategory).order_by(ServiceCategory.name, Service.name).all()
+    return [{
+        "id": s.id, "name": s.name, "category": s.category.name,
+        "unit": s.unit, "price": s.price, "min_volume": s.min_volume
+    } for s in services]
 
 print("Главный модуль main.py успешно загружен и готов к работе с PostgreSQL.")
