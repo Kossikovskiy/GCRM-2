@@ -142,7 +142,7 @@ EQUIPMENT_DATA = [
 EXPENSE_CATEGORIES_DATA = ["Техника", "Топливо"]
 
 def init_and_seed_db():
-    "'''Создает таблицы и наполняет их начальными данными, если они пусты.'''"
+    """Создает таблицы и наполняет их начальными данными, если они пусты."""
     print("--- STARTING DB INIT ---", flush=True)
     try:
         print("Creating all tables (if they don't exist)...", flush=True)
@@ -150,38 +150,62 @@ def init_and_seed_db():
         print("Tables creation command finished.", flush=True)
 
         with SessionFactory() as session:
-            print("Checking if 'stages' table is empty...", flush=True)
-            stage_count = session.query(Stage).count()
-            print(f"Found {stage_count} stages in the database.", flush=True)
-
-            if stage_count == 0:
-                print("Database appears empty. Seeding initial data for stages, services, etc...", flush=True)
+            # Check Stages
+            if session.query(Stage).count() == 0:
+                print("Seeding Stages...", flush=True)
                 for s_data in STAGES_DATA:
                     session.add(Stage(**s_data))
+                session.commit()
+                print("Stages seeded.", flush=True)
+            else:
+                print("Stages already exist.", flush=True)
+
+            # Check Service Categories
+            if session.query(ServiceCategory).count() == 0:
+                print("Seeding Service Categories...", flush=True)
                 for sc_data in SERVICE_CATEGORIES_DATA:
                     session.add(ServiceCategory(**sc_data))
                 session.commit()
-                print("Seeded stages and service categories.", flush=True)
+                print("Service Categories seeded.", flush=True)
+            else:
+                print("Service Categories already exist.", flush=True)
 
+            # Check Services
+            if session.query(Service).count() == 0:
+                print("Seeding Services...", flush=True)
                 for name, cat_name, unit, price, min_vol in SERVICES_DATA:
                     cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
                     if cat:
                         session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
-                print("Seeded services.", flush=True)
+                session.commit()
+                print("Services seeded.", flush=True)
+            else:
+                print("Services already exist.", flush=True)
 
+            # Check Equipment
+            if session.query(Equipment).count() == 0:
+                print("Seeding Equipment...", flush=True)
                 for eq_data in EQUIPMENT_DATA:
-                    eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
-                    session.add(Equipment(**eq_data))
-                print("Seeded equipment.", flush=True)
-                
+                    eq_data_copy = eq_data.copy()
+                    eq_data_copy["purchase_date"] = datetime.strptime(eq_data_copy["purchase_date"], "%Y-%m-%d").date()
+                    session.add(Equipment(**eq_data_copy))
+                session.commit()
+                print("Equipment seeded.", flush=True)
+            else:
+                print("Equipment already exists.", flush=True)
+            
+            # Check Expense Categories
+            if session.query(ExpenseCategory).count() == 0:
+                print("Seeding Expense Categories...", flush=True)
                 for name in EXPENSE_CATEGORIES_DATA:
                     session.add(ExpenseCategory(name=name))
-                print("Seeded expense categories.", flush=True)
-                    
                 session.commit()
-                print("--- DB SEEDING COMPLETE! ---", flush=True)
+                print("Expense Categories seeded.", flush=True)
             else:
-                print("Database already contains data. Skipping seed.", flush=True)
+                print("Expense Categories already exist.", flush=True)
+                
+            print("--- DB SEEDING COMPLETE! ---", flush=True)
+
     except Exception as e:
         print(f"---!! ERROR DURING DB INIT: {e} !!----", flush=True)
         import traceback
@@ -265,7 +289,7 @@ async def serve_frontend():
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["System"])
 async def health_check():
-    "'''Проверка работоспособности сервиса.'''"
+    """Проверка работоспособности сервиса."""
     return {"status": "ok"}
     
 def get_db():
