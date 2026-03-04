@@ -1,143 +1,99 @@
 
 import os
-import sys
 import pandas as pd
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
+from main import Base, Deal, Contact  # Импортируем модели
+import numpy as np # Для обработки nan
 
-# Загружаем переменные окружения (например, DATABASE_URL)
-load_dotenv()
-
-# Импортируем модели из main.py
-# Это немного "грязный" способ, но для одноразового скрипта он подходит
-from main import (
-    Base, Contact, Deal, DealService, Service, Stage, 
-    Expense, ExpenseCategory, Equipment, Maintenance, Consumable, User
-)
-
-# --- 1. НАСТРОЙКА СОЕДИНЕНИЯ С БД ---
+# --- Константы и Настройки ---
+DEALS_FILE_PATH = 'docs/DEAL_20260225_80749126_699ec1e196167.xls'
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_first_phone(row):
+    """Возвращает первый доступный телефон из нескольких колонок."""
+    mobile = row.get('Контакт: Мобильный телефон')
+    if pd.notna(mobile) and mobile:
+        return str(mobile)
+    work = row.get('Контакт: Рабочий телефон')
+    if pd.notna(work) and work:
+        return str(work)
+    return None
+
+print("--- Начало финальной миграции ---")
+
+# --- 1. Настройка БД ---
 if not DATABASE_URL:
-    print("FATAL: Переменная окружения DATABASE_URL не установлена.", flush=True)
-    sys.exit(1)
+    print("FATAL: Переменная окружения DATABASE_URL не установлена.")
+    exit(1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+db_session = SessionLocal()
 
-# --- 2. ПУТИ К ФАЙЛАМ ---
-DEALS_FILE_PATH = 'docs/DEAL_20260225_80749126_699ec1e196167.xls'
-BUSINESS_FILE_PATH = 'docs/Покос Управление Бизнесом.xlsx'
+# --- 2. Создание таблиц, если их нет ---
+print("Проверка и создание таблиц 'contact' и 'deal'...")
+Base.metadata.create_all(bind=engine)
+print("Таблицы готовы.")
 
-# --- 3. ФУНКЦИИ-ПОМОЩНИКИ ---
+# --- 3. Чтение и обработка данных ---
+try:
+    print(f"Чтение данных из файла: {DEALS_FILE_PATH}")
+    tables = pd.read_html(DEALS_FILE_PATH, header=0)
+    df = tables[0]
+    print(f"Успешно прочитано {len(df)} строк.")
 
-def get_or_create_contact(session, name, phone, source):
-    """Находит контакт по телефону или создает нового, если не найден."""
-    if not name or pd.isna(name):
-        name = "Имя не указано" # Имя по умолчанию, если оно пустое
-
-    # Пытаемся найти контакт по номеру телефона, если он есть
-    contact = None
-    if phone and not pd.isna(phone):
-        # Приводим телефон к стандартному формату (только цифры)
-        normalized_phone = ''.join(filter(str.isdigit, str(phone)))
-        if normalized_phone:
-            contact = session.query(Contact).filter(Contact.phone.like(f'%{normalized_phone}%')).first()
-
-    # Если контакт не найден по телефону, ищем по имени
-    if not contact:
-        contact = session.query(Contact).filter(Contact.name == name).first()
-        
-    # Если контакт все еще не найден, создаем новый
-    if not contact:
-        print(f"Создание нового контакта: {name}, Телефон: {phone}")
-        contact = Contact(
-            name=str(name),
-            phone=str(phone) if phone and not pd.isna(phone) else None,
-            source=str(source) if source and not pd.isna(source) else 'Импорт'
-        )
-        session.add(contact)
-        session.flush() # Получаем ID для нового контакта
-    
-    return contact
-
-# --- 4. ОСНОВНАЯ ЛОГИКА МИГРАЦИИ ---
-
-def migrate_deals(session):
-    """Миграция данных о сделках и контактах."""
-    print(f"\n--- Начало миграции сделок из файла: {DEALS_FILE_PATH} ---")
-    
-    try:
-        df = pd.read_excel(DEALS_FILE_PATH, engine='xlrd')
-        print(f"Успешно прочитано {len(df)} строк из файла сделок.")
-    except FileNotFoundError:
-        print(f"ОШИБКА: Файл {DEALS_FILE_PATH} не найден.")
-        return
-
-    # Получаем ID стадий "Успешно" и "Провалена" для автоматического назначения
-    success_stage = session.query(Stage).filter_by(type='success').first()
-    
-    if not success_stage:
-        print("ОШИБКА: Не найдена стадия 'Успешно' в базе данных. Прерывание.")
-        return
+    # Заменяем все NaN на None для корректной работы с базой
+    df = df.replace({np.nan: None})
 
     for index, row in df.iterrows():
-        try:
-            # Пропускаем строки, где нет названия сделки
-            if pd.isna(row.get('Сделка')):
-                continue
+        # --- Извлечение данных из строки ---
+        contact_name = row.get('Контакт: Имя') or row.get('Контакт') # Резервное имя
+        contact_phone = get_first_phone(row)
+        deal_title = row.get('Название сделки')
+        deal_amount = row.get('Сумма')
 
-            # 1. Получаем или создаем контакт
-            contact = get_or_create_contact(
-                session=session,
-                name=row.get('Контакт'),
-                phone=row.get('Телефон'),
-                source=row.get('Источник')
-            )
-
-            # 2. Создаем сделку
-            # Преобразуем дату, обрабатывая возможные ошибки
-            try:
-                deal_date = pd.to_datetime(row.get('Дата'), errors='coerce')
-                if pd.isna(deal_date):
-                    deal_date = datetime.now()
-            except Exception:
-                deal_date = datetime.now()
-
-            new_deal = Deal(
-                title=row.get('Сделка'),
-                total=float(row.get('Сумма', 0)),
-                address=str(row.get('Адрес', '')),
-                deal_date=deal_date,
-                is_repeat=bool(row.get('Повторная сделка', False)),
-                created_at=deal_date, # Используем дату сделки как дату создания
-                closed_at=deal_date,  # Считаем сделку закрытой в ту же дату
-                contact_id=contact.id,
-                stage_id=success_stage.id # Все импортированные сделки считаем успешными
-            )
-            session.add(new_deal)
-            
-            print(f"  -> Обработана сделка: '{new_deal.title}' для контакта '{contact.name}'")
-
-        except Exception as e:
-            print(f"!! Ошибка при обработке строки {index+2}: {row.to_dict()}")
-            print(f"!! Исключение: {e}")
-            session.rollback() # Откатываем изменения для этой строки
+        # Пропускаем, если нет ключевых данных
+        if not contact_name or not deal_title:
+            print(f"Пропущена строка {index+2}: нет имени контакта или названия сделки.")
             continue
 
-    print("--- Миграция сделок завершена. Сохранение изменений... ---")
-    session.commit()
-    print("--- Изменения успешно сохранены в базе данных. ---")
+        # --- Работа с контактом ---
+        contact = None
+        if contact_phone:
+            contact = db_session.query(Contact).filter(Contact.phone == contact_phone).first()
+        
+        if not contact:
+            contact = Contact(
+                name=str(contact_name),
+                phone=contact_phone,
+                source=row.get('Источник')
+            )
+            db_session.add(contact)
+            db_session.flush() # Получаем ID для нового контакта
+            print(f"Создан новый контакт: {contact.name} (Телефон: {contact.phone})")
+        else:
+            print(f"Найден существующий контакт: {contact.name}")
 
+        # --- Работа со сделкой ---
+        deal = Deal(
+            title=str(deal_title),
+            value=float(deal_amount) if deal_amount else 0.0,
+            contact_id=contact.id
+        )
+        db_session.add(deal)
+        print(f" -> Добавлена сделка '{deal.title}' на сумму {deal.value}")
 
-# --- ГЛАВНАЯ ФУНКЦИЯ ---
-if __name__ == "__main__":
-    db_session = SessionLocal()
-    try:
-        # Пока вызываем только миграцию сделок
-        migrate_deals(db_session)
-        # migrate_business_data(db_session) # Эту функцию добавим позже
-    finally:
-        db_session.close()
+    # --- 4. Сохранение в БД ---
+    print("\n--- Сохранение всех изменений в базе данных... ---")
+    db_session.commit()
+    print("--- Миграция успешно завершена! Все данные сохранены. ---")
 
+except FileNotFoundError:
+    print(f"ОШИБКА: Файл {DEALS_FILE_PATH} не найден.")
+except Exception as e:
+    print(f"Произошла критическая ошибка: {e}")
+    db_session.rollback()
+
+finally:
+    db_session.close()
