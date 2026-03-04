@@ -19,7 +19,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
 import httpx
 from jose import jwt, JWTError
+from cachetools import TTLCache, cached
 
+# ── 0. КЭШ ───────────────────────────────────────────────────────────────────
+cache = TTLCache(maxsize=128, ttl=600) 
 
 # ── 1. КОНФИГ ─────────────────────────────────────────────────────────────────
 DATABASE_URL   = os.getenv("DATABASE_URL")
@@ -182,14 +185,13 @@ def get_current_user(request: Request) -> dict:
 # ── 5. ПРИЛОЖЕНИЕ ─────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.8)...", flush=True)
+    print("App starting (v3.9 - caching)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.8.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.9.0", lifespan=lifespan)
 
-# FIX: Changed https_only to False to allow session cookies over HTTP
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
                    https_only=False, 
@@ -265,6 +267,7 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
 @app.get("/api/auth/logout", include_in_schema=False)
 def logout(request: Request):
     request.session.clear()
+    cache.clear()
     return RedirectResponse(
         f"https://{AUTH0_DOMAIN}/v2/logout"
         f"?client_id={CLIENT_ID}"
@@ -275,6 +278,7 @@ def logout(request: Request):
 # ── 7. DATA ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
 
 @app.get("/api/years")
+@cached(cache)
 def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     deal_years = db.query(extract('year', Deal.created_at)).distinct().all()
     expense_years = db.query(extract('year', Expense.date)).distinct().all()
@@ -294,12 +298,14 @@ def get_me(user: dict = Depends(get_current_user)):
     return {"username": user["sub"], "role": user["role"]}
 
 @app.get("/api/stages")
+@cached(cache)
 def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     return [{"id": s.id, "name": s.name, "order": s.order,
              "type": s.type, "is_final": s.is_final, "color": s.color}
             for s in db.query(Stage).order_by(Stage.order).all()]
 
 @app.get("/api/deals")
+@cached(cache)
 def get_deals(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
     query = (db.query(Deal)
                .outerjoin(Deal.contact)
@@ -324,6 +330,7 @@ def get_deals(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Dep
     return {"deals": result}
 
 @app.get("/api/tasks")
+@cached(cache)
 def get_tasks(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
     query = db.query(Task).order_by(Task.due_date.asc())
     if year:
@@ -337,6 +344,7 @@ def get_tasks(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Dep
     } for t in tasks]}
 
 @app.get("/api/expenses")
+@cached(cache)
 def get_expenses(db: DBSession = Depends(get_db), year: Optional[int] = None, _=Depends(get_current_user)):
     query = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc())
     if year:
@@ -349,11 +357,13 @@ def get_expenses(db: DBSession = Depends(get_db), year: Optional[int] = None, _=
     } for e in rows]}
 
 @app.get("/api/equipment")
+@cached(cache)
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     return [{"id": e.id, "name": e.name, "model": e.model or "", "status": e.status or "active"}
             for e in db.query(Equipment).order_by(Equipment.name).all()]
 
 @app.get("/api/services")
+@cached(cache)
 def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     try:
         db.execute(text("SELECT 1 FROM services LIMIT 1"))
@@ -379,13 +389,14 @@ def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     return result
 
 @app.get("/api/consumables")
+@cached(cache)
 def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     return [{"id": c.id, "name": c.name, "stock_quantity": c.stock_quantity, "unit": c.unit}
             for c in db.query(Consumable).order_by(Consumable.name).all()]
 
 @app.get("/api/contacts")
+@cached(cache)
 def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    # Берём контакты из таблицы contacts
     db_contacts = {
         c.name.strip().lower(): {"id": c.id, "name": c.name, "phone": c.phone}
         for c in db.query(Contact).order_by(Contact.name).all()
@@ -405,4 +416,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.8) loaded.", flush=True)
+print("main.py (v3.9 - caching) loaded.", flush=True)
