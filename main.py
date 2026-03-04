@@ -79,6 +79,12 @@ class Deal(Base):
     deal_date  = Column(DateTime, nullable=True)
     closed_at  = Column(DateTime, nullable=True)
     is_repeat  = Column(Boolean, default=False)
+    # Поле client — прямое имя клиента (используется MCP-сервером)
+    # Не удалять! Старые записи хранят клиента здесь, а не через contact_id
+    client     = Column(String(200), nullable=True)
+    manager    = Column(String(200), nullable=True)
+    address    = Column(Text, nullable=True)
+
     contact    = relationship("Contact", back_populates="deals")
     stage      = relationship("Stage",   back_populates="deals")
 
@@ -179,14 +185,13 @@ def get_current_user(request: Request) -> dict:
 # ── 5. ПРИЛОЖЕНИЕ ─────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.4)...", flush=True)
+    print("App starting (v3.5)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.4.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.5.0", lifespan=lifespan)
 
-# SessionMiddleware — ПЕРВЫМ, до всего остального
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
                    https_only=True,
@@ -207,7 +212,6 @@ def get_db():
 
 @app.get("/api/auth/login", include_in_schema=False)
 def login(request: Request):
-    """Шаг 1: редирект на страницу входа Auth0."""
     state = secrets.token_urlsafe(16)
     request.session["oauth_state"] = state
     return RedirectResponse(
@@ -220,10 +224,8 @@ def login(request: Request):
         f"&state={state}"
     )
 
-
 @app.get("/api/auth/callback", include_in_schema=False)
 def callback(request: Request, code: str = None, state: str = None, error: str = None):
-    """Шаг 2: получаем code, меняем на токены, сохраняем сессию."""
     if error:
         return RedirectResponse(f"/?auth_error={error}")
     if not code:
@@ -262,7 +264,6 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
     }
     return RedirectResponse("/")
 
-
 @app.get("/api/auth/logout", include_in_schema=False)
 def logout(request: Request):
     request.session.clear()
@@ -287,14 +288,27 @@ def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 
 @app.get("/api/deals")
 def get_deals(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    deals = (db.query(Deal).outerjoin(Deal.contact).outerjoin(Deal.stage)
-               .order_by(Deal.created_at.desc()).all())
-    return {"deals": [{
-        "id": d.id, "title": d.title or "Без названия", "total": d.total or 0.0,
-        "client": d.contact.name if d.contact else "Нет клиента",
-        "stage":  d.stage.name   if d.stage   else "Без статуса",
-        "created_at": (d.created_at or datetime.utcnow()).isoformat(),
-    } for d in deals]}
+    deals = (db.query(Deal)
+               .outerjoin(Deal.contact)
+               .outerjoin(Deal.stage)
+               .order_by(Deal.created_at.desc())
+               .all())
+    result = []
+    for d in deals:
+        # Имя клиента: сначала из связанного Contact, потом из прямого поля client
+        client_name = (
+            d.contact.name if d.contact
+            else d.client or "Нет клиента"
+        )
+        result.append({
+            "id":         d.id,
+            "title":      d.title or "Без названия",
+            "total":      d.total or 0.0,
+            "client":     client_name,
+            "stage":      d.stage.name if d.stage else "Без статуса",
+            "created_at": (d.created_at or datetime.utcnow()).isoformat(),
+        })
+    return {"deals": result}
 
 @app.get("/api/tasks")
 def get_tasks(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -350,8 +364,29 @@ def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)
 
 @app.get("/api/contacts")
 def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    return [{"id": c.id, "name": c.name, "phone": c.phone}
-            for c in db.query(Contact).order_by(Contact.name).all()]
+    # Берём контакты из таблицы contacts
+    db_contacts = {
+        c.name.strip().lower(): {"id": c.id, "name": c.name, "phone": c.phone}
+        for c in db.query(Contact).order_by(Contact.name).all()
+    }
+
+    # Дополняем уникальными именами из deals.client (MCP создаёт сделки без contact_id)
+    deal_clients = db.execute(
+        text("SELECT DISTINCT client FROM deals WHERE client IS NOT NULL AND client != ''")
+    ).fetchall()
+
+    result = list(db_contacts.values())
+    next_id = max((c["id"] for c in result), default=0) + 1
+
+    for row in deal_clients:
+        name = (row[0] or "").strip()
+        if name and name.lower() not in db_contacts:
+            result.append({"id": f"d_{next_id}", "name": name, "phone": None})
+            db_contacts[name.lower()] = True
+            next_id += 1
+
+    result.sort(key=lambda c: c["name"])
+    return result
 
 
 # ── 8. ФРОНТЕНД ───────────────────────────────────────────────────────────────
@@ -363,4 +398,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.4) loaded.", flush=True)
+print("main.py (v3.5) loaded.", flush=True)
