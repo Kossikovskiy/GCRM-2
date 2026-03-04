@@ -14,7 +14,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Float, Date, 
+    create_engine, Column, Integer, String, Float, Date,
     DateTime, Boolean, ForeignKey, Text
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
@@ -33,7 +33,7 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionFactory = sessionmaker(bind=engine)
 
-# 2. DATABASE MODELS (v3.0 - Synchronized with colleague's notes)
+# 2. DATABASE MODELS (v3.1)
 class Stage(Base):
     __tablename__ = "stages"
     id = Column(Integer, primary_key=True)
@@ -62,9 +62,8 @@ class Deal(Base):
     deal_date = Column(DateTime)
     closed_at = Column(DateTime)
     is_repeat = Column(Boolean, default=False)
-    # FIX: Added fields from mcp_server schema
-    client = Column(String) 
-    manager = Column(String) 
+    client = Column(String)
+    manager = Column(String)
 
     contact = relationship("Contact", back_populates="deals")
     stage = relationship("Stage", back_populates="deals")
@@ -86,7 +85,6 @@ class Equipment(Base):
     __tablename__ = 'equipment'
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
-    # FIX: Added fields from mcp_server schema
     serial = Column(String)
     engine_hours = Column(Float)
     notes = Column(Text)
@@ -113,12 +111,9 @@ class Consumable(Base):
 def init_and_seed_db():
     print("--- Checking DB Schema and Seeding ---", flush=True)
     try:
-        # Create tables if they don't exist
         Base.metadata.create_all(engine)
         print("Schema check/update complete.", flush=True)
-
         with SessionFactory() as session:
-            # Seed Stages only if the table is empty
             if session.query(Stage).count() == 0:
                 print("Seeding Stages...", flush=True)
                 STAGES_DATA = [
@@ -130,34 +125,65 @@ def init_and_seed_db():
                 ]
                 for s_data in STAGES_DATA: session.add(Stage(**s_data))
                 session.commit()
-            
-            # Seed Expense Categories if empty
             if session.query(ExpenseCategory).count() == 0:
                 print("Seeding Expense Categories...", flush=True)
                 EXP_CATS = ["Техника", "Топливо", "Расходники", "Реклама", "Запчасти", "Прочее"]
                 for name in EXP_CATS: session.add(ExpenseCategory(name=name))
                 session.commit()
-        
         print("--- DB Seeding Complete! ---", flush=True)
     except Exception as e:
         print(f"---!! ERROR DURING DB INIT/SEED: {e} !!----", flush=True)
 
 # 4. AUTHENTICATION
-AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-80umollds5sbkqku.us.auth0.com")
-AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE", "https://grass-crm/api")
+# FIX: Removed hardcoded default for AUTH0_DOMAIN
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
+AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 CLIENT_ID = os.getenv("AUTH0_CLIENT_ID") 
-# ... (rest of auth functions remain the same) ...
+if not all([AUTH0_DOMAIN, AUTH0_AUDIENCE, CLIENT_ID]):
+    raise RuntimeError("FATAL: Auth0 settings (DOMAIN, AUDIENCE, CLIENT_ID) are not configured.")
+
+bearer = HTTPBearer(auto_error=False)
+
+@lru_cache(maxsize=1)
+def get_jwks() -> dict:
+    url = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
+    try:
+        with httpx.Client() as client:
+            resp = client.get(url, timeout=10)
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPError as e:
+        raise RuntimeError(f"Failed to fetch JWKS from Auth0: {e}") from e
+
+def get_current_user(token: Optional[str] = Depends(bearer)) -> dict:
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Auth required.")
+    try:
+        unverified_header = jwt.get_unverified_header(token.credentials)
+        kid = unverified_header.get("kid")
+        jwks = get_jwks()
+        key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
+        if not key:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Signing key not found.")
+        
+        payload = jwt.decode(
+            token.credentials, key, algorithms=["RS256"],
+            audience=AUTH0_AUDIENCE, issuer=f"https://{AUTH0_DOMAIN}/"
+        )
+        return {"username": payload.get("sub", ""), "role": payload.get("https://grass-crm/role", "user")}
+    except JWTError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {exc}")
+
 
 # 5. FASTAPI APPLICATION
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App is starting... (v3.0)", flush=True)
-    # FIX: Re-enabled safe seeding on startup
+    print("App is starting... (v3.1)", flush=True)
     init_and_seed_db()
     yield
     print("App is shutting down...", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 def get_db():
@@ -168,15 +194,9 @@ def get_db():
         db.close()
 
 # 6. API ENDPOINTS
-
-# FIX: Added login route to prevent redirect loop
 @app.get("/api/auth/login")
 def login_redirect():
-    if not CLIENT_ID:
-         raise HTTPException(status_code=500, detail="Auth0 Client ID not configured on server.")
-    
-    redirect_uri = "http://localhost:3000" # Should be your frontend URL
-    
+    redirect_uri = os.getenv("AUTH0_CALLBACK_URL", "http://localhost:3000") # Your frontend URL
     auth_url = (
         f"https://{AUTH0_DOMAIN}/authorize?"
         f"response_type=token&"
@@ -186,7 +206,6 @@ def login_redirect():
         f"audience={AUTH0_AUDIENCE}"
     )
     return RedirectResponse(url=auth_url)
-
 
 @app.get("/api/deals")
 def get_deals(db: DBSession = Depends(get_db)):
@@ -203,10 +222,8 @@ def get_deals(db: DBSession = Depends(get_db)):
             "stage": d.stage.name if d.stage else "Без статуса",
             "created_at": (d.created_at or datetime.utcnow()).isoformat()
         })
-    # FIX: Return data in the format expected by the frontend
     return {"deals": response_data}
 
-# FIX: Added back missing endpoints
 @app.get("/api/tasks", response_model=List[dict])
 def get_tasks(db: DBSession = Depends(get_db)):
     tasks = db.query(Task).order_by(Task.due_date.desc()).all()
@@ -216,7 +233,7 @@ def get_tasks(db: DBSession = Depends(get_db)):
 def get_expenses(db: DBSession = Depends(get_db)):
     expenses = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc()).all()
     return [{
-        "id": e.id, "date": e.date, "name": e.name, "amount": e.amount, 
+        "id": e.id, "date": e.date, "name": e.name, "amount": e.amount,
         "category": e.category.name if e.category else "Без категории"
     } for e in expenses]
 
@@ -241,5 +258,4 @@ async def serve_frontend(full_path: str):
         return FileResponse(path)
     return FileResponse("./index.html")
 
-print("main.py (v3.0) loaded successfully.", flush=True)
-
+print("main.py (v3.1) loaded successfully.", flush=True)
