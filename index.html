@@ -7,581 +7,218 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=Geologica:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --ink: #141a10;
-  --forest: #1e3d18;
-  --moss: #3a6b2e;
-  --fern: #5a9448;
-  --sage: #8cbf76;
-  --dew: #d4ead0;
-  --mist: #eef7ec;
-  --parchment: #f6f3ea;
-  --cream: #fffdf5;
-  --gold: #b8882a;
-  --gold-light: #e8c96a;
-  --rust: #8b3a2a;
-  --shadow: rgba(20,40,16,.12);
-  --shadow-deep: rgba(20,40,16,.22);
-  --border: #dde8d9;
+  --ink: #141a10; --forest: #1e3d18; --moss: #3a6b2e; --fern: #5a9448;
+  --sage: #8cbf76; --dew: #d4ead0; --mist: #eef7ec; --parchment: #f6f3ea;
+  --cream: #fffdf5; --gold: #b8882a; --rust: #8b3a2a; --border: #dde8d9;
 }
-
-html { scroll-behavior: smooth; }
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Geologica', sans-serif;
-  font-weight: 300;
-  background: var(--cream);
-  color: var(--ink);
-  overflow-x: hidden;
-  min-height: 100vh;
+  font-family: 'Geologica', sans-serif; font-weight: 300; background: var(--cream);
+  color: var(--ink); min-height: 100vh;
 }
-
-#login-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: var(--forest);
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  overflow: hidden;
-}
-
-.login-box {
-  position: relative;
-  z-index: 2;
-  width: 400px;
-  text-align: center;
-}
-
-.login-logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 56px;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1;
-  margin-bottom: 8px;
-}
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--forest); position: fixed; inset: 0; z-index: 999; }
+.login-box { text-align: center; }
+.login-logo { font-family: 'Cormorant Garamond', serif; font-size: 56px; font-weight: 700; color: #fff; line-height: 1; }
 .login-logo em { font-style: italic; color: var(--sage); }
-
 #app { display: none; }
-
-header {
-  background: var(--forest);
-  height: 58px;
-  display: flex;
-  align-items: center;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  gap: 0;
-}
-
-.logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: #fff;
-  margin-right: auto;
-  text-decoration: none;
-  letter-spacing: .5px;
-}
+header { background: var(--forest); height: 58px; display: flex; align-items: center; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: #fff; margin-right: auto; text-decoration: none; }
 .logo em { font-style: italic; color: var(--sage); }
-
-nav { display: flex; gap: 0; }
-
-nav button {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.45);
-  font-family: 'Geologica', sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: color .2s;
-  position: relative;
-}
+nav { display: flex; }
+nav button { background: none; border: none; color: rgba(255,255,255,.45); font-family: 'Geologica', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; padding: 10px 18px; cursor: pointer; }
 nav button.active { color: var(--sage); }
-
-.page { display: none; padding: 40px 40px; }
+.page { display: none; padding: 40px; }
 .page.active { display: block; }
-
-.page-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 38px;
-  font-weight: 700;
-  color: var(--forest);
-  line-height: 1;
-  margin-bottom: 28px;
-}
-
-.card {
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.table-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.search-input {
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--ink);
-  font-family: 'Geologica', sans-serif;
-  font-size: 12px;
-  padding: 9px 14px;
-  width: 240px;
-}
-
-select.filter-sel {
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: #888;
-  font-family: 'Geologica', sans-serif;
-  font-size: 11px;
-  padding: 9px 12px;
-  cursor: pointer;
-}
-
-.btn {
-  background: var(--forest);
-  border: none;
-  border-radius: 4px;
-  color: rgba(255,255,255,.9);
-  font-family: 'Geologica', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 9px 20px;
-  cursor: pointer;
-}
+.page-title { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); margin-bottom: 28px; }
+.card { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.table-toolbar { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+.search-input { background: var(--cream); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; padding: 9px 14px; width: 240px; }
+.btn { background: var(--forest); border: none; border-radius: 4px; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 9px 20px; cursor: pointer; }
 .btn.ml { margin-left: auto; }
-
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th {
-  text-align: left;
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--fern);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--dew);
-}
-td {
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--mist);
-  color: #777;
-  vertical-align: middle;
-}
-
-td button { cursor: pointer; }
-
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(20,40,16,.5);
-  z-index: 200;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(6px);
-}
-.modal-overlay.open { display: flex; }
-
-.modal {
-  background: var(--cream);
-  border-radius: 16px;
-  padding: 36px;
-  width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block;
-  font-size: 9px;
-  color: var(--fern);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-.form-group input, .form-group select, .form-group textarea {
-  width: 100%;
-  background: var(--cream);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--ink);
-  font-family: 'Geologica', sans-serif;
-  font-size: 13px;
-  padding: 11px 14px;
-}
-
-.modal-footer { display: flex; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--dew); }
-
-.toast {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  background: var(--forest);
-  border-radius: 8px;
-  padding: 14px 22px;
-  font-size: 12px;
-  color: rgba(255,255,255,.85);
-  z-index: 300;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all .35s ease;
-}
+th { text-align: left; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: var(--fern); padding: 12px 16px; border-bottom: 1px solid var(--dew); }
+td { padding: 13px 16px; border-bottom: 1px solid var(--mist); color: #777; }
+.toast { position: fixed; bottom: 28px; right: 28px; background: var(--forest); border-radius: 8px; padding: 14px 22px; font-size: 12px; color: rgba(255,255,255,.85); z-index: 300; transform: translateY(80px); opacity: 0; transition: all .35s ease; }
 .toast.show { transform: translateY(0); opacity: 1; }
-
 </style>
 </head>
 <body>
 
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">Green<em>CRM</em></div>
-  </div>
-</div>
+<div id="login-screen"><div class="login-box"><div class="login-logo">Green<em>CRM</em></div></div></div>
 
 <div id="app">
 <header>
   <div class="logo">Green<em>CRM</em></div>
-  <nav>
-    <button class="active" onclick="showPage('deals', this)"><span>Сделки</span></button>
-    <button onclick="showPage('expenses', this)"><span>Расходы</span></button>
+  <nav id="main-nav">
+    <button class="active" onclick="showPage('deals', this)">Сделки</button>
+    <button onclick="showPage('expenses', this)">Расходы</button>
+    <button onclick="showPage('equipment', this)">Техника</button>
+    <button onclick="showPage('services', this)">Прайс-лист</button>
   </nav>
 </header>
 
 <div class="page active" id="page-deals">
   <div class="page-title">Сделки</div>
-  <div class="table-toolbar">
-      <input id="deals-search" class="search-input" placeholder="Поиск...">
-      <button class="btn ml" onclick="openDealModal()">+ Новая сделка</button>
-  </div>
   <div class="card">
-    <table><thead><tr><th>ID</th><th>Клиент</th><th>Название</th><th>Сумма</th><th>Стадия</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="deals-tbody"></tbody></table>
+    <table><thead><tr><th>ID</th><th>Клиент</th><th>Название</th><th>Сумма</th><th>Стадия</th><th>Дата</th></tr></thead><tbody id="deals-tbody"></tbody></table>
   </div>
 </div>
 
 <div class="page" id="page-expenses">
   <div class="page-title">Расходы</div>
-   <div class="table-toolbar">
-      <input id="expenses-search" class="search-input" placeholder="Поиск...">
-      <button class="btn ml" onclick="openExpenseModal()">+ Новый расход</button>
-  </div>
   <div class="card">
-    <table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Дата</th><th>Действия</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+    <table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
   </div>
 </div>
 
-<!-- Модальное окно для сделок -->
-<div class="modal-overlay" id="modal-deal">
-  <div class="modal">
-    <input type="hidden" id="deal-id">
-    <div class="form-group"><label>Клиент</label><input id="deal-client"></div>
-    <div class="form-group"><label>Название</label><input id="deal-title"></div>
-    <div class="form-group"><label>Сумма</label><input id="deal-total" type="number"></div>
-    <div class="form-group"><label>Стадия</label><select id="deal-stage"></select></div>
-    <div class="modal-footer">
-        <button onclick="closeModal('modal-deal')">Отмена</button>
-        <button class="btn" onclick="saveDeal()">Сохранить</button>
-    </div>
+<div class="page" id="page-equipment">
+  <div class="page-title">Техника</div>
+  <div class="card">
+    <table><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>Статус</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
   </div>
 </div>
 
-<!-- Модальное окно для расходов -->
-<div class="modal-overlay" id="modal-expense">
-  <div class="modal">
-    <input type="hidden" id="expense-id">
-    <div class="form-group"><label>Название</label><input id="expense-name"></div>
-    <div class="form-group"><label>Категория</label><input id="expense-category"></div>
-    <div class="form-group"><label>Сумма</label><input id="expense-amount" type="number"></div>
-    <div class="form-group"><label>Дата</label><input id="expense-date" type="date"></div>
-    <div class="modal-footer">
-        <button onclick="closeModal('modal-expense')">Отмена</button>
-        <button class="btn" onclick="saveExpense()">Сохранить</button>
-    </div>
+<div class="page" id="page-services">
+  <div class="page-title">Прайс-лист</div>
+  <div class="card">
+    <table><thead><tr><th>ID</th><th>Название</th><th>Категория</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
   </div>
 </div>
 
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
 const API_BASE = '/api';
 
-// --- Глобальное состояние --- 
-const state = {
-    deals: [],
-    expenses: [],
-    stages: [],
-    filters: {
-        deals: '',
-        expenses: ''
-    }
-};
-
-// --- Утилиты API --- 
+// --- Утилиты API ---
 async function api(endpoint, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
     const token = sessionStorage.getItem('token');
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     try {
         const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-
         if (response.status === 401) {
             sessionStorage.removeItem('token');
             window.location.href = `${API_BASE}/auth/login`;
             throw new Error('Unauthorized');
         }
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: response.statusText }));
             throw new Error(errorData.detail || 'API request failed');
         }
-
-        if (response.status === 204) {
-            return null;
-        }
-        return response.json();
+        return response.status === 204 ? null : response.json();
     } catch (error) {
-        showToast(`❌ Ошибка: ${error.message}`)
-        console.error(error);
+        showToast(`❌ Ошибка: ${error.message}`);
+        console.error(`API Error at ${endpoint}:`, error);
         throw error;
     }
 }
 
-// --- Рендеринг (отрисовка) --- 
-function render() {
-    renderDeals();
-    renderExpenses();
-}
-
-function renderDeals() {
+// --- Рендеринг (отрисовка) ---
+function renderDeals(deals = []) {
     const tbody = document.getElementById('deals-tbody');
     if (!tbody) return;
-    const filter = state.filters.deals.toLowerCase();
-    const filteredDeals = state.deals.filter(d => 
-        (d.client || '').toLowerCase().includes(filter) || 
-        (d.title || '').toLowerCase().includes(filter)
-    );
-
-    tbody.innerHTML = filteredDeals.map(deal => `
-        <tr>
-            <td>${deal.id}</td>
-            <td>${deal.client}</td>
-            <td>${deal.title}</td>
-            <td>${deal.total}</td>
-            <td>${deal.stage}</td>
-            <td>${new Date(deal.created_at).toLocaleDateString()}</td>
-            <td>
-                <button onclick="editDeal(${deal.id})">✏️</button>
-                <button onclick="deleteDeal(${deal.id})">🗑️</button>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = deals.map(d => `
+        <tr><td>${d.id}</td><td>${d.client}</td><td>${d.title}</td><td>${d.total}</td><td>${d.stage}</td><td>${new Date(d.created_at).toLocaleDateString()}</td></tr>
+    `).join('') || '<tr><td colspan="6">Сделок не найдено</td></tr>';
 }
 
-function renderExpenses() {
+function renderExpenses(expenses = []) {
     const tbody = document.getElementById('expenses-tbody');
     if (!tbody) return;
-    const filter = state.filters.expenses.toLowerCase();
-    const filteredExpenses = state.expenses.filter(e => 
-        (e.name || '').toLowerCase().includes(filter) || 
-        (e.category || '').toLowerCase().includes(filter)
-    );
-
-    tbody.innerHTML = filteredExpenses.map(exp => `
-        <tr>
-            <td>${exp.id}</td>
-            <td>${exp.name}</td>
-            <td>${exp.category}</td>
-            <td>${exp.amount}</td>
-            <td>${new Date(exp.date).toLocaleDateString()}</td>
-            <td>
-                <button onclick="editExpense(${exp.id})">✏️</button>
-                <button onclick="deleteExpense(${exp.id})">🗑️</button>
-            </td>
-        </tr>
-    `).join('');
+    // В main.py endpoint /api/expenses возвращает пустой массив, поэтому эта таблица будет пуста.
+    // Это ожидаемое поведение на данный момент.
+    tbody.innerHTML = expenses.map(e => `
+        <tr><td>${e.id}</td><td>${e.name}</td><td>${e.category}</td><td>${e.amount}</td><td>${new Date(e.date).toLocaleDateString()}</td></tr>
+    `).join('') || '<tr><td colspan="5">Расходов не найдено</td></tr>';
 }
 
-// --- Загрузка данных --- 
+function renderEquipment(equipment = []) {
+    const tbody = document.getElementById('equipment-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = equipment.map(e => `
+        <tr><td>${e.id}</td><td>${e.name}</td><td>${e.model}</td><td>${e.status}</td></tr>
+    `).join('') || '<tr><td colspan="4">Техники не найдено</td></tr>';
+}
+
+function renderServices(services = []) {
+    const tbody = document.getElementById('services-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = services.map(s => `
+        <tr><td>${s.id}</td><td>${s.name}</td><td>${s.category}</td><td>${s.price}</td><td>${s.unit}</td></tr>
+    `).join('') || '<tr><td colspan="5">Услуг не найдено</td></tr>';
+}
+
+
+// --- Загрузка данных ---
 async function loadData() {
     showToast('⏳ Загрузка данных...');
-    try {
-        const [dealsData, expensesData, stagesData] = await Promise.all([
-            api('/deals'),
-            api('/expenses'),
-            api('/stages')
-        ]);
+    const endpoints = [
+        { key: 'deals', path: '/deals' },
+        { key: 'expenses', path: '/expenses' },
+        { key: 'equipment', path: '/equipment' },
+        { key: 'services', path: '/services' },
+        { key: 'stages', path: '/stages' },
+    ];
 
-        state.deals = dealsData.deals || [];
-        state.expenses = expensesData.expenses || [];
-        state.stages = stagesData || [];
-        
-        populateStageSelect();
-        render();
-        showToast('✅ Данные загружены');
-    } catch (error) {
-        console.error('Не удалось загрузить данные:', error);
-    }
+    const results = await Promise.allSettled(endpoints.map(e => api(e.path)));
+
+    let hasErrors = false;
+    results.forEach((result, index) => {
+        const endpoint = endpoints[index];
+        if (result.status === 'fulfilled') {
+            let data = result.value;
+            console.log(`Успешно загружено ${endpoint.path}:`, data);
+
+            // Важно: API возвращает данные в разном формате!
+            // /api/deals -> {deals: [...]}
+            // /api/expenses -> {expenses: [...]}
+            // /api/equipment -> [...] (массив напрямую)
+            // /api/services -> [...] (массив напрямую)
+
+            if (endpoint.key === 'deals') renderDeals(data.deals || []);
+            else if (endpoint.key === 'expenses') renderExpenses(data.expenses || []);
+            else if (endpoint.key === 'equipment') renderEquipment(data || []);
+            else if (endpoint.key === 'services') renderServices(data || []);
+            // 'stages' не рендерятся напрямую, они нужны для модальных окон
+        } else {
+            hasErrors = true;
+            console.error(`Не удалось загрузить ${endpoint.path}:`, result.reason);
+        }
+    });
+
+    showToast(hasErrors ? '⚠️ Часть данных не загрузилась' : '✅ Данные загружены');
 }
 
-// --- Авторизация --- 
+// --- Авторизация ---
 async function checkAuth() {
   if (!sessionStorage.getItem('token')) {
-    window.location.href = `${API_BASE}/auth/login`;
-    return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('access_token');
+    if (token) {
+        sessionStorage.setItem('token', token);
+        window.history.replaceState({}, document.title, '/');
+    } else {
+        window.location.href = `${API_BASE}/auth/login`;
+        return;
+    }
   }
+  
   try {
-    await api('/me'); 
+    await api('/me');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     await loadData();
   } catch (error) {
-    console.error("Auth failed:", error);
     sessionStorage.clear();
     window.location.href = `${API_BASE}/auth/login`;
   }
 }
 
-// --- Модальные окна и CRUD --- 
-
-function populateStageSelect() {
-    const select = document.getElementById('deal-stage');
-    if (!select) return;
-    select.innerHTML = state.stages.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-}
-
-function openDealModal() {
-    document.getElementById('deal-id').value = '';
-    document.getElementById('deal-client').value = '';
-    document.getElementById('deal-title').value = '';
-    document.getElementById('deal-total').value = '';
-    document.getElementById('deal-stage').value = state.stages[0]?.name || '';
-    document.getElementById('modal-deal').classList.add('open');
-}
-
-function editDeal(id) {
-    const deal = state.deals.find(d => d.id === id);
-    if (!deal) return;
-    document.getElementById('deal-id').value = deal.id;
-    document.getElementById('deal-client').value = deal.client;
-    document.getElementById('deal-title').value = deal.title;
-    document.getElementById('deal-total').value = deal.total;
-    document.getElementById('deal-stage').value = deal.stage;
-    document.getElementById('modal-deal').classList.add('open');
-}
-
-async function saveDeal() {
-    const id = document.getElementById('deal-id').value;
-    const payload = {
-        client: document.getElementById('deal-client').value,
-        title: document.getElementById('deal-title').value,
-        total: parseFloat(document.getElementById('deal-total').value),
-        stage_name: document.getElementById('deal-stage').value
-    };
-
-    try {
-        if (id) {
-            await api(`/deals/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        } else {
-            await api('/deals', { method: 'POST', body: JSON.stringify(payload) });
-        }
-        showToast('✅ Сделка сохранена');
-        closeModal('modal-deal');
-        loadData();
-    } catch (e) { /* ошибка уже показана в api() */ }
-}
-
-async function deleteDeal(id) {
-    if (!confirm('Вы уверены, что хотите удалить сделку?')) return;
-    try {
-        await api(`/deals/${id}`, { method: 'DELETE' });
-        showToast('🗑️ Сделка удалена');
-        loadData();
-    } catch (e) { /* ... */ }
-}
-
-function openExpenseModal() {
-    document.getElementById('expense-id').value = '';
-    document.getElementById('expense-name').value = '';
-    document.getElementById('expense-category').value = '';
-    document.getElementById('expense-amount').value = '';
-    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('modal-expense').classList.add('open');
-}
-
-function editExpense(id) {
-    const expense = state.expenses.find(e => e.id === id);
-    if (!expense) return;
-    document.getElementById('expense-id').value = expense.id;
-    document.getElementById('expense-name').value = expense.name;
-    document.getElementById('expense-category').value = expense.category;
-    document.getElementById('expense-amount').value = expense.amount;
-    document.getElementById('expense-date').value = new Date(expense.date).toISOString().split('T')[0];
-    document.getElementById('modal-expense').classList.add('open');
-}
-
-async function saveExpense() {
-    const id = document.getElementById('expense-id').value;
-    const payload = {
-        name: document.getElementById('expense-name').value,
-        category: document.getElementById('expense-category').value,
-        amount: parseFloat(document.getElementById('expense-amount').value),
-        date: document.getElementById('expense-date').value
-    };
-
-    try {
-        if (id) {
-            await api(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-        } else {
-            await api('/expenses', { method: 'POST', body: JSON.stringify(payload) });
-        }
-        showToast('✅ Расход сохранен');
-        closeModal('modal-expense');
-        loadData();
-    } catch (e) { /* ... */ }
-}
-
-async function deleteExpense(id) {
-    if (!confirm('Вы уверены, что хотите удалить расход?')) return;
-    try {
-        await api(`/expenses/${id}`, { method: 'DELETE' });
-        showToast('🗑️ Расход удален');
-        loadData();
-    } catch (e) { /* ... */ }
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-}
-
-// --- Навигация и утилиты --- 
-
+// --- Навигация и утилиты ---
 function showPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -593,35 +230,13 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3000);
+  setTimeout(()=>t.classList.remove('show'), 4000);
 }
 
-// --- Инициализация --- 
-document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем наличие токена, который мог прийти в URL от Auth0
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('access_token');
-    if (token) {
-        sessionStorage.setItem('token', token);
-        window.history.replaceState({}, document.title, '/');
-    }
-
-    // Навешиваем обработчики на поиск
-    document.getElementById('deals-search').addEventListener('input', (e) => {
-        state.filters.deals = e.target.value;
-        renderDeals();
-    });
-    document.getElementById('expenses-search').addEventListener('input', (e) => {
-        state.filters.expenses = e.target.value;
-        renderExpenses();
-    });
-
-    // Запускаем проверку авторизации
-    checkAuth();
-});
+// --- Инициализация ---
+document.addEventListener('DOMContentLoaded', checkAuth);
 
 </script>
 
-</div>
 </body>
 </html>
