@@ -1,4 +1,7 @@
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import sys
 import os
 import urllib.request
@@ -139,7 +142,7 @@ EQUIPMENT_DATA = [
 EXPENSE_CATEGORIES_DATA = ["Техника", "Топливо"]
 
 def init_and_seed_db():
-    """Создает таблицы и наполняет их начальными данными, если они пусты."""
+    "'''Создает таблицы и наполняет их начальными данными, если они пусты.'''"
     print("Проверка и инициализация базы данных...")
     Base.metadata.create_all(engine)
     with SessionFactory() as session:
@@ -245,7 +248,7 @@ async def serve_frontend():
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["System"])
 async def health_check():
-    """Проверка работоспособности сервиса."""
+    "'''Проверка работоспособности сервиса.'''"
     return {"status": "ok"}
     
 def get_db():
