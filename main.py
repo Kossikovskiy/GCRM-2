@@ -143,34 +143,51 @@ EXPENSE_CATEGORIES_DATA = ["Техника", "Топливо"]
 
 def init_and_seed_db():
     "'''Создает таблицы и наполняет их начальными данными, если они пусты.'''"
-    print("Проверка и инициализация базы данных...")
-    Base.metadata.create_all(engine)
-    with SessionFactory() as session:
-        if session.query(Stage).count() == 0:
-            print("База пуста. Добавляю начальные данные (стадии, услуги)...")
-            for s_data in STAGES_DATA:
-                session.add(Stage(**s_data))
-            for sc_data in SERVICE_CATEGORIES_DATA:
-                session.add(ServiceCategory(**sc_data))
-            session.commit()
-            
-            for name, cat_name, unit, price, min_vol in SERVICES_DATA:
-                cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
-                if cat:
-                    session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
-            
-            for eq_data in EQUIPMENT_DATA:
-                eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
-                session.add(Equipment(**eq_data))
-            
-            for name in EXPENSE_CATEGORIES_DATA:
-                session.add(ExpenseCategory(name=name))
-                
-            session.commit()
-            print("🎉 База данных успешно инициализирована!")
-        else:
-            print("База данных уже содержит данные. Инициализация не требуется.")
+    print("--- STARTING DB INIT ---", flush=True)
+    try:
+        print("Creating all tables (if they don't exist)...", flush=True)
+        Base.metadata.create_all(engine)
+        print("Tables creation command finished.", flush=True)
 
+        with SessionFactory() as session:
+            print("Checking if 'stages' table is empty...", flush=True)
+            stage_count = session.query(Stage).count()
+            print(f"Found {stage_count} stages in the database.", flush=True)
+
+            if stage_count == 0:
+                print("Database appears empty. Seeding initial data for stages, services, etc...", flush=True)
+                for s_data in STAGES_DATA:
+                    session.add(Stage(**s_data))
+                for sc_data in SERVICE_CATEGORIES_DATA:
+                    session.add(ServiceCategory(**sc_data))
+                session.commit()
+                print("Seeded stages and service categories.", flush=True)
+
+                for name, cat_name, unit, price, min_vol in SERVICES_DATA:
+                    cat = session.query(ServiceCategory).filter_by(name=cat_name).first()
+                    if cat:
+                        session.add(Service(name=name, category_id=cat.id, unit=unit, price=price, min_volume=min_vol))
+                print("Seeded services.", flush=True)
+
+                for eq_data in EQUIPMENT_DATA:
+                    eq_data["purchase_date"] = datetime.strptime(eq_data["purchase_date"], "%Y-%m-%d").date()
+                    session.add(Equipment(**eq_data))
+                print("Seeded equipment.", flush=True)
+                
+                for name in EXPENSE_CATEGORIES_DATA:
+                    session.add(ExpenseCategory(name=name))
+                print("Seeded expense categories.", flush=True)
+                    
+                session.commit()
+                print("--- DB SEEDING COMPLETE! ---", flush=True)
+            else:
+                print("Database already contains data. Skipping seed.", flush=True)
+    except Exception as e:
+        print(f"---!! ERROR DURING DB INIT: {e} !!----", flush=True)
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+    finally:
+        print("--- FINISHED DB INIT ---", flush=True)
 
 # --------------------------------------------------------------------------
 # 4. АВТОРИЗАЦИЯ
@@ -230,10 +247,10 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
 # --------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Приложение запускается...")
+    print("Приложение запускается...", flush=True)
     init_and_seed_db()
     yield
-    print("Приложение останавливается...")
+    print("Приложение останавливается...", flush=True)
 
 app = FastAPI(title="Grass CRM API", version="2.1.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", secrets.token_hex(32)))
