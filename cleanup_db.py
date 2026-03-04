@@ -1,6 +1,6 @@
 
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 from main import Base, Deal, Contact # Импортируем модели
 
@@ -14,15 +14,22 @@ if not DATABASE_URL:
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db_session = SessionLocal()
+inspector = inspect(engine)
 
 try:
-    # Сначала удаляем сделки, так как они ссылаются на контакты
-    num_deals_deleted = db_session.query(Deal).delete()
-    print(f"Удалено {num_deals_deleted} записей из таблицы 'deals'.")
+    # Проверяем, существует ли таблица 'deal'
+    if inspector.has_table("deal"):
+        num_deals_deleted = db_session.query(Deal).delete()
+        print(f"Удалено {num_deals_deleted} записей из таблицы 'deal'.")
+    else:
+        print("Таблица 'deal' не существует, пропущено.")
 
-    # Затем удаляем контакты
-    num_contacts_deleted = db_session.query(Contact).delete()
-    print(f"Удалено {num_contacts_deleted} записей из таблицы 'contacts'.")
+    # Проверяем, существует ли таблица 'contact'
+    if inspector.has_table("contact"):
+        num_contacts_deleted = db_session.query(Contact).delete()
+        print(f"Удалено {num_contacts_deleted} записей из таблицы 'contact'.")
+    else:
+        print("Таблица 'contact' не существует, пропущено.")
 
     # Подтверждаем транзакцию
     db_session.commit()
