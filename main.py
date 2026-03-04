@@ -24,7 +24,7 @@ from sqlalchemy import (
     Column, Integer, String, Float, Date, DateTime, Boolean,
     ForeignKey, Text, create_engine, inspect
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, outerjoin
 from jose import jwt, JWTError
 
 # 1. НАСТРОЙКА БАЗЫ ДАННЫХ
@@ -271,11 +271,12 @@ def get_stages(db: DBSession = Depends(get_db)):
 
 @app.get("/api/deals", tags=["Deals"])
 def get_deals(db: DBSession = Depends(get_db)):
-    deals = db.query(Deal).join(Contact).join(Stage).order_by(Deal.created_at.desc()).all()
+    deals = db.query(Deal).join(Contact).outerjoin(Stage).order_by(Deal.created_at.desc()).all()
     return [{
         "id": d.id, "title": d.title, "total": d.total,
-        "client": d.contact.name, "stage": d.stage.name,
-        "created_at": d.created_at.isoformat()
+        "client": d.contact.name if d.contact else "Нет клиента",
+        "stage": d.stage.name if d.stage else "Без статуса",
+        "created_at": d.created_at.isoformat() if d.created_at else None
     } for d in deals]
 
 @app.get("/api/tasks", tags=["Tasks"])
@@ -317,4 +318,3 @@ async def serve_frontend(full_path: str):
     return "./index.html"
 
 print("main.py loaded successfully.", flush=True)
-
