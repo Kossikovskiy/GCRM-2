@@ -182,16 +182,17 @@ def get_current_user(request: Request) -> dict:
 # ── 5. ПРИЛОЖЕНИЕ ─────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.5)...", flush=True)
+    print("App starting (v3.6)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.5.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.6.0", lifespan=lifespan)
 
+# FIX: Changed https_only to False to allow session cookies over HTTP
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
-                   https_only=True,
+                   https_only=False, 
                    same_site="lax")
 app.add_middleware(CORSMiddleware,
                    allow_origins=[APP_BASE_URL],
@@ -377,4 +378,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.5) loaded.", flush=True)
+print("main.py (v3.6) loaded.", flush=True)
