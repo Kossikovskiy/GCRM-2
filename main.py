@@ -79,9 +79,6 @@ class Deal(Base):
     deal_date  = Column(DateTime, nullable=True)
     closed_at  = Column(DateTime, nullable=True)
     is_repeat  = Column(Boolean, default=False)
-    # Поле client — прямое имя клиента (используется MCP-сервером)
-    # Не удалять! Старые записи хранят клиента здесь, а не через contact_id
-    client     = Column(String(200), nullable=True)
     manager    = Column(String(200), nullable=True)
     address    = Column(Text, nullable=True)
 
@@ -295,11 +292,7 @@ def get_deals(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
                .all())
     result = []
     for d in deals:
-        # Имя клиента: сначала из связанного Contact, потом из прямого поля client
-        client_name = (
-            d.contact.name if d.contact
-            else d.client or "Нет клиента"
-        )
+        client_name = d.contact.name if d.contact else "Нет клиента" 
         result.append({
             "id":         d.id,
             "title":      d.title or "Без названия",
@@ -370,21 +363,7 @@ def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
         for c in db.query(Contact).order_by(Contact.name).all()
     }
 
-    # Дополняем уникальными именами из deals.client (MCP создаёт сделки без contact_id)
-    deal_clients = db.execute(
-        text("SELECT DISTINCT client FROM deals WHERE client IS NOT NULL AND client != ''")
-    ).fetchall()
-
     result = list(db_contacts.values())
-    next_id = max((c["id"] for c in result), default=0) + 1
-
-    for row in deal_clients:
-        name = (row[0] or "").strip()
-        if name and name.lower() not in db_contacts:
-            result.append({"id": f"d_{next_id}", "name": name, "phone": None})
-            db_contacts[name.lower()] = True
-            next_id += 1
-
     result.sort(key=lambda c: c["name"])
     return result
 
