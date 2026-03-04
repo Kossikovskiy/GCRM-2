@@ -220,34 +220,76 @@ td {
   margin-left: 16px;
 }
 .icon-btn:hover { background: var(--mist); border-color: var(--dew); }
+
+.section-label { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.label-line { width: 32px; height: 1px; background: var(--fern); }
+.label-text { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--fern); font-weight: 600; }
+
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--dew); border: 1px solid var(--dew); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+.kpi { background: var(--cream); padding: 28px 24px; position: relative; }
+.kpi .icon { font-size: 22px; margin-bottom: 16px; opacity: .7; }
+.kpi .val { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 700; color: var(--forest); line-height: 1; }
+.kpi .lbl { font-size: 9px; color: var(--fern); text-transform: uppercase; letter-spacing: 2px; margin-top: 6px; font-weight: 600; }
+.kpi .sub { font-size: 11px; color: #aaa; margin-top: 10px; }
+
+.kanban { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 16px; }
+.kanban-col { background: var(--mist); border: 1px solid var(--border); border-radius: 10px; width: 280px; flex-shrink: 0; display: flex; flex-direction: column; max-height: calc(100vh - 160px); }
+.col-head { padding: 14px 16px; border-bottom: 1px solid var(--dew); display: flex; align-items: center; gap: 8px; }
+.col-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.col-head h4 { font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; color: #888; }
+.col-count { background: var(--mist); color: #aaa; font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+.col-cards { padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.deal-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px 14px 12px; cursor: pointer; transition: all .2s; box-shadow: 0 1px 4px rgba(20,40,16,.05); }
+.deal-card:hover { border-color: var(--stage-color, var(--fern)); transform: translateY(-2px); box-shadow: 0 6px 20px var(--shadow); }
+.deal-sum { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 700; line-height: 1; }
+.deal-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 700; color: var(--forest); margin-bottom: 6px; }
+.deal-client { font-size: 12px; color: var(--moss); margin-bottom: 4px; font-weight: 500; }
+.deal-divider { height: 1px; background: var(--dew); margin: 8px 0; }
+.deal-footer { display: flex; justify-content: space-between; align-items: center; }
+.deal-date { font-size: 10px; color: #ccc; }
+
 </style>
 </head>
 <body>
 
-<div id="login-screen">
-  <div class="login-box">
-    <div class="logo">Green<em>CRM</em></div>
-  </div>
-</div>
+<div id="login-screen"><div class="login-box"><div class="logo">Green<em>CRM</em></div></div></div>
 
 <div id="app">
 <header>
   <div class="logo">Green<em>CRM</em></div>
   <nav id="main-nav">
-    <button class="active" onclick="showPage('deals', this)">Сделки</button>
+    <button class="active" onclick="showPage('dash', this)">Дашборд</button>
+    <button onclick="showPage('kanban',this)">Сделки</button>
+    <button onclick="showPage('tasks',this)">Задачи</button>
     <button onclick="showPage('expenses', this)">Расходы</button>
     <button onclick="showPage('equipment', this)">Техника</button>
     <button onclick="showPage('services', this)">Прайс-лист</button>
-    <button onclick="showPage('stock',this)"><span>Склад</span></button>
-    <button onclick="showPage('contacts',this)"><span>Контакты</span></button>
+    <button onclick="showPage('stock',this)">Склад</button>
+    <button onclick="showPage('contacts',this)">Контакты</button>
   </nav>
   <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
 </header>
 
-<div class="page active" id="page-deals">
-  <div class="page-title">Сделки</div>
+<div class="page active" id="page-dash">
+    <div class="section-label"><div class="label-line"></div><span class="label-text">Обзор</span></div>
+    <div class="page-title">Ключевые <em>показатели</em></div>
+    <div class="dash-grid">
+        <div class="kpi"><div class="icon">💰</div><div class="val" id="kpi-revenue">—</div><div class="lbl">Выручка</div><div class="sub" id="kpi-deals-count">— сделок</div></div>
+        <div class="kpi"><div class="icon">📉</div><div class="val" id="kpi-expenses">—</div><div class="lbl">Расходы</div><div class="sub" id="kpi-exp-count">— записей</div></div>
+        <div class="kpi"><div class="icon">📈</div><div class="val" id="kpi-profit">—</div><div class="lbl">Прибыль</div><div class="sub" id="kpi-margin">маржа —%</div></div>
+        <div class="kpi"><div class="icon">🔧</div><div class="val" id="kpi-equip">—</div><div class="lbl">Единиц техники</div><div class="sub" id="kpi-repair">— в ремонте</div></div>
+    </div>
+</div>
+
+<div class="page" id="page-kanban">
+  <div class="page-title">Воронка <em>продаж</em></div>
+  <div class="kanban" id="kanban-board"></div>
+</div>
+
+<div class="page" id="page-tasks">
+  <div class="page-title">Задачи</div>
   <div class="card">
-    <table><thead><tr><th>ID</th><th>Клиент</th><th>Название</th><th>Сумма</th><th>Стадия</th><th>Дата</th></tr></thead><tbody id="deals-tbody"></tbody></table>
+    <table><thead><tr><th>ID</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
   </div>
 </div>
 
@@ -275,23 +317,23 @@ td {
 <div class="page" id="page-stock">
   <div class="page-title">Склад</div>
   <div class="card">
-    <table><thead><tr><th>Наименование</th><th>Остаток</th><th>Себест./ед.</th><th>Сумма на складе</th><th>Примечание</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
+    <table><thead><tr><th>ID</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
   </div>
 </div>
 
 <div class="page" id="page-contacts">
   <div class="page-title">Контакты</div>
   <div class="card">
-    <table><thead><tr><th>Имя</th><th>Телефон</th><th>E-mail</th><th></th></tr></thead><tbody id="contacts-tbody"></tbody></table>
+    <table><thead><tr><th>ID</th><th>Имя</th><th>Телефон</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
   </div>
 </div>
-
 
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 const API_BASE = '/api';
+let STAGES = [];
 
 async function api(endpoint, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
@@ -317,12 +359,44 @@ async function api(endpoint, options = {}) {
     }
 }
 
-function renderDeals(deals = []) {
-    const tbody = document.getElementById('deals-tbody');
+function renderKanban(deals = []) {
+    const board = document.getElementById('kanban-board');
+    if (!board) return;
+
+    board.innerHTML = STAGES.map(stage => {
+        const stageDeals = deals.filter(d => d.stage === stage.name);
+        const stageColor = stage.color || '#5a9448';
+        return `
+        <div class="kanban-col">
+            <div class="col-head" style="border-bottom-color:${stageColor}40">
+                <div class="col-dot" style="background:${stageColor}"></div>
+                <h4 style="color:${stageColor}">${stage.name}</h4>
+                <div class="col-count">${stageDeals.length}</div>
+            </div>
+            <div class="col-cards">
+            ${stageDeals.map(d => `
+                <div class="deal-card" style="--stage-color:${stageColor}; border-left-color:${stageColor}">
+                    <div class="deal-sum" style="color:${stageColor}">${d.total.toLocaleString('ru')} ₽</div>
+                    <div class="deal-title">${d.title}</div>
+                    <div class="deal-client">${d.client}</div>
+                    <div class="deal-divider"></div>
+                    <div class="deal-footer">
+                        <div class="deal-date">${new Date(d.created_at).toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `).join('')}
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+function renderTasks(tasks = []) {
+    const tbody = document.getElementById('tasks-tbody');
     if (!tbody) return;
-    tbody.innerHTML = deals.map(d => `
-        <tr><td>${d.id}</td><td>${d.client}</td><td>${d.title}</td><td>${d.total}</td><td>${d.stage}</td><td>${new Date(d.created_at).toLocaleDateString()}</td></tr>
-    `).join('') || '<tr><td colspan="6">Сделок не найдено</td></tr>';
+    tbody.innerHTML = tasks.map(t => `
+        <tr><td>${t.id}</td><td>${t.title}</td><td>${t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}</td><td>${t.status}</td></tr>
+    `).join('') || '<tr><td colspan="4">Задач не найдено</td></tr>';
 }
 
 function renderExpenses(expenses = []) {
@@ -353,79 +427,87 @@ function renderConsumables(consumables = []) {
   const tbody = document.getElementById('consumables-tbody');
   if (!tbody) return;
   tbody.innerHTML = consumables.map(c => `
-    <tr>
-      <td>${c.name}</td>
-      <td>${Number(c.stock_quantity||0).toLocaleString('ru')} ${c.unit||''}</td>
-      <td>${(c.price_per_unit||0).toLocaleString('ru')} ₽</td>
-      <td>${(c.stock_value||0).toLocaleString('ru')} ₽</td>
-      <td>${c.notes||'—'}</td>
-    </tr>
-  `).join('') || '<tr><td colspan="5" style="text-align:center;color:#ccc;padding:24px;font-size:12px">Расходников пока нет</td></tr>';
+    <tr><td>${c.id}</td><td>${c.name}</td><td>${c.stock_quantity || 0} ${c.unit || ''}</td></tr>
+  `).join('') || '<tr><td colspan="3">Расходников не найдено</td></tr>';
 }
 
-function renderContactsPage(contacts = []) {
+function renderContacts(contacts = []) {
   const tbody = document.getElementById('contacts-tbody');
   if (!tbody) return;
   tbody.innerHTML = contacts.map(c => `
-    <tr style="cursor:pointer">
-      <td style="color:var(--ink);font-weight:400">${c.name||'—'}</td>
-      <td>${c.phone||'—'}</td>
-      <td>${c.email||'—'}</td>
-      <td></td>
-    </tr>
-  `).join('') || '<tr><td colspan="4" style="text-align:center;color:#ccc;padding:32px;font-size:12px">Контактов нет</td></tr>';
+    <tr><td>${c.id}</td><td>${c.name}</td><td>${c.phone || '—'}</td></tr>
+  `).join('') || '<tr><td colspan="3">Контактов не найдено</td></tr>';
+}
+
+function buildDash(deals, expenses, equipment) {
+    const successStage = STAGES.find(s => s.type === 'success');
+    const successDeals = successStage ? deals.filter(d => d.stage === successStage.name) : [];
+    const revenue = successDeals.reduce((sum, d) => sum + d.total, 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const profit = revenue - totalExpenses;
+    const margin = revenue ? Math.round(profit / revenue * 100) : 0;
+
+    document.getElementById('kpi-revenue').textContent = `${(revenue/1000).toFixed(0)} тыс. ₽`;
+    document.getElementById('kpi-deals-count').textContent = `${successDeals.length} сделок`;
+    document.getElementById('kpi-expenses').textContent = `${(totalExpenses/1000).toFixed(0)} тыс. ₽`;
+    document.getElementById('kpi-exp-count').textContent = `${expenses.length} записей`;
+    document.getElementById('kpi-profit').textContent = `${(profit/1000).toFixed(0)} тыс. ₽`;
+    document.getElementById('kpi-margin').textContent = `маржа ${margin}%`;
+    document.getElementById('kpi-equip').textContent = equipment.length;
+    document.getElementById('kpi-repair').textContent = `${equipment.filter(e => e.status === 'repair').length} в ремонте`;
 }
 
 async function loadData() {
     showToast('⏳ Загрузка данных...');
     const endpoints = [
+        { key: 'stages', path: '/stages'},
         { key: 'deals', path: '/deals' },
+        { key: 'tasks', path: '/tasks' },
         { key: 'expenses', path: '/expenses' },
         { key: 'equipment', path: '/equipment' },
         { key: 'services', path: '/services' },
-        { key: 'stages', path: '/stages' },
         { key: 'consumables', path: '/consumables' },
     ];
 
     const results = await Promise.allSettled(endpoints.map(e => api(e.path)));
-    
-    let contacts = [];
-    try {
-        contacts = JSON.parse(localStorage.getItem('crm_contacts')||'[]');
-        if(!Array.isArray(contacts)) contacts=[];
-    } catch {}
-
-
+    const data = {};
     let hasErrors = false;
+
     results.forEach((result, index) => {
         const endpoint = endpoints[index];
         if (result.status === 'fulfilled') {
-            let data = result.value;
-            console.log(`Успешно загружено ${endpoint.path}:`, data);
-
-            if (endpoint.key === 'deals') {
-                renderDeals(data.deals || []);
-                const namesFromDeals = [...new Set((data.deals || []).map(d=>(d.client||'').trim()).filter(Boolean))];
-                namesFromDeals.forEach(name => {
-                    const nn = (name||'').trim();
-                    if (!nn) return;
-                    if (!contacts.some(c => (c.name||'').toLowerCase().trim() === nn.toLowerCase().trim())) {
-                        contacts.push({id:Date.now()+Math.random(),name:nn,phone:'',email:''});
-                    }
-                });
-                localStorage.setItem('crm_contacts', JSON.stringify(contacts));
-                renderContactsPage(contacts);
-
-            }
-            else if (endpoint.key === 'expenses') renderExpenses(data.expenses || []);
-            else if (endpoint.key === 'equipment') renderEquipment(data || []);
-            else if (endpoint.key === 'services') renderServices(data || []);
-            else if (endpoint.key === 'consumables') renderConsumables(Array.isArray(data) ? data : []);
+            data[endpoint.key] = result.value;
         } else {
             hasErrors = true;
             console.error(`Не удалось загрузить ${endpoint.path}:`, result.reason);
         }
     });
+
+    STAGES = data.stages || [];
+    const deals = data.deals?.deals || [];
+    const expenses = data.expenses?.expenses || [];
+    const equipment = data.equipment || [];
+
+    renderKanban(deals);
+    renderTasks(data.tasks?.tasks || []);
+    renderExpenses(expenses);
+    renderEquipment(equipment);
+    renderServices(data.services || []);
+    renderConsumables(data.consumables || []);
+    
+    // Render contacts from local storage or deals
+    let contacts = [];
+    try { contacts = JSON.parse(localStorage.getItem('crm_contacts') || '[]'); } catch {}
+    const dealContacts = [...new Set(deals.map(d => d.client.trim()).filter(Boolean))];
+    dealContacts.forEach(name => {
+        if (!contacts.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+            contacts.push({ id: Date.now() + Math.random(), name: name });
+        }
+    });
+    localStorage.setItem('crm_contacts', JSON.stringify(contacts));
+    renderContacts(contacts);
+
+    buildDash(deals, expenses, equipment);
 
     showToast(hasErrors ? '⚠️ Часть данных не загрузилась' : '✅ Данные загружены');
 }
@@ -470,12 +552,11 @@ function showToast(msg) {
 
 function applyTheme(theme) {
   const t = (theme === 'dark') ? 'dark' : 'light';
-  if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-  else document.documentElement.removeAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('crm_theme', t);
   const btn = document.getElementById('theme-toggle');
   if (btn) {
-    btn.textContent = (t === 'dark') ? '☀' : '🌙';
+    btn.textContent = (t === 'dark') ? '☀️' : '🌙';
     btn.title = (t === 'dark') ? 'Светлая тема' : 'Тёмная тема';
   }
 }
@@ -487,7 +568,7 @@ function toggleTheme() {
 
 function initTheme() {
   const saved = localStorage.getItem('crm_theme');
-  applyTheme(saved === 'dark' ? 'dark' : 'light');
+  applyTheme(saved || 'light');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

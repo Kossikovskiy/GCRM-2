@@ -137,6 +137,17 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
 
+class Task(Base):
+    __tablename__ = 'tasks'
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default='')
+    due_date = Column(Date)
+    is_done = Column(Boolean, default=False)
+    status = Column(String(50), default='open') # open, in_progress, done, canceled
+    priority = Column(String(50), default='normal') # low, normal, high
+    manager = Column(String(100), default='')
+
 
 # --------------------------------------------------------------------------
 # 3. ИНИЦИАЛИЗАЦИЯ И НАЧАЛЬНЫЕ ДАННЫЕ
@@ -274,7 +285,7 @@ async def lifespan(app: FastAPI):
     yield
     print("Приложение останавливается...", flush=True)
 
-app = FastAPI(title="Grass CRM API", version="2.2.0", lifespan=lifespan)
+app = FastAPI(title="Grass CRM API", version="2.3.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", secrets.token_hex(32)))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -349,7 +360,7 @@ class DealCreateOrUpdate(BaseModel):
     address: Optional[str] = ""
     vat_rate: Optional[str] = "no_vat"
     services: Optional[str] = "" 
-    total: Optional[float] = 0 # Будет пересчитано на сервере
+    total: Optional[float] = 0
 
 class StageUpdate(BaseModel):
     stage_name: str
@@ -359,6 +370,14 @@ class ExpenseCreate(BaseModel):
     name: str
     category: str
     amount: float
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = ''
+    due_date: Optional[date] = None
+    manager: Optional[str] = ''
+    priority: Optional[str] = 'normal'
+    status: Optional[str] = 'open'
 
 # --- API Endpoints ---
 @app.get("/api/me", tags=["Users"])
@@ -445,6 +464,11 @@ def update_deal_stage(deal_id: int, body: StageUpdate, db: DBSession = Depends(g
         
     db.commit()
     return {"id": deal.id, "new_stage": stage.name}
+
+@app.get("/api/tasks", tags=["Tasks"])
+def get_tasks(db: DBSession = Depends(get_db)):
+    tasks = db.query(Task).order_by(Task.due_date.desc()).all()
+    return {"tasks": tasks}
 
 # Fallback for other endpoints to avoid crashes, returning empty data
 @app.get("/api/expenses")
