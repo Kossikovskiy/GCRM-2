@@ -228,7 +228,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Приложение запускается...")
-    # init_and_seed_db()
+    init_and_seed_db()
     yield
     print("Приложение останавливается...")
 
