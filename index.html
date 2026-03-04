@@ -1936,62 +1936,82 @@ function showToast(msg) {
 }
 
 /* ── ЗАГРУЗКА ДАННЫХ ── */
-async function loadAll() {
-  showToast('⏳ Загружаем...');
+async function loadAll(retries = 5, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    if (i > 0) {
+      showToast(`⏳ Нет ответа. Повтор через ${delay/1000}с... (${i+1}/${retries})`);
+      await new Promise(res => setTimeout(res, delay));
+    } else {
+      showToast('⏳ Загружаем данные...');
+    }
 
-  const [stagesData, dealsData, expData, equipData, maintData, consData, servicesData] = await Promise.all([
-      apiFetch('/stages'),
-      apiFetch('/deals'),
-      apiFetch('/expenses'),
-      apiFetch('/equipment'),
-      apiFetch('/maintenances'),
-      apiFetch('/consumables'),
-      apiFetch('/services')
-  ]);
+    // apiFetch returns null on error.
+    const results = await Promise.all([
+        apiFetch('/stages'),
+        apiFetch('/deals'),
+        apiFetch('/expenses'),
+        apiFetch('/equipment'),
+        apiFetch('/maintenances'),
+        apiFetch('/consumables'),
+        apiFetch('/services')
+    ]);
 
-  if (stagesData) STAGES = stagesData.map(s=>({...s, color: s.color||'#94a3b8'}));
+    // We need at least stages and deals to render the page.
+    // If the first fetch (stages) is null, it means the server is likely not ready.
+    if (results[0] !== null) {
+        const [stagesData, dealsData, expData, equipData, maintData, consData, servicesData] = results;
 
-  if (dealsData?.deals) {
-    deals = dealsData.deals.map(d => ({
-      id:d.id, client:d.client, title:d.title, address:d.address||'',
-      services:Array.isArray(d.services)?d.services.map(s=>`${s.name}:${s.qty}`).join(','):(d.services||''),
-      notes:d.notes||'', vat_rate:d.vat_rate||'no_vat', stage_id:STAGES.find(s=>s.name===d.stage)?.id||1,
-      sum:d.total||0, date:d.created_at?.split('T')[0]||d.created_at?.split(' ')[0]||new Date().toISOString().split('T')[0]
-    }));
+        if (stagesData) STAGES = stagesData.map(s=>({...s, color: s.color||'#94a3b8'}));
+
+        if (dealsData?.deals) {
+            deals = dealsData.deals.map(d => ({
+                id:d.id, client:d.client, title:d.title, address:d.address||'',
+                services:Array.isArray(d.services)?d.services.map(s=>`${s.name}:${s.qty}`).join(','):(d.services||''),
+                notes:d.notes||'', vat_rate:d.vat_rate||'no_vat', stage_id:STAGES.find(s=>s.name===d.stage)?.id||1,
+                sum:d.total||0, date:d.created_at?.split('T')[0]||d.created_at?.split(' ')[0]||new Date().toISOString().split('T')[0]
+            }));
+        }
+
+        if (expData?.expenses) expenses = expData.expenses.map(e=>({ id:e.id, date:e.date, name:e.name, cat:e.category||'Прочее', equip:e.equipment||'', amt:e.amount }));
+
+        if (equipData) equipment = equipData.map(e=>({ id:e.id, name:e.name, model:e.model, cost:e.purchase_cost, engine_hours:e.engine_hours||0, status:e.status, purchase_date:e.purchase_date||'', last_maintenance:e.last_maintenance||'', next_maintenance:e.next_maintenance||'', notes:e.notes||'' }));
+
+        maintenances = Array.isArray(maintData) ? maintData : [];
+        consumables = Array.isArray(consData) ? consData : [];
+
+        if (Array.isArray(servicesData)) {
+            SERVICES = servicesData.map(s => ({
+                id: s.id,
+                name: s.name,
+                cat: s.category || 'Прочее',
+                unit: s.unit,
+                price: s.price,
+                min: s.min_volume || 1
+            }));
+        }
+
+        loadContactsFromStorage();
+        buildDashYearFilter();
+        buildKanbanYearFilter();
+        buildExpenseFilters();
+        buildServiceFilter();
+
+        buildDash();
+        buildKanban();
+        renderExpenses();
+        buildEquipment();
+        renderConsumables();
+        renderServices();
+
+        showToast('✅ Данные загружены');
+        return; // Success, exit the loop and function
+    }
   }
 
-  if (expData?.expenses) expenses = expData.expenses.map(e=>({ id:e.id, date:e.date, name:e.name, cat:e.category||'Прочее', equip:e.equipment||'', amt:e.amount }));
-
-  if (equipData) equipment = equipData.map(e=>({ id:e.id, name:e.name, model:e.model, cost:e.purchase_cost, engine_hours:e.engine_hours||0, status:e.status, purchase_date:e.purchase_date||'', last_maintenance:e.last_maintenance||'', next_maintenance:e.next_maintenance||'', notes:e.notes||'' }));
-
-  maintenances = Array.isArray(maintData) ? maintData : [];
-  consumables = Array.isArray(consData) ? consData : [];
-  
-  if (Array.isArray(servicesData)) {
-      SERVICES = servicesData.map(s => ({
-          id: s.id,
-          name: s.name,
-          cat: s.category || 'Прочее',
-          unit: s.unit,
-          price: s.price,
-          min: s.min_volume || 1
-      }));
-  }
-
-  loadContactsFromStorage();
-  buildDashYearFilter();
-  buildKanbanYearFilter();
-  buildExpenseFilters();
-  buildServiceFilter();
-  
-  buildDash();
-  buildKanban();
-  renderExpenses();
-  buildEquipment();
-  renderConsumables();
-  renderServices();
-  
-  showToast('✅ Данные загружены');
+  // If the loop completes without success
+  showToast('❌ Не удалось загрузить данные. Пожалуйста, обновите страницу.');
+  const appEl = document.getElementById('app');
+  if(appEl) appEl.innerHTML = '<div style="padding:40px;text-align:center;color:#8b3a2a;"><h1>Ошибка загрузки</h1><p>Не удалось получить данные от сервера. Пожалуйста, проверьте ваше интернет-соединение и <a href="javascript:window.location.reload(true)">попробуйте обновить страницу</a>.</p></div>';
 }
 
 /* ── АВТОРИЗАЦИЯ ── */
