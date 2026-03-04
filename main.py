@@ -33,7 +33,7 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionFactory = sessionmaker(bind=engine)
 
-# 2. DATABASE MODELS (v3.1)
+# 2. DATABASE MODELS (v3.2)
 class Stage(Base):
     __tablename__ = "stages"
     id = Column(Integer, primary_key=True)
@@ -109,38 +109,31 @@ class Consumable(Base):
 
 # 3. DB INITIALIZATION & SEEDING
 def init_and_seed_db():
-    print("--- Checking DB Schema and Seeding ---", flush=True)
     try:
         Base.metadata.create_all(engine)
-        print("Schema check/update complete.", flush=True)
         with SessionFactory() as session:
             if session.query(Stage).count() == 0:
-                print("Seeding Stages...", flush=True)
                 STAGES_DATA = [
-                    {"name": "Согласовать", "order": 1, "color": "#3B82F6"},
-                    {"name": "Ожидание", "order": 2, "color": "#F59E0B"},
-                    {"name": "В работе", "order": 3, "color": "#EC4899"},
-                    {"name": "Успешно", "order": 4, "color": "#10B981"},
-                    {"name": "Провалена", "order": 5, "color": "#EF4444"},
-                ]
+                    {"name": "Согласовать", "order": 1, "color": "#3B82F6"}, {"name": "Ожидание", "order": 2, "color": "#F59E0B"},
+                    {"name": "В работе", "order": 3, "color": "#EC4899"}, {"name": "Успешно", "order": 4, "color": "#10B981"},
+                    {"name": "Провалена", "order": 5, "color": "#EF4444"}]
                 for s_data in STAGES_DATA: session.add(Stage(**s_data))
                 session.commit()
             if session.query(ExpenseCategory).count() == 0:
-                print("Seeding Expense Categories...", flush=True)
                 EXP_CATS = ["Техника", "Топливо", "Расходники", "Реклама", "Запчасти", "Прочее"]
                 for name in EXP_CATS: session.add(ExpenseCategory(name=name))
                 session.commit()
-        print("--- DB Seeding Complete! ---", flush=True)
     except Exception as e:
         print(f"---!! ERROR DURING DB INIT/SEED: {e} !!----", flush=True)
 
 # 4. AUTHENTICATION
-# FIX: Removed hardcoded default for AUTH0_DOMAIN
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
-CLIENT_ID = os.getenv("AUTH0_CLIENT_ID") 
-if not all([AUTH0_DOMAIN, AUTH0_AUDIENCE, CLIENT_ID]):
-    raise RuntimeError("FATAL: Auth0 settings (DOMAIN, AUDIENCE, CLIENT_ID) are not configured.")
+CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
+AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL")
+
+if not all([AUTH0_DOMAIN, AUTH0_AUDIENCE, CLIENT_ID, AUTH0_CALLBACK_URL]):
+    raise RuntimeError("FATAL: Auth0 settings (DOMAIN, AUDIENCE, CLIENT_ID, CALLBACK_URL) are not configured.")
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -178,30 +171,27 @@ def get_current_user(token: Optional[str] = Depends(bearer)) -> dict:
 # 5. FASTAPI APPLICATION
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App is starting... (v3.1)", flush=True)
+    print("App is starting... (v3.2)", flush=True)
     init_and_seed_db()
     yield
     print("App is shutting down...", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.1.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.2.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 def get_db():
     db = SessionFactory()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
 # 6. API ENDPOINTS
 @app.get("/api/auth/login")
 def login_redirect():
-    redirect_uri = os.getenv("AUTH0_CALLBACK_URL", "http://localhost:3000") # Your frontend URL
     auth_url = (
         f"https://{AUTH0_DOMAIN}/authorize?"
         f"response_type=token&"
         f"client_id={CLIENT_ID}&"
-        f"redirect_uri={redirect_uri}&"
+        f"redirect_uri={AUTH0_CALLBACK_URL}&"
         f"scope=openid%20profile%20email&"
         f"audience={AUTH0_AUDIENCE}"
     )
@@ -215,9 +205,7 @@ def get_deals(db: DBSession = Depends(get_db)):
     response_data = []
     for d in deals_from_db:
         response_data.append({
-            "id": d.id,
-            "title": d.title or "Без названия",
-            "total": d.total or 0.0,
+            "id": d.id, "title": d.title or "Без названия", "total": d.total or 0.0,
             "client": d.contact.name if d.contact else "Нет клиента",
             "stage": d.stage.name if d.stage else "Без статуса",
             "created_at": (d.created_at or datetime.utcnow()).isoformat()
@@ -258,4 +246,4 @@ async def serve_frontend(full_path: str):
         return FileResponse(path)
     return FileResponse("./index.html")
 
-print("main.py (v3.1) loaded successfully.", flush=True)
+print("main.py (v3.2) loaded successfully.", flush=True)
