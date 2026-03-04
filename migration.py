@@ -78,11 +78,11 @@ try:
         # --- Работа со сделкой ---
         deal = Deal(
             title=str(deal_title),
-            value=float(deal_amount) if deal_amount else 0.0,
+            total=float(deal_amount) if deal_amount else 0.0, # ИСПРАВЛЕНО: value -> total
             contact_id=contact.id
         )
         db_session.add(deal)
-        print(f" -> Добавлена сделка '{deal.title}' на сумму {deal.value}")
+        print(f" -> Добавлена сделка '{deal.title}' на сумму {deal.total}")
 
     # --- 4. Сохранение в БД ---
     print("\n--- Сохранение всех изменений в базе данных... ---")
