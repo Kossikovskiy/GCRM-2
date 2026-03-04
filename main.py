@@ -19,6 +19,7 @@ from sqlalchemy import (
     DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
+from pydantic import BaseModel
 import httpx
 from jose import jwt, JWTError
 
@@ -133,10 +134,14 @@ class Deal(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
-    id       = Column(Integer, primary_key=True)
-    title    = Column(String, nullable=False)
-    is_done  = Column(Boolean, default=False)
-    due_date = Column(Date, nullable=True)
+    id          = Column(Integer, primary_key=True)
+    title       = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    is_done     = Column(Boolean, default=False)
+    due_date    = Column(Date, nullable=True)
+    assignee    = Column(String, nullable=True)
+    priority    = Column(String, default="Обычный")
+    status      = Column(String, default="Открыта")
 
 class ExpenseCategory(Base):
     __tablename__ = "expense_categories"
@@ -228,12 +233,12 @@ def get_current_user(request: Request) -> dict:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.6)...", flush=True)
+    print("App starting (v3.7)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.6.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.7.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
@@ -250,6 +255,12 @@ def get_db():
     try:    yield db
     finally: db.close()
 
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    due_date: Optional[date] = None
+    priority: Optional[str] = "Обычный"
+    status: Optional[str] = "Открыта"
 
 # ── 7. AUTH ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
 
@@ -391,6 +402,25 @@ def get_deals(year: Optional[int] = None,
     return result
 
 
+@app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
+def create_task(task: TaskCreate,
+                db: DBSession = Depends(get_db),
+                user: dict = Depends(get_current_user)):
+    new_task = Task(
+        title=task.title,
+        description=task.description,
+        due_date=task.due_date,
+        priority=task.priority,
+        status=task.status,
+        assignee=user["sub"]
+    )
+    db.add(new_task)
+    db.commit()
+    db.refresh(new_task)
+    _cache.invalidate("tasks")
+    return new_task
+
+
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None,
               db: DBSession = Depends(get_db),
@@ -405,10 +435,13 @@ def get_tasks(year: Optional[int] = None,
         q = q.filter(extract("year", Task.due_date) == year)
 
     result = {"tasks": [{
-        "id":       t.id,
-        "title":    t.title,
-        "status":   "Выполнено" if t.is_done else "В работе",
-        "due_date": t.due_date.isoformat() if t.due_date else None,
+        "id":          t.id,
+        "title":       t.title,
+        "description": t.description,
+        "status":      t.status,
+        "due_date":    t.due_date.isoformat() if t.due_date else None,
+        "assignee":    t.assignee,
+        "priority":    t.priority,
     } for t in q.all()]}
 
     _cache.set(cache_key, result)
@@ -531,4 +564,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.6) loaded.", flush=True)
+print("main.py (v3.7) loaded.", flush=True)
