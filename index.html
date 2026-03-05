@@ -135,6 +135,9 @@ nav button.active::after{left:13px;right:13px}
 .kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
 .kpi-sub{font-size:11px;color:var(--ink3);font-weight:300}
 
+/* TAX KPI STRIP — 3 col */
+.kpi-strip-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
+
 /* TABLE CARD */
 .tcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-s)}
 .tcard-head{
@@ -150,9 +153,6 @@ td{padding:12px 20px;border-bottom:1px solid var(--border2);font-size:12px;color
 td:first-child{color:var(--ink4);font-size:11px;width:44px}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
-tbody tr{cursor:pointer}
-tbody tr.selected td{background:var(--leaf)}
-html[data-theme=dark] tbody tr.selected td{background:var(--moss)}
 
 /* BADGE */
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.3px}
@@ -160,10 +160,12 @@ html[data-theme=dark] tbody tr.selected td{background:var(--moss)}
 .b-amber{background:#fef3c7;color:#b45309}
 .b-slate{background:#f1f5f9;color:#64748b}
 .b-blue{background:#dbeafe;color:#1d4ed8}
+.b-red{background:#fee2e2;color:#dc2626}
 html[data-theme="dark"] .b-green{background:#14532d;color:#4ade80}
 html[data-theme="dark"] .b-amber{background:#451a03;color:#fb923c}
 html[data-theme="dark"] .b-slate{background:#1e293b;color:#94a3b8}
 html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
+html[data-theme="dark"] .b-red{background:#450a0a;color:#f87171}
 
 .money{font-family:'Playfair Display',serif;font-size:14px;font-weight:500;color:var(--ink)}
 .m-neg{color:var(--red)}
@@ -183,7 +185,7 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
 .k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
 .k-cards::-webkit-scrollbar{width:3px}
-.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
+.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:grab;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
 .k-card:hover{box-shadow:var(--sh-m);transform:translateY(-2px);background:var(--surface)}
 .k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
 .k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
@@ -199,15 +201,15 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
 .empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
 
-/* TABS */
-.tabs-row{display:flex;gap:10px;margin-bottom:18px}
-.tab-btn{
-  background:none;border:1px solid var(--border);border-radius:7px;padding:7px 16px;
-  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--ink3);
-  cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px
-}
-.tab-btn.active{background:var(--fern);border-color:var(--fern);color:#fff}
-.tab-btn:hover:not(.active){border-color:var(--ink3);color:var(--ink)}
+/* TAX PROGRESS BAR */
+.tax-progress-wrap{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px 28px;margin-bottom:24px;box-shadow:var(--sh-s)}
+.tax-progress-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.tax-progress-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500}
+.tax-progress-pct{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:500}
+.tax-bar-bg{width:100%;height:8px;background:var(--border2);border-radius:4px;overflow:hidden}
+.tax-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#16a34a,#4ade80);transition:width .6s ease}
+.tax-bar-fill.overpaid{background:linear-gradient(90deg,#2563eb,#60a5fa)}
+.tax-bar-fill.danger{background:linear-gradient(90deg,#dc2626,#f87171)}
 
 /* ADD BUTTON */
 .add-btn{display:inline-flex;align-items:center;gap:7px;background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;box-shadow:var(--sh-s)}
@@ -216,43 +218,20 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* MODAL */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-.item-selector-modal { z-index: 501; }
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:540px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:400px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
 .overlay.open .modal{transform:none}
 .modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--ink);margin-bottom:24px}
 .modal-title em{font-style:italic;color:var(--fern)}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .field{margin-bottom:16px}
-.field.full{grid-column:span 2}
 .field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:7px}
-.field input, .field textarea, .field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
-.field textarea{resize:vertical;min-height:80px}
-.field input:focus, .field textarea:focus, .field select:focus{border-color:var(--fern)}
+.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--fern)}
 .field input.err{border-color:var(--red)}
-.modal-row{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:24px}
-.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
+.modal-row{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
-.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
+.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s}
 .btn-pri:hover{background:var(--moss)}
-.btn-del-modal{margin-right:auto;border-color:var(--red);color:var(--red)}
-.btn-del-modal:hover{background:var(--red);color:#fff}
-
-
-#d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
-#d-services-table th, #m-consumables-table th {font-size:8px;padding:8px 10px}
-#d-services-table td, #m-consumables-table td {font-size:11px;padding:8px 10px}
-#d-services-table .btn-del, #m-consumables-table .btn-del {cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
-
-.item-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column;}
-.item-selector-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px;}
-.item-selector-results{overflow-y:auto;padding:8px;}
-.item-result{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;border-radius:8px;}
-.item-result:hover{background:var(--surface2);}
-.item-result-name{font-weight:500;}
-.item-result-sub{font-size:11px;color:var(--ink3)}
-.item-result-price{color:var(--fern);}
-
-#page-equipment-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:24px}
 
 /* TOAST */
 .toast{
@@ -290,6 +269,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <button onclick="showPage('kanban',this)">Сделки</button>
     <button onclick="showPage('tasks',this)">Задачи</button>
     <button onclick="showPage('expenses',this)">Расходы</button>
+    <button onclick="showPage('taxes',this)">Налоги</button>
     <button onclick="showPage('equipment',this)">Техника</button>
     <button onclick="showPage('services',this)">Прайс-лист</button>
     <button onclick="showPage('stock',this)">Склад</button>
@@ -305,6 +285,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </header>
 
+<!-- DASHBOARD -->
 <div class="page active" id="page-dash">
   <div class="ph">
     <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Обзор</span></div>
@@ -338,17 +319,16 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
+<!-- KANBAN -->
 <div class="page" id="page-kanban">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-    <div>
-      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Воронка продаж</span></div>
-      <div class="ph-title">Сделки <em>по этапам</em><span class="ph-year year-display"></span></div>
-    </div>
-    <button class="add-btn" onclick="openDealModal()">＋&nbsp;Новая сделка</button>
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Воронка продаж</span></div>
+    <div class="ph-title">Сделки <em>по этапам</em><span class="ph-year year-display"></span></div>
   </div>
   <div class="kanban" id="kanban-board"></div>
 </div>
 
+<!-- TASKS -->
 <div class="page" id="page-tasks">
   <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
     <div>
@@ -357,475 +337,191 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <button class="add-btn" onclick="openTaskModal()">＋&nbsp;Новая задача</button>
   </div>
-  <div class="tabs-row">
-    <button class="tab-btn active" id="btn-tasks-active" onclick="loadTasks(false)">Активные</button>
-    <button class="tab-btn" id="btn-tasks-done" onclick="loadTasks(true)">Завершенные</button>
-  </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
-    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
+    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
   </div>
 </div>
 
+<!-- EXPENSES -->
 <div class="page" id="page-expenses">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
-            <div class="ph-title">Расходы<span class="ph-year year-display"></span></div>
-        </div>
-        <button class="add-btn" onclick="openExpenseModal()">＋&nbsp;Новый расход</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
-        <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
-    </div>
-</div>
-
-<div class="page" id="page-equipment">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Парк</span></div>
-            <div class="ph-title">Учёт <em>техники</em></div>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn-sec" id="btn-add-maintenance" onclick="openMaintenanceModal()">＋ ТО</button>
-            <button class="add-btn" onclick="openEquipmentModal()">＋ Техника</button>
-        </div>
-    </div>
-    <div id="page-equipment-layout">
-        <div class="tcard">
-            <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
-            <div style="overflow-x: auto;">
-                <table><thead><tr><th>Тип</th><th>Наименование</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
-            </div>
-        </div>
-        <div class="tcard">
-            <div class="tcard-head"><span class="tcard-title">Журнал ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
-            <table><thead><tr><th>Техника</th><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
-        </div>
-    </div>
-</div>
-
-<div class="page" id="page-services">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Услуги</span></div>
-            <div class="ph-title">Прайс-<em>лист</em></div>
-        </div>
-        <button class="add-btn" onclick="openServiceModal()">＋&nbsp;Новая услуга</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
-        <table><thead><tr><th>#</th><th>Наименование</th><th>Ед. изм.</th><th>Цена</th><th>Мин. объём</th><th>Примечание</th></tr></thead><tbody id="services-tbody"></tbody></table>
-    </div>
-</div>
-
-<div class="page" id="page-stock">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Материалы</span></div>
-            <div class="ph-title">Склад <em>и расходники</em></div>
-        </div>
-        <button class="add-btn" onclick="openConsumableModal()">＋&nbsp;Новый расходник</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Остатки</span><span class="tcard-meta" id="consumables-count"></span></div>
-        <table><thead><tr><th>#</th><th>Название</th><th>Остаток</th><th>Цена</th><th>Заметки</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
-    </div>
-</div>
-
-<div class="page" id="page-contacts">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">База клиентов</span></div>
-            <div class="ph-title">Контакты</div>
-        </div>
-        <button class="add-btn" onclick="openContactModal()">＋&nbsp;Новый контакт</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
-        <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th>Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
-    </div>
-</div>
-
-<!-- EXPENSE MODAL -->
-<div class="overlay" id="expense-overlay" onclick="if(event.target===this)closeExpenseModal()">
-  <div class="modal">
-    <div class="modal-title" id="expense-modal-title">Новый <em>расход</em></div>
-    <div class="field full">
-      <label>НАИМЕНОВАНИЕ</label>
-      <input type="text" id="ex-name" placeholder="Например, бензин для газонокосилки" />
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>СУММА</label>
-        <input type="number" id="ex-amount" placeholder="1000" />
-      </div>
-      <div class="field">
-        <label>ДАТА</label>
-        <input type="date" id="ex-date" />
-      </div>
-    </div>
-    <div class="field full">
-        <label>КАТЕГОРИЯ</label>
-        <input type="text" id="ex-category" list="expense-categories-list" placeholder="Например, ГСМ, ремонт, запчасти" />
-        <datalist id="expense-categories-list"></datalist>
-    </div>
-    <div class="modal-row">
-      <button class="btn-sec btn-del-modal" id="btn-expense-delete" style="display:none">УДАЛИТЬ</button>
-      <button class="btn-sec" onclick="closeExpenseModal()">ОТМЕНА</button>
-      <button class="btn-pri" onclick="saveExpense()">СОХРАНИТЬ</button>
-    </div>
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
+    <div class="ph-title">Расходы<span class="ph-year year-display"></span></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
+    <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
   </div>
 </div>
 
-<!-- MODALS -->
+<!-- TAXES -->
+<div class="page" id="page-taxes">
+  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+    <div>
+      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">УСН · Доходы</span></div>
+      <div class="ph-title">Налоги <em>к уплате</em><span class="ph-year year-display"></span></div>
+    </div>
+    <button class="add-btn" onclick="openTaxModal()">＋&nbsp;Внести платёж</button>
+  </div>
+
+  <!-- Прогресс-бар -->
+  <div class="tax-progress-wrap">
+    <div class="tax-progress-label">
+      <span class="tax-progress-title">Уплачено от начисленного</span>
+      <span class="tax-progress-pct" id="tax-pct">—%</span>
+    </div>
+    <div class="tax-bar-bg">
+      <div class="tax-bar-fill" id="tax-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- 3 KPI -->
+  <div class="kpi-strip-3">
+    <div class="kpi-card" style="--kpi-accent:#7c3aed">
+      <span class="kpi-icon">📊</span>
+      <div class="kpi-val" id="kpi-tax-revenue">—</div>
+      <div class="kpi-label">Налоговая база</div>
+      <div class="kpi-sub" id="kpi-tax-rate-lbl">ставка —%</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:#dc2626">
+      <span class="kpi-icon">🧾</span>
+      <div class="kpi-val" id="kpi-tax-accrued">—</div>
+      <div class="kpi-label">Начислено налога</div>
+      <div class="kpi-sub">по итогам года</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:#16a34a">
+      <span class="kpi-icon">✅</span>
+      <div class="kpi-val" id="kpi-tax-balance">—</div>
+      <div class="kpi-label" id="kpi-tax-balance-lbl">Остаток к уплате</div>
+      <div class="kpi-sub" id="kpi-tax-paid-sub">уплачено —</div>
+    </div>
+  </div>
+
+  <!-- Таблица платежей -->
+  <div class="tcard">
+    <div class="tcard-head">
+      <span class="tcard-title">История платежей</span>
+      <span class="tcard-meta" id="tax-payments-count"></span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th>Примечание</th><th>Год</th></tr></thead>
+      <tbody id="tax-payments-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EQUIPMENT -->
+<div class="page" id="page-equipment">
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Парк техники</span></div>
+    <div class="ph-title">Техника <em>и инвентарь</em></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
+    <table><thead><tr><th>#</th><th>Название</th><th>Модель</th><th>Статус</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<div class="page" id="page-services">
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Услуги</span></div>
+    <div class="ph-title">Прайс-<em>лист</em></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
+    <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- STOCK -->
+<div class="page" id="page-stock">
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Материалы</span></div>
+    <div class="ph-title">Склад <em>и расходники</em></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-head"><span class="tcard-title">Остатки</span><span class="tcard-meta" id="consumables-count"></span></div>
+    <table><thead><tr><th>#</th><th>Название</th><th>Остаток</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- CONTACTS -->
+<div class="page" id="page-contacts">
+  <div class="ph">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">База клиентов</span></div>
+    <div class="ph-title">Контакты</div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
+    <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- MODAL: новая задача -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
     <div class="modal-title">Новая <em>задача</em></div>
-    <div class="field full">
-      <label>НАЗВАНИЕ</label>
-      <input type="text" id="t-title" placeholder="Позвонить клиенту, подготовить КП..." />
+    <div class="field">
+      <label>Название</label>
+      <input type="text" id="t-title" placeholder="Что нужно сделать?" />
     </div>
-    <div class="field full">
-      <label>ОПИСАНИЕ</label>
-      <textarea id="t-desc" placeholder="Кратко опишите задачу"></textarea>
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>СРОК</label>
-        <input type="date" id="t-date" />
-      </div>
-      <div class="field">
-        <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="t-assignee"></select>
-      </div>
-      <div class="field">
-        <label>ПРИОРИТЕТ</label>
-        <select id="t-priority">
-          <option value="Низкий">Низкий</option>
-          <option value="Обычный" selected>Обычный</option>
-          <option value="Высокий">Высокий</option>
-          <option value="Критический">Критический</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>СТАТУС</label>
-        <select id="t-status">
-          <option value="Открыта" selected>Открыта</option>
-          <option value="В работе">В работе</option>
-          <option value="Отложена">Отложена</option>
-          <option value="Выполнена">Выполнена</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Срок</label>
+      <input type="date" id="t-date" />
     </div>
     <div class="modal-row">
-      <button class="btn-sec btn-del-modal" id="btn-task-delete" style="display:none">УДАЛИТЬ</button>
-      <button class="btn-sec" onclick="closeTaskModal()">ОТМЕНА</button>
-      <button class="btn-pri" onclick="saveTask()">СОХРАНИТЬ</button>
+      <button class="btn-sec" onclick="closeTaskModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveTask()">Сохранить</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
-  <div class="modal" style="max-width: 680px;">
-    <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
-    <div class="field full">
-      <label>НАЗВАНИЕ СДЕЛКИ</label>
-      <input type="text" id="d-title" placeholder="Покос участка 10 соток" />
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>КЛИЕНТ</label>
-        <input list="d-contact-list" id="d-contact-input" placeholder="Начните вводить имя...">
-        <datalist id="d-contact-list"></datalist>
-      </div>
-      <div class="field">
-        <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="d-assignee"></select>
-      </div>
-    </div>
-
-    <div id="d-services-block">
-        <label>УСЛУГИ</label>
-        <div class="tcard" style="margin-bottom: 12px;">
-            <table id="d-services-table">
-                <thead><tr><th>Услуга</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <button class="btn-sec" style="width:100%" onclick="openItemSelectorModal('service')">＋ Добавить услугу</button>
-    </div>
-    
-    <div class="modal-grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr 1fr;">
-        <div class="field">
-            <label>Скидка (%)</label>
-            <input type="number" id="d-discount" value="0" onchange="calculateDealTotal()">
-        </div>
-        <div class="field">
-            <label>Налог (%)</label>
-            <select id="d-tax-rate" onchange="calculateDealTotal()">
-                <option value="0">Без налога</option>
-                <option value="4">4%</option>
-                <option value="6">6%</option>
-            </select>
-        </div>
-        <div class="field" style="display:flex; align-items:center; padding-top:14px;">
-            <input type="checkbox" id="d-tax-included" onchange="calculateDealTotal()" style="width:auto; margin-right: 8px;">
-            <label for="d-tax-included" style="margin:0; font-size: 12px;">Налог включен</label>
-        </div>
-    </div>
-
-    <div class="modal-grid" style="margin-top: 20px;">
-      <div class="field">
-        <label>ЭТАП</label>
-        <select id="d-stage"></select>
-      </div>
-      <div class="field">
-        <label>ИТОГОВАЯ СУММА</label>
-        <input type="text" id="d-total" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
-      </div>
-    </div>
-
-    <div class="modal-row">
-        <button class="btn-sec btn-del-modal" id="btn-deal-delete" style="display:none;">Удалить</button>
-        <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
-        <button class="btn-pri" id="btn-deal-save">СОЗДАТЬ</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay item-selector-modal" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
-    <div class="modal" style="max-width: 600px;">
-        <div class="modal-content">
-            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
-            <div class="item-selector-results" id="item-selector-results"></div>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
+<!-- MODAL: налоговый платёж -->
+<div class="overlay" id="tax-overlay" onclick="if(event.target===this)closeTaxModal()">
   <div class="modal">
-    <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
-    <div class="field full">
-      <label>ИМЯ КЛИЕНТА</label>
-      <input type="text" id="c-name" placeholder="Иван Петров" />
+    <div class="modal-title">Налоговый <em>платёж</em></div>
+    <div class="field">
+      <label>Сумма (₽)</label>
+      <input type="number" id="tx-amount" placeholder="0" min="1" step="1" />
     </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>ТЕЛЕФОН</label>
-        <input type="tel" id="c-phone" placeholder="+7 (999) 123-45-67" />
-      </div>
-      <div class="field">
-        <label>ИСТОЧНИК</label>
-        <input type="text" id="c-source" placeholder="Рекомендация" />
-      </div>
+    <div class="field">
+      <label>Дата платежа</label>
+      <input type="date" id="tx-date" />
+    </div>
+    <div class="field">
+      <label>Примечание</label>
+      <input type="text" id="tx-note" placeholder="Аванс Q1, итоговый платёж…" />
     </div>
     <div class="modal-row">
-      <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;">УДАЛИТЬ</button>
-      <button class="btn-sec" onclick="closeContactModal()">ОТМЕНА</button>
-      <button class="btn-pri" id="btn-contact-save">СОЗДАТЬ</button>
+      <button class="btn-sec" onclick="closeTaxModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveTaxPayment()">Сохранить</button>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="service-modal" onclick="if(event.target===this)closeServiceModal()">
-    <div class="modal">
-        <div class="modal-title" id="service-modal-title">Новая <em>услуга</em></div>
-        <div class="field full">
-            <label>НАИМЕНОВАНИЕ УСЛУГИ</label>
-            <input type="text" id="s-name" placeholder="Стандартный покос" />
-        </div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Ед. изм.</label>
-                <input type="text" id="s-unit" placeholder="соток" />
-            </div>
-            <div class="field">
-                <label>Цена (₽)</label>
-                <input type="number" id="s-price" placeholder="790" />
-            </div>
-            <div class="field">
-                <label>Мин. объём</label>
-                <input type="number" id="s-min-volume" placeholder="1" />
-            </div>
-        </div>
-        <div class="field full">
-            <label>ПРИМЕЧАНИЕ</label>
-            <textarea id="s-notes" placeholder="Трава до 30 см"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-service-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeServiceModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-service-save">СОЗДАТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="equipment-modal" onclick="if(event.target===this)closeEquipmentModal()">
-    <div class="modal" style="max-width: 720px;">
-        <div class="modal-title" id="equipment-modal-title">Новая <em>техника</em></div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Название</label>
-                <input type="text" id="eq-name" placeholder="Газонокосилка #1">
-            </div>
-            <div class="field">
-                <label>Модель</label>
-                <input type="text" id="eq-model" placeholder="Husqvarna 525">
-            </div>
-             <div class="field full">
-                <label>Серийный номер</label>
-                <input type="text" id="eq-serial">
-            </div>
-            <div class="field">
-                <label>Дата покупки</label>
-                <input type="date" id="eq-purchase-date">
-            </div>
-            <div class="field">
-                <label>Стоимость</label>
-                <input type="number" id="eq-purchase-cost" placeholder="25000">
-            </div>
-            <div class="field">
-                <label>Статус</label>
-                <select id="eq-status">
-                    <option value="active">Активна</option>
-                    <option value="repair">В ремонте</option>
-                    <option value="retired">Списана</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Моточасы</label>
-                <input type="number" id="eq-engine-hours" placeholder="120.5">
-            </div>
-            <div class="field">
-                <label>Норма ГСМ (л/ч)</label>
-                <input type="number" id="eq-fuel-norm" placeholder="1.2">
-            </div>
-             <div class="field">
-                <label>Последнее ТО</label>
-                <input type="date" id="eq-last-maintenance">
-            </div>
-             <div class="field">
-                <label>Следующее ТО</label>
-                <input type="date" id="eq-next-maintenance">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Примечание</label>
-            <textarea id="eq-notes"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-equipment-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeEquipmentModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-equipment-save">СОЗДАТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="maintenance-modal" onclick="if(event.target===this)closeMaintenanceModal()">
-    <div class="modal" style="max-width: 680px;">
-        <div class="modal-title" id="maintenance-modal-title">Запись <em>о ТО</em></div>
-        <div class="modal-grid">
-             <div class="field">
-                <label>Проведенные работы</label>
-                <input type="text" id="m-work" placeholder="Замена масла, чистка фильтра">
-            </div>
-            <div class="field">
-                <label>Дата</label>
-                <input type="date" id="m-date">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Примечание</label>
-            <textarea id="m-notes"></textarea>
-        </div>
-        <div id="m-consumables-block" style="margin-top: 20px; border-top: 1px solid var(--border2); padding-top: 20px;">
-            <label>РАСХОДНИКИ</label>
-            <div class="tcard" style="margin-bottom: 12px;">
-                <table id="m-consumables-table">
-                    <thead><tr><th>Название</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <button class="btn-sec" style="width:100%" onclick="openItemSelectorModal('consumable')">＋ Добавить расходник</button>
-        </div>
-        <div class="modal-grid" style="margin-top:20px;">
-            <div class="field full">
-                 <label>ИТОГОВАЯ СТОИМОСТЬ ТО</label>
-                 <input type="text" id="m-total-cost" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
-            </div>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-maintenance-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeMaintenanceModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-maintenance-save">СОХРАНИТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="consumable-modal" onclick="if(event.target===this)closeConsumableModal()">
-    <div class="modal">
-        <div class="modal-title" id="consumable-modal-title">Новый <em>расходник</em></div>
-        <div class="field full">
-            <label>Название</label>
-            <input type="text" id="cn-name" placeholder="Масло 4Т 10W-30">
-        </div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Ед. изм.</label>
-                <input type="text" id="cn-unit" placeholder="л">
-            </div>
-            <div class="field">
-                <label>Кол-во на складе</label>
-                <input type="number" id="cn-stock">
-            </div>
-            <div class="field">
-                <label>Цена за ед.</label>
-                <input type="number" id="cn-price" placeholder="800">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Заметки</label>
-            <textarea id="cn-notes"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-consumable-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeConsumableModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-consumable-save">СОЗДАТЬ</button>
-        </div>
-    </div>
-</div>
-
-</div>
+</div><!-- /app -->
 <div class="toast" id="toast"></div>
 
 <script>
 const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
-let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[], _expenseCategories=[];
-let _selectedEquipmentId = null;
+let STAGES=[],SELECTED_YEAR=new Date().getFullYear();
 
-function fmt(n, z = '—'){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : z}
-function fmtShort(n, z='—'){return n != null ? n.toLocaleString('ru') : z}
-function fmtDate(s, z='—'){ if (!s) return z; const d = new Date(s); return d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}) }
-function toISODate(d) { if (!d) return null; const date = new Date(d); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().split('T')[0]; }
-
+function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
+function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
 function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
-function esc(s){return s != null ? String(s).replace(/"/g,'&quot;').replace(/'/g,"&apos;") : ''}
 
 async function api(ep,opts={}){
   try{
     const r=await fetch(`${API_BASE}${ep}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
     if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
-    if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP Error ${r.status}`)}
-    if (r.status === 204) return null;
-    const text = await r.text();
-    return text ? JSON.parse(text) : null;
-  }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
+    if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||'err')}
+    return r.status===204?null:r.json()
+  }catch(e){showToast('❌ '+e.message);throw e}
 }
 
-// ── KANBAN STATE ──
+// ── KANBAN ──────────────────────────────────────────────────────────────────
 let _deals=[], _dragEl=null, _dragSrcStage=null;
 
 function renderKanban(deals=[]){
@@ -837,7 +533,7 @@ function renderKanban(deals=[]){
     const cards=deals.filter(d=>d.stage===st.name);
     const total=cards.reduce((s,d)=>s+d.total,0);
     const cardsHtml=cards.length
-      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" onclick="openDealModal(${d.id})" data-stage="${esc(st.name)}" style="--c:${c}">
+      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" data-stage="${escH(st.name)}" style="--c:${c}">
           <div class="k-sum">${fmt(d.total)}</div>
           <div class="k-title">${d.title}</div>
           <div class="k-client">${d.client}</div>
@@ -845,7 +541,7 @@ function renderKanban(deals=[]){
           <div class="k-date">${fmtDate(d.created_at)}</div>
         </div>`).join('')
       :`<div class="empty"><div class="empty-ico" style="font-size:20px">🌿</div><div class="empty-txt">Пусто</div></div>`;
-    return`<div class="k-col" data-stage="${esc(st.name)}">
+    return`<div class="k-col" data-stage="${escH(st.name)}">
       <div class="k-head"><div class="k-dot" style="background:${c}"></div><span class="k-name" style="color:${c}">${st.name}</span><span class="k-count">${cards.length}</span></div>
       <div class="k-total" style="${cards.length?'':'visibility:hidden'}">${fmt(total)}</div>
       <div class="k-cards">${cardsHtml}</div>
@@ -854,11 +550,12 @@ function renderKanban(deals=[]){
   initDrag();
 }
 
+function escH(s){return s.replace(/"/g,'&quot;')}
+
 function initDrag(){
   const board=document.getElementById('kanban-board');
   board.querySelectorAll('.k-card[draggable]').forEach(el=>{
     el.addEventListener('dragstart',e=>{
-      e.stopPropagation();
       _dragEl=el; _dragSrcStage=el.dataset.stage;
       requestAnimationFrame(()=>el.classList.add('dragging'));
       e.dataTransfer.effectAllowed='move';
@@ -886,1020 +583,158 @@ function initDrag(){
       }
     });
     col.addEventListener('drop',e=>{
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
       col.classList.remove('drag-over');
       col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
       const id=e.dataTransfer.getData('text/plain');
-      const newStageName=col.dataset.stage;
-      if(!id||_dragSrcStage===newStageName)return;
-      
+      const newStage=col.dataset.stage;
+      if(!id||_dragSrcStage===newStage)return;
       const deal=_deals.find(d=>String(d.id)===String(id));
       if(!deal)return;
-      
-      const stage = STAGES.find(s => s.name === newStageName);
-      if (!stage) return;
-
-      const oldStageName = deal.stage;
-      deal.stage = newStageName;
+      const oldStage=deal.stage;
+      deal.stage=newStage;
       renderKanban(_deals);
-
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
-        .then(()=>showToast('✅ → '+newStageName))
-        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+      api(`/deals/${id}/stage`,{method:'PATCH',body:JSON.stringify({stage_name:newStage})})
+        .then(()=>showToast('✅ → '+newStage))
+        .catch(()=>{deal.stage=oldStage;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
   });
 }
 
-// ── DEAL MODAL ──
-let _dealItems = [];
-
-async function setupDealModal(dealId = null) {
-    const titleEl = document.getElementById('d-modal-title');
-    const saveBtn = document.getElementById('btn-deal-save');
-    const deleteBtn = document.getElementById('btn-deal-delete');
-    const contactList = document.getElementById('d-contact-list');
-    const stageSel = document.getElementById('d-stage');
-    const assigneeSel = document.getElementById('d-assignee');
-
-    document.getElementById('d-title').value = '';
-    document.getElementById('d-contact-input').value = '';
-    document.getElementById('d-title').classList.remove('err');
-    document.getElementById('d-discount').value = 0;
-    document.getElementById('d-tax-rate').value = 4;
-    document.getElementById('d-tax-included').checked = true;
-
-    contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
-    const users = await api('/users').catch(() => []);
-    assigneeSel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-
-    if (dealId) {
-        titleEl.innerHTML = `Сделка <em>№${dealId}</em>`;
-        saveBtn.textContent = 'Сохранить';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteDeal(dealId);
-        saveBtn.onclick = () => saveDeal(dealId);
-
-        const deal = await api(`/deals/${dealId}`);
-        if (!deal) { closeDealModal(); return; }
-        
-        document.getElementById('d-title').value = deal.title || '';
-        if(deal.contact) document.getElementById('d-contact-input').value = deal.contact.name || '';
-        assigneeSel.value = deal.manager || '';
-        stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
-        document.getElementById('d-discount').value = deal.discount || 0;
-        document.getElementById('d-tax-rate').value = deal.tax_rate;
-        document.getElementById('d-tax-included').checked = deal.tax_included;
-
-        _dealItems = deal.services.map(s => ({
-            id: s.service.id,
-            name: s.service.name,
-            price: s.price_at_moment, 
-            quantity: s.quantity,
-            unit: s.service.unit
-        }));
-
-    } else {
-        titleEl.innerHTML = 'Новая <em>сделка</em>';
-        saveBtn.textContent = 'Создать';
-        deleteBtn.style.display = 'none';
-        saveBtn.onclick = () => saveDeal();
-        stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
-        _dealItems = [];
-    }
-
-    renderDealServices();
+// ── TASK MODAL ──────────────────────────────────────────────────────────────
+function openTaskModal(){
+  document.getElementById('t-title').value='';
+  document.getElementById('t-date').value='';
+  document.getElementById('t-title').classList.remove('err');
+  document.getElementById('task-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('t-title').focus(),100);
 }
-
-function calculateDealTotal() {
-    const subtotal = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discountInput = document.getElementById('d-discount');
-    const taxRate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
-    const taxIncluded = document.getElementById('d-tax-included').checked;
-
-    if (subtotal > 10000 && parseFloat(discountInput.value) === 0) {
-        discountInput.value = 5;
-    }
-    const discount = parseFloat(discountInput.value) || 0;
-
-    const discountAmount = subtotal * (discount / 100);
-    const discountedTotal = subtotal - discountAmount;
-    let finalTotal;
-
-    if (taxIncluded) {
-        finalTotal = discountedTotal;
-    } else {
-        const taxAmount = discountedTotal * (taxRate / 100);
-        finalTotal = discountedTotal + taxAmount;
-    }
-    
-    document.getElementById('d-total').value = fmt(finalTotal);
-}
-
-async function openDealModal(dealId = null) {
-    try {
-        await setupDealModal(dealId);
-        document.getElementById('deal-overlay').classList.add('open');
-        setTimeout(() => document.getElementById('d-title').focus(), 100);
-    } catch(e) {
-        showToast('❌ Не удалось загрузить данные сделки');
-        console.error(e);
-    }
-}
-
-function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
-
-function addDealService(service) {
-    const existingItem = _dealItems.find(item => item.id === service.id);
-    if (existingItem) {
-        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
-    } else {
-        _dealItems.push({ ...service, quantity: service.min_volume || 1 });
-    }
-    renderDealServices();
-}
-
-function removeDealService(serviceId) {
-    _dealItems = _dealItems.filter(item => item.id !== serviceId);
-    renderDealServices();
-}
-
-function updateDealServiceQty(serviceId, newQuantity) {
-    const item = _dealItems.find(item => item.id === serviceId);
-    if (item) {
-        const qty = parseFloat(newQuantity);
-        if (qty > 0) item.quantity = qty; else removeDealService(serviceId);
-    }
-    renderDealServices();
-}
-
-function renderDealServices() {
-    const tbody = document.getElementById('d-services-table').querySelector('tbody');
-    if (_dealItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;font-size:11px;color:var(--ink4)">Услуги не добавлены</td></tr>`;
-    } else {
-        tbody.innerHTML = _dealItems.map(item => `
-            <tr>
-                <td>${item.name} ${item.id === -1 ? '<small style="color:var(--red)">[удалена]</small>' : ''}</td>
-                <td>${fmt(item.price)}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
-                <td>${fmt(item.price * item.quantity)}</td>
-                <td><button class="btn-del" onclick="removeDealService(${item.id})" title="Удалить">⊗</button></td>
-            </tr>
-        `).join('');
-    }
-    calculateDealTotal();
-}
-
-function getContactIdByName(name) {
-    const el = document.querySelector(`#d-contact-list option[value="${esc(name)}"]`);
-    return el ? parseInt(el.dataset.id, 10) : null;
-}
-
-async function saveDeal(dealId = null) {
-  const title = document.getElementById('d-title').value.trim();
-  const contactName = document.getElementById('d-contact-input').value.trim();
-  const stage_id = parseInt(document.getElementById('d-stage').value, 10);
-  const manager = document.getElementById('d-assignee').value;
-  const discount = parseFloat(document.getElementById('d-discount').value) || 0;
-  const tax_rate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
-  const tax_included = document.getElementById('d-tax-included').checked;
-
-  if (!title) { document.getElementById('d-title').classList.add('err'); return; }
-  if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
-
-  const dealData = { 
-      title, 
-      stage_id, 
-      manager: manager || null,
-      services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity })),
-      discount,
-      tax_rate,
-      tax_included
-  };
-  
-  const contact_id = getContactIdByName(contactName);
-  if (contact_id) {
-    dealData.contact_id = contact_id;
-  } else if (contactName) {
-    dealData.new_contact_name = contactName;
-  }
-
-  const method = dealId ? 'PATCH' : 'POST';
-  const endpoint = dealId ? `/deals/${dealId}` : '/deals';
-
-  try {
-    await api(endpoint, { method, body: JSON.stringify(dealData) });
-    closeDealModal();
-    showToast(dealId ? '✅ Сделка обновлена' : '✅ Сделка создана');
-    loadData(SELECTED_YEAR, true);
-  } catch (e) {}
-}
-
-async function deleteDeal(dealId) {
-    if (!confirm(`Вы уверены, что хотите удалить сделку №${dealId}?`)) return;
-    try {
-        await api(`/deals/${dealId}`, { method: 'DELETE' });
-        closeDealModal();
-        showToast('🗑️ Сделка удалена');
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// --- ITEM SELECTOR (replaces service selector) ---
-let _itemSelectorCallback = null;
-let _itemSelectorSource = [];
-
-function openItemSelectorModal(type) {
-    document.getElementById('item-selector-search').value = '';
-    if (type === 'service') {
-        _itemSelectorSource = _services;
-        _itemSelectorCallback = (item) => addDealService(item);
-    } else if (type === 'consumable') {
-        _itemSelectorSource = _consumables;
-        _itemSelectorCallback = (item) => addMaintenanceConsumable(item);
-    }
-    renderItemSelectorResults();
-    document.getElementById('item-selector-modal').classList.add('open');
-    setTimeout(() => document.getElementById('item-selector-search').focus(), 50);
-}
-
-function closeItemSelectorModal() {
-    document.getElementById('item-selector-modal').classList.remove('open');
-}
-
-function renderItemSelectorResults() {
-    const searchTerm = document.getElementById('item-selector-search').value.toLowerCase();
-    const resultsContainer = document.getElementById('item-selector-results');
-    const filteredItems = _itemSelectorSource.filter(i => i.name.toLowerCase().includes(searchTerm));
-
-    if (filteredItems.length === 0) {
-        resultsContainer.innerHTML = `<div class="empty-txt" style="padding: 24px;">Ничего не найдено</div>`;
-        return;
-    }
-
-    resultsContainer.innerHTML = filteredItems.map(i => {
-      const sub = i.stock_quantity != null ? `На складе: ${fmtShort(i.stock_quantity)} ${i.unit || ''}` : (i.unit || '');
-      return `
-        <div class="item-result" onclick="selectItem(${i.id})">
-            <div>
-                <div class="item-result-name">${i.name}</div>
-                <div class="item-result-sub">${sub}</div>
-            </div>
-            <div class="item-result-price">${fmt(i.price)}</div>
-        </div>
-    `}).join('');
-}
-
-function selectItem(itemId) {
-    if (_itemSelectorCallback) {
-        const item = _itemSelectorSource.find(i => i.id === itemId);
-        if(item) _itemSelectorCallback(item);
-    }
-    closeItemSelectorModal();
-}
-
-// ── CONTACT MODAL ──
-let _currentContactId = null;
-function openContactModal(contact = null) {
-    const overlay = document.getElementById('contact-overlay');
-    const title = document.getElementById('contact-modal-title');
-    const nameInput = document.getElementById('c-name');
-    const phoneInput = document.getElementById('c-phone');
-    const sourceInput = document.getElementById('c-source');
-    const saveBtn = document.getElementById('btn-contact-save');
-    const deleteBtn = document.getElementById('btn-contact-delete');
-
-    nameInput.classList.remove('err');
-    _currentContactId = null;
-
-    if (contact) {
-        _currentContactId = contact.id;
-        title.innerHTML = 'Редактировать <em>контакт</em>';
-        nameInput.value = contact.name || '';
-        phoneInput.value = contact.phone || '';
-        sourceInput.value = contact.source || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteContact(_currentContactId);
-    } else {
-        title.innerHTML = 'Новый <em>контакт</em>';
-        nameInput.value = '';
-        phoneInput.value = '';
-        sourceInput.value = '';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveContact;
-    overlay.classList.add('open');
-    setTimeout(() => nameInput.focus(), 100);
-}
-
-function closeContactModal() {
-    document.getElementById('contact-overlay').classList.remove('open');
-    _currentContactId = null;
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContactModal() });
-
-async function saveContact() {
-    const name = document.getElementById('c-name').value.trim();
-    if (!name) {
-        document.getElementById('c-name').classList.add('err');
-        return;
-    }
-    const data = {
-        name,
-        phone: document.getElementById('c-phone').value.trim() || null,
-        source: document.getElementById('c-source').value.trim() || null
-    };
-
-    try {
-        const endpoint = _currentContactId ? `/contacts/${_currentContactId}` : '/contacts';
-        const method = _currentContactId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentContactId ? '✅ Контакт обновлен' : '✅ Контакт создан');
-        closeContactModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteContact(contactId) {
-    if (!confirm('Вы уверены, что хотите удалить этот контакт? Это действие нельзя отменить.')) return;
-    try {
-        await api(`/contacts/${contactId}`, { method: 'DELETE' });
-        showToast('🗑️ Контакт удален');
-        closeContactModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── SERVICE MODAL ──
-let _currentServiceId = null;
-function openServiceModal(service = null) {
-    const overlay = document.getElementById('service-modal');
-    const title = document.getElementById('service-modal-title');
-    const nameInput = document.getElementById('s-name');
-    const saveBtn = document.getElementById('btn-service-save');
-    const deleteBtn = document.getElementById('btn-service-delete');
-
-    nameInput.classList.remove('err');
-    _currentServiceId = null;
-
-    if (service) {
-        _currentServiceId = service.id;
-        title.innerHTML = 'Редактировать <em>услугу</em>';
-        nameInput.value = service.name || '';
-        document.getElementById('s-unit').value = service.unit || '';
-        document.getElementById('s-price').value = service.price || '';
-        document.getElementById('s-min-volume').value = service.min_volume || '';
-        document.getElementById('s-notes').value = service.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteService(_currentServiceId);
-    } else {
-        title.innerHTML = 'Новая <em>услуга</em>';
-        nameInput.value = '';
-        document.getElementById('s-unit').value = '';
-        document.getElementById('s-price').value = '';
-        document.getElementById('s-min-volume').value = '1';
-        document.getElementById('s-notes').value = '';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveService;
-    overlay.classList.add('open');
-    setTimeout(() => nameInput.focus(), 100);
-}
-
-function closeServiceModal() {
-    document.getElementById('service-modal').classList.remove('open');
-    _currentServiceId = null;
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeServiceModal() });
-
-async function saveService() {
-    const name = document.getElementById('s-name').value.trim();
-    const price = parseFloat(document.getElementById('s-price').value);
-    if (!name || !price) {
-        document.getElementById('s-name').classList.toggle('err', !name);
-        document.getElementById('s-price').classList.toggle('err', !price);
-        return;
-    }
-    const data = {
-        name,
-        price,
-        unit: document.getElementById('s-unit').value.trim() || 'шт',
-        min_volume: parseFloat(document.getElementById('s-min-volume').value) || 1,
-        notes: document.getElementById('s-notes').value.trim() || null
-    };
-
-    try {
-        const endpoint = _currentServiceId ? `/services/${_currentServiceId}` : '/services';
-        const method = _currentServiceId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentServiceId ? '✅ Услуга обновлена' : '✅ Услуга создана');
-        closeServiceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteService(serviceId) {
-    if (!confirm('Вы уверены, что хотите удалить эту услугу? Это действие нельзя отменить.')) return;
-    try {
-        await api(`/services/${serviceId}`, { method: 'DELETE' });
-        showToast('🗑️ Услуга удалена');
-        closeServiceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── EQUIPMENT & MAINTENANCE ──
-let _currentEquipmentId = null;
-let _maintenanceItems = [];
-let _currentMaintenanceId = null;
-
-function selectEquipment(eqId, rowElement) {
-    _selectedEquipmentId = eqId;
-    document.querySelectorAll('#equipment-tbody tr').forEach(row => row.classList.remove('selected'));
-    if (rowElement) rowElement.classList.add('selected');
-}
-
-function openEquipmentModal(eq = null) {
-    const overlay = document.getElementById('equipment-modal');
-    const title = document.getElementById('equipment-modal-title');
-    const saveBtn = document.getElementById('btn-equipment-save');
-    const deleteBtn = document.getElementById('btn-equipment-delete');
-
-    _currentEquipmentId = null;
-    const fields = ['name', 'model', 'serial', 'purchase-date', 'purchase-cost', 'status', 'engine-hours', 'fuel-norm', 'last-maintenance', 'next-maintenance', 'notes'];
-    fields.forEach(f => document.getElementById(`eq-${f}`).value = '');
-    document.getElementById('eq-status').value = 'active';
-
-    if (eq) {
-        _currentEquipmentId = eq.id;
-        title.innerHTML = 'Редактировать <em>технику</em>';
-        document.getElementById('eq-name').value = eq.name || '';
-        document.getElementById('eq-model').value = eq.model || '';
-        document.getElementById('eq-serial').value = eq.serial || '';
-        document.getElementById('eq-purchase-date').value = toISODate(eq.purchase_date);
-        document.getElementById('eq-purchase-cost').value = eq.purchase_cost;
-        document.getElementById('eq-status').value = eq.status || 'active';
-        document.getElementById('eq-engine-hours').value = eq.engine_hours;
-        document.getElementById('eq-fuel-norm').value = eq.fuel_norm;
-        document.getElementById('eq-last-maintenance').value = toISODate(eq.last_maintenance_date);
-        document.getElementById('eq-next-maintenance').value = toISODate(eq.next_maintenance_date);
-        document.getElementById('eq-notes').value = eq.notes || '';
-
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteEquipment(_currentEquipmentId);
-    } else {
-        title.innerHTML = 'Новая <em>техника</em>';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveEquipment;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('eq-name').focus(), 100);
-}
-
-function closeEquipmentModal() {
-    document.getElementById('equipment-modal').classList.remove('open');
-    _currentEquipmentId = null;
-}
-
-async function saveEquipment() {
-    const name = document.getElementById('eq-name').value.trim();
-    if (!name) {
-        document.getElementById('eq-name').classList.add('err');
-        return;
-    }
-    const data = {
-        name,
-        model: document.getElementById('eq-model').value.trim() || null,
-        serial: document.getElementById('eq-serial').value.trim() || null,
-        purchase_date: document.getElementById('eq-purchase-date').value || null,
-        purchase_cost: parseFloat(document.getElementById('eq-purchase-cost').value) || null,
-        status: document.getElementById('eq-status').value,
-        engine_hours: parseFloat(document.getElementById('eq-engine-hours').value) || null,
-        fuel_norm: parseFloat(document.getElementById('eq-fuel-norm').value) || null,
-        last_maintenance_date: document.getElementById('eq-last-maintenance').value || null,
-        next_maintenance_date: document.getElementById('eq-next-maintenance').value || null,
-        notes: document.getElementById('eq-notes').value.trim() || null,
-    };
-
-    try {
-        const endpoint = _currentEquipmentId ? `/equipment/${_currentEquipmentId}` : '/equipment';
-        const method = _currentEquipmentId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentEquipmentId ? '✅ Техника обновлена' : '✅ Техника добавлена');
-        closeEquipmentModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteEquipment(eqId) {
-    if (!confirm('Вы уверены, что хотите удалить эту единицу техники? Все записи о ТО также будут удалены.')) return;
-    try {
-        await api(`/equipment/${eqId}`, { method: 'DELETE' });
-        showToast('🗑️ Техника удалена');
-        closeEquipmentModal();
-        _selectedEquipmentId = null;
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function openMaintenanceModal(mId = null) {
-    if (!mId && !_selectedEquipmentId) {
-        showToast('💡 Сначала выберите технику в левой таблице');
-        return;
-    }
-    const overlay = document.getElementById('maintenance-modal');
-    const title = document.getElementById('maintenance-modal-title');
-    const saveBtn = document.getElementById('btn-maintenance-save');
-    const deleteBtn = document.getElementById('btn-maintenance-delete');
-    
-    _currentMaintenanceId = null;
-    document.getElementById('m-work').classList.remove('err');
-    document.getElementById('m-date').value = toISODate(new Date());
-    document.getElementById('m-work').value = '';
-    document.getElementById('m-notes').value = '';
-
-    if (mId) {
-        _currentMaintenanceId = mId;
-        const m = await api(`/maintenance/${mId}`);
-        if (!m) { showToast('Ошибка загрузки ТО'); return; }
-        
-        selectEquipment(m.equipment_id, document.querySelector(`#equipment-tbody tr[data-id="${m.equipment_id}"]`));
-        title.innerHTML = `Запись <em>о ТО #${m.id}</em>`;
-        document.getElementById('m-date').value = toISODate(m.date);
-        document.getElementById('m-work').value = m.work_description || '';
-        document.getElementById('m-notes').value = m.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteMaintenance(_currentMaintenanceId);
-
-        _maintenanceItems = m.consumables_used.map(c => ({ 
-            id: c.consumable.id, 
-            name: c.consumable.name, 
-            price: c.price_at_moment, 
-            quantity: c.quantity,
-            unit: c.consumable.unit
-        }));
-
-    } else {
-        title.innerHTML = 'Новая запись <em>о ТО</em>';
-        _maintenanceItems = [];
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    renderMaintenanceConsumables();
-    saveBtn.onclick = saveMaintenance;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('m-work').focus(), 100);
-}
-
-function closeMaintenanceModal() {
-    document.getElementById('maintenance-modal').classList.remove('open');
-    _currentMaintenanceId = null;
-}
-
-function addMaintenanceConsumable(consumable) {
-    const existingItem = _maintenanceItems.find(item => item.id === consumable.id);
-    if (existingItem) {
-        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
-    } else {
-        _maintenanceItems.push({ ...consumable, quantity: 1 });
-    }
-    renderMaintenanceConsumables();
-}
-
-function removeMaintenanceConsumable(consumableId) {
-    _maintenanceItems = _maintenanceItems.filter(item => item.id !== consumableId);
-    renderMaintenanceConsumables();
-}
-
-function updateMaintenanceConsumableQty(consumableId, newQuantity) {
-    const item = _maintenanceItems.find(item => item.id === consumableId);
-    if (item) {
-        const qty = parseFloat(newQuantity);
-        if (qty > 0) item.quantity = qty; else removeMaintenanceConsumable(consumableId);
-    }
-    renderMaintenanceConsumables();
-}
-
-function renderMaintenanceConsumables() {
-    const tbody = document.getElementById('m-consumables-table').querySelector('tbody');
-    if (_maintenanceItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;font-size:11px;color:var(--ink4)">Расходники не добавлены</td></tr>`;
-    } else {
-        tbody.innerHTML = _maintenanceItems.map(item => `
-            <tr>
-                <td>${item.name}</td>
-                <td>${fmt(item.price, '0 ₽')} / ${item.unit}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateMaintenanceConsumableQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
-                <td>${fmt(item.price * item.quantity)}</td>
-                <td><button class="btn-del" onclick="removeMaintenanceConsumable(${item.id})" title="Удалить">⊗</button></td>
-            </tr>
-        `).join('');
-    }
-    const total = _maintenanceItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    document.getElementById('m-total-cost').value = fmt(total);
-}
-
-async function saveMaintenance() {
-    const work = document.getElementById('m-work').value.trim();
-    if (!work) { document.getElementById('m-work').classList.add('err'); return; }
-    
-    const data = {
-        date: document.getElementById('m-date').value || toISODate(new Date()),
-        work_description: work,
-        notes: document.getElementById('m-notes').value.trim() || null,
-        consumables: _maintenanceItems.map(item => ({ consumable_id: item.id, quantity: item.quantity }))
-    };
-
-    const method = _currentMaintenanceId ? 'PATCH' : 'POST';
-    const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
-    if (method === 'POST') {
-        if (!_selectedEquipmentId) { showToast('❌ Ошибка: не выбрана техника для ТО'); return; }
-        data.equipment_id = _selectedEquipmentId;
-    }
-
-    try {
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentMaintenanceId ? '✅ Запись о ТО обновлена' : '✅ Запись о ТО добавлена');
-        closeMaintenanceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteMaintenance(mId) {
-    if (!confirm('Удалить эту запись о ТО? Расходники вернутся на склад.')) return;
-    try {
-        await api(`/maintenance/${mId}`, { method: 'DELETE' });
-        showToast('🗑️ Запись удалена');
-        closeMaintenanceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── CONSUMABLE (STOCK) MODAL ──
-let _currentConsumableId = null;
-function openConsumableModal(c = null) {
-    const overlay = document.getElementById('consumable-modal');
-    const title = document.getElementById('consumable-modal-title');
-    const saveBtn = document.getElementById('btn-consumable-save');
-    const deleteBtn = document.getElementById('btn-consumable-delete');
-
-    _currentConsumableId = null;
-    document.getElementById('cn-name').value = '';
-    document.getElementById('cn-unit').value = '';
-    document.getElementById('cn-stock').value = '';
-    document.getElementById('cn-price').value = '';
-    document.getElementById('cn-notes').value = '';
-    document.getElementById('cn-name').classList.remove('err');
-
-    if (c) {
-        _currentConsumableId = c.id;
-        title.innerHTML = 'Редактировать <em>расходник</em>';
-        document.getElementById('cn-name').value = c.name;
-        document.getElementById('cn-unit').value = c.unit;
-        document.getElementById('cn-stock').value = c.stock_quantity;
-        document.getElementById('cn-price').value = c.price;
-        document.getElementById('cn-notes').value = c.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteConsumable(_currentConsumableId);
-    } else {
-        title.innerHTML = 'Новый <em>расходник</em>';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveConsumable;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('cn-name').focus(), 100);
-}
-function closeConsumableModal() { document.getElementById('consumable-modal').classList.remove('open'); }
-
-async function saveConsumable() {
-    const name = document.getElementById('cn-name').value.trim();
-    if (!name) { document.getElementById('cn-name').classList.add('err'); return; }
-
-    const data = {
-        name,
-        unit: document.getElementById('cn-unit').value.trim() || 'шт',
-        stock_quantity: parseFloat(document.getElementById('cn-stock').value) || 0,
-        price: parseFloat(document.getElementById('cn-price').value) || 0,
-        notes: document.getElementById('cn-notes').value.trim() || null
-    };
-    
-    try {
-        const endpoint = _currentConsumableId ? `/consumables/${_currentConsumableId}` : '/consumables';
-        const method = _currentConsumableId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentConsumableId ? '✅ Расходник обновлен' : '✅ Расходник добавлен');
-        closeConsumableModal();
-        loadData(SELECTED_YEAR, true);
-    } catch(e) { }
-}
-
-async function deleteConsumable(cId) {
-    if (!confirm('Вы уверены, что хотите удалить этот расходник? Его нельзя будет восстановить.')) return;
-    try {
-        await api(`/consumables/${cId}`, { method: 'DELETE' });
-        showToast('🗑️ Расходник удален');
-        closeConsumableModal();
-        loadData(SELECTED_YEAR, true);
-    } catch(e) { }
-}
-
-// ── EXPENSE MODAL ──
-let _currentExpenseId = null;
-
-async function openExpenseModal(expense = null) {
-    const overlay = document.getElementById('expense-overlay');
-    const title = document.getElementById('expense-modal-title');
-    const nameInput = document.getElementById('ex-name');
-    const amountInput = document.getElementById('ex-amount');
-    const dateInput = document.getElementById('ex-date');
-    const categoryInput = document.getElementById('ex-category');
-    const categoryList = document.getElementById('expense-categories-list');
-    const saveBtn = overlay.querySelector('.btn-pri');
-    const deleteBtn = document.getElementById('btn-expense-delete');
-    
-    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}"></option>`).join('');
-
-    nameInput.classList.remove('err');
-    amountInput.classList.remove('err');
-    _currentExpenseId = null;
-
-    if (expense) {
-        _currentExpenseId = expense.id;
-        title.innerHTML = 'Редактировать <em>расход</em>';
-        nameInput.value = expense.name || '';
-        amountInput.value = expense.amount || '';
-        dateInput.value = toISODate(expense.date);
-        categoryInput.value = expense.category || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteExpense(_currentExpenseId);
-    } else {
-        title.innerHTML = 'Новый <em>расход</em>';
-        nameInput.value = '';
-        amountInput.value = '';
-        dateInput.valueAsDate = new Date();
-        categoryInput.value = '';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveExpense;
-    overlay.classList.add('open');
-    setTimeout(() => nameInput.focus(), 100);
-}
-
-function closeExpenseModal() {
-    document.getElementById('expense-overlay').classList.remove('open');
-    _currentExpenseId = null;
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExpenseModal() });
-
-
-async function saveExpense() {
-    const name = document.getElementById('ex-name').value.trim();
-    const amount = parseFloat(document.getElementById('ex-amount').value);
-    const date = document.getElementById('ex-date').value;
-    const category = document.getElementById('ex-category').value.trim();
-
-    if (!name || !amount) {
-        document.getElementById('ex-name').classList.toggle('err', !name);
-        document.getElementById('ex-amount').classList.toggle('err', !amount);
-        return;
-    }
-    const data = { name, amount, date: date || toISODate(new Date()), category };
-
-    try {
-        const endpoint = _currentExpenseId ? `/expenses/${_currentExpenseId}` : '/expenses';
-        const method = _currentExpenseId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentExpenseId ? '✅ Расход обновлен' : '✅ Расход добавлен');
-        closeExpenseModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteExpense(expenseId) {
-    if (!confirm('Вы уверены, что хотите удалить этот расход?')) return;
-    try {
-        await api(`/expenses/${expenseId}`, { method: 'DELETE' });
-        showToast('🗑️ Расход удален');
-        closeExpenseModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── TASK MODAL ──
-let _currentTaskId = null;
-
-async function populateAssignees(selectedId){
-  const sel = document.getElementById('t-assignee');
-  try {
-    const users = await api('/users');
-    sel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name}</option>`).join('');
-  } catch(e) {
-    sel.innerHTML = `<option value="">Ошибка загрузки</option>`;
-  }
-}
-
-async function openTaskModal(taskId = null){
-    _currentTaskId = taskId;
-    const overlay = document.getElementById('task-overlay');
-    const titleEl = document.getElementById('t-title');
-    const descEl = document.getElementById('t-desc');
-    const dateEl = document.getElementById('t-date');
-    const priorityEl = document.getElementById('t-priority');
-    const statusEl = document.getElementById('t-status');
-    const deleteBtn = document.getElementById('btn-task-delete');
-
-    titleEl.value = ''; descEl.value = ''; 
-    dateEl.valueAsDate = new Date(Date.now() + 864e5);
-    priorityEl.value = 'Обычный'; statusEl.value = 'Открыта';
-    titleEl.classList.remove('err');
-    deleteBtn.style.display = 'none';
-
-    if (taskId) {
-        try {
-            const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=false`);
-            const task = (tasks).find(t => t.id === taskId);
-            if (task) {
-                titleEl.value = task.title || '';
-                descEl.value = task.description || '';
-                if (task.due_date) dateEl.value = toISODate(task.due_date);
-                priorityEl.value = task.priority || 'Обычный';
-                statusEl.value = task.status || 'Открыта';
-                await populateAssignees(task.assignee);
-                deleteBtn.style.display = 'block';
-                deleteBtn.onclick = () => deleteTask(taskId);
-            } else { throw new Error('Task not found'); }
-        } catch(e) { showToast('❌ Не удалось загрузить задачу'); return; }
-    } else {
-        await populateAssignees(CURRENT_USER?.sub);
-    }
-
-    overlay.classList.add('open');
-    setTimeout(() => titleEl.focus(), 100);
-}
-
-async function deleteTask(id){
-  if(!confirm('Удалить задачу?')) return;
-  try{
-    await api(`/tasks/${id}`, {method:'DELETE'});
-    closeTaskModal();
-    showToast('🗑️ Задача удалена');
-    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
-  }catch{}
-}
-
 function closeTaskModal(){document.getElementById('task-overlay').classList.remove('open')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
 
 async function saveTask(){
   const title=document.getElementById('t-title').value.trim();
-  const description=document.getElementById('t-desc').value.trim();
-  const due_date=document.getElementById('t-date').value;
-  const priority=document.getElementById('t-priority').value;
-  const status=document.getElementById('t-status').value;
-  const assignee=document.getElementById('t-assignee').value;
-
+  const date=document.getElementById('t-date').value;
   if(!title){document.getElementById('t-title').classList.add('err');return}
   try{
-    const method = _currentTaskId ? 'PATCH' : 'POST';
-    const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
-    const is_done = status === 'Выполнена';
-    
-    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
-    closeTaskModal();
-    showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
-    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
+    await api('/tasks',{method:'POST',body:JSON.stringify({title,due_date:date||null})});
+    closeTaskModal();showToast('✅ Задача добавлена');
+    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
+    const data=await api('/tasks?year='+SELECTED_YEAR);
+    renderTasks(data?.tasks||[]);
   }catch{}
 }
 
-async function loadTasks(isDone){
-  document.getElementById('btn-tasks-active').classList.toggle('active', !isDone);
-  document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
-  const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
-  renderTasks(tasks || []);
+// ── TAX MODAL ───────────────────────────────────────────────────────────────
+function openTaxModal(){
+  document.getElementById('tx-amount').value='';
+  document.getElementById('tx-note').value='';
+  document.getElementById('tx-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('tx-amount').classList.remove('err');
+  document.getElementById('tax-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('tx-amount').focus(),100);
+}
+function closeTaxModal(){document.getElementById('tax-overlay').classList.remove('open')}
+
+async function saveTaxPayment(){
+  const amount=parseFloat(document.getElementById('tx-amount').value);
+  const date=document.getElementById('tx-date').value;
+  const note=document.getElementById('tx-note').value.trim();
+  if(!amount||amount<=0){document.getElementById('tx-amount').classList.add('err');return}
+  try{
+    await api('/taxes/payments',{method:'POST',body:JSON.stringify({amount,date:date||null,note:note||null,year:SELECTED_YEAR})});
+    closeTaxModal();showToast('✅ Платёж сохранён');
+    // обновляем данные по налогам
+    const [summary,payments]=await Promise.all([
+      api('/taxes/summary?year='+SELECTED_YEAR),
+      api('/taxes/payments?year='+SELECTED_YEAR)
+    ]);
+    renderTaxes(summary,payments?.payments||[]);
+  }catch{}
 }
 
+// ── RENDER FUNCTIONS ─────────────────────────────────────────────────────────
 function renderTasks(tasks=[]){
   const tb=document.getElementById('tasks-tbody'),cnt=document.getElementById('tasks-count');
   if(cnt)cnt.textContent=tasks.length?tasks.length+' задач':'';
-  const getBadge=(s)=>{
-    if(s==='Выполнена'||s==='Выполнено')return'b-green';
-    if(s==='Отложена')return'b-amber';
-    if(s==='В работе')return'b-blue';
-    return 'b-slate';
-  };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${esc(t.description||'')}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr><td>${t.id}</td><td style="color:var(--ink);font-weight:400">${t.title}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${t.status==='Выполнено'?'b-green':'b-blue'}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){
   const tb=document.getElementById('expenses-tbody'),cnt=document.getElementById('expenses-count');
   const total=expenses.reduce((s,e)=>s+e.amount,0);
   if(cnt)cnt.textContent=expenses.length?`${expenses.length} записей · ${fmt(total)}`:'';
-  tb.innerHTML=expenses.length?expenses.map(e=>`<tr onclick='openExpenseModal(${JSON.stringify(e)})'><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
+  tb.innerHTML=expenses.length?expenses.map(e=>`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
 }
 
-function renderEquipment(eq=[]) {
-    _equipment = eq;
-    const tb = document.getElementById('equipment-tbody'), cnt = document.getElementById('equipment-count');
-    if (cnt) cnt.textContent = eq.length ? eq.length + ' единиц' : '';
-    const SM = { active: ['b-green', 'Активна'], repair: ['b-amber', 'В ремонте'], retired: ['b-slate', 'Списана'] };
-    tb.innerHTML = eq.length ? eq.map(e => {
-        const [cls, lbl] = SM[e.status] || ['b-slate', e.status];
-        return `<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования">
-            <td style="font-weight:500;color:var(--ink)">${e.name}</td>
-            <td style="font-size:11px;color:var(--ink3)">${e.model || '—'}</td>
-            <td><span class="badge ${cls}">${lbl}</span></td>
-            <td>${fmtDate(e.purchase_date)}</td>
-            <td>${fmt(e.purchase_cost)}</td>
-            <td>${fmtShort(e.engine_hours, '0')}</td>
-            <td>${e.fuel_norm != null ? e.fuel_norm + ' л/ч' : '—'}</td>
-            <td>${fmtDate(e.last_maintenance_date)}</td>
-            <td>${fmtDate(e.next_maintenance_date)}</td>
-        </tr>`;
-    }).join('') : empty(9, 'Техники не найдено');
-
-    if (_selectedEquipmentId) {
-        const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
-        if (row) row.classList.add('selected');
-        else selectEquipment(null);
-    } else {
-        selectEquipment(null);
-    }
+function renderTaxes(summary,payments=[]){
+  // KPI
+  if(summary){
+    const rate=Math.round((summary.tax_rate||0.06)*100);
+    document.getElementById('kpi-tax-revenue').textContent=fmt(summary.revenue||0);
+    document.getElementById('kpi-tax-rate-lbl').textContent='ставка '+rate+'%';
+    document.getElementById('kpi-tax-accrued').textContent=fmt(summary.tax_accrued||0);
+    const bal=summary.balance||0;
+    const balEl=document.getElementById('kpi-tax-balance');
+    const lblEl=document.getElementById('kpi-tax-balance-lbl');
+    balEl.textContent=fmt(Math.abs(bal));
+    if(bal<0){balEl.className='kpi-val m-pos';lblEl.textContent='Переплата'}
+    else if(bal===0){balEl.className='kpi-val';lblEl.textContent='Полностью уплачено'}
+    else{balEl.className='kpi-val m-neg';lblEl.textContent='Остаток к уплате'}
+    document.getElementById('kpi-tax-paid-sub').textContent='уплачено '+fmt(summary.paid||0);
+    // прогресс бар
+    const accrued=summary.tax_accrued||0;
+    const paid=summary.paid||0;
+    const pct=accrued>0?Math.min(Math.round(paid/accrued*100),100):0;
+    document.getElementById('tax-pct').textContent=pct+'%';
+    const bar=document.getElementById('tax-bar');
+    bar.style.width=pct+'%';
+    bar.className='tax-bar-fill'+(paid>accrued?' overpaid':bal>0?' danger':'');
+  }
+  // таблица платежей
+  const tb=document.getElementById('tax-payments-tbody');
+  const cnt=document.getElementById('tax-payments-count');
+  const total=payments.reduce((s,p)=>s+p.amount,0);
+  if(cnt)cnt.textContent=payments.length?`${payments.length} платежей · ${fmt(total)}`:'';
+  tb.innerHTML=payments.length?payments.map(p=>`<tr>
+    <td>${p.id}</td>
+    <td><span class="money m-pos">${fmt(p.amount)}</span></td>
+    <td>${fmtDate(p.date)}</td>
+    <td style="color:var(--ink3)">${p.note||'—'}</td>
+    <td><span class="badge b-slate">${p.year}</span></td>
+  </tr>`).join(''):empty(5,'Платежей не найдено')
 }
 
-function renderMaintenanceHistory(history) {
-    _maintenanceHistory = history;
-    const tbody = document.getElementById('maintenance-tbody');
-    const countEl = document.getElementById('maintenance-count');
-    tbody.innerHTML = history.length ? history.map(h => 
-        `<tr onclick='openMaintenanceModal(${h.id})'>
-            <td style="font-size:11px;color:var(--ink3)">${h.equipment.name}</td>
-            <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
-            <td>${fmt(h.cost)}</td>
-            <td>${fmtDate(h.date)}</td>
-        </tr>`
-    ).join('') : empty(4, 'Записей о ТО нет');
-    countEl.textContent = history.length ? `${history.length} записей` : '';
+function renderEquipment(eq=[]){
+  const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
+  if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
+  const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
+  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td style="color:var(--ink3);font-size:11px">${e.model||'—'}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`}).join(''):empty(4,'Техники не найдено')
 }
 
 function renderServices(services=[]){
-    _services = services;
-    const tb = document.getElementById('services-tbody');
-    const cnt = document.getElementById('services-count');
-    if (cnt) cnt.textContent = services.length ? services.length + ' услуг' : '';
-    tb.innerHTML = services.length ? services.map(s => 
-        `<tr onclick='openServiceModal(${JSON.stringify(s)})'>
-            <td>${s.id}</td>
-            <td style="color:var(--ink);font-weight:400">${s.name}</td>
-            <td style="color:var(--ink3);font-size:11px">${s.unit || '—'}</td>
-            <td><span class="money">${fmt(s.price)}</span></td>
-            <td style="color:var(--ink3);font-size:11px">${s.min_volume != null ? 'от ' + s.min_volume : '—'}</td>
-            <td style="color:var(--ink4);font-size:11px; white-space: pre-wrap; max-width: 300px;">${s.notes || '—'}</td>
-        </tr>`
-    ).join('') : empty(6, 'Услуг не найдено');
+  const tb=document.getElementById('services-tbody'),cnt=document.getElementById('services-count');
+  if(cnt)cnt.textContent=services.length?services.length+' услуг':'';
+  tb.innerHTML=services.length?services.map(s=>`<tr><td>${s.id}</td><td style="color:var(--ink);font-weight:400">${s.name}</td><td><span class="cat-tag">${s.category||'—'}</span></td><td><span class="money">${fmt(s.price)}</span></td><td style="color:var(--ink4);font-size:11px">${s.unit}</td></tr>`).join(''):empty(5,'Услуг не найдено')
 }
 
 function renderConsumables(items=[]){
-  _consumables = items;
   const tb=document.getElementById('consumables-tbody'),cnt=document.getElementById('consumables-count');
   if(cnt)cnt.textContent=items.length?items.length+' позиций':'';
-  tb.innerHTML=items.length?items.map(c=>`<tr onclick='openConsumableModal(${JSON.stringify(c)})'><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td><span class="money">${c.stock_quantity||0}</span> <span style="font-size:11px;color:var(--ink4)">${c.unit||''}</span></td><td>${fmt(c.price, '0 ₽')}</td><td style="color:var(--ink4);font-size:11px;">${c.notes || '-'}</td></tr>`).join(''):empty(5,'Позиций не найдено')
+  tb.innerHTML=items.length?items.map(c=>`<tr><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td><span class="money">${c.stock_quantity||0}</span> <span style="font-size:11px;color:var(--ink4)">${c.unit||''}</span></td></tr>`).join(''):empty(3,'Позиций не найдено')
 }
 
 function renderContacts(contacts=[]){
-  _contacts = contacts;
   const tb=document.getElementById('contacts-tbody'),cnt=document.getElementById('contacts-count');
   if(cnt)cnt.textContent=contacts.length?contacts.length+' контактов':'';
-  tb.innerHTML = contacts.length ? contacts.map(c => 
-    `<tr onclick='openContactModal(${JSON.stringify(c)})'>
-        <td>${c.id}</td>
-        <td style="color:var(--ink);font-weight:400">${c.name}</td>
-        <td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td>
-        <td style="color:var(--ink3);font-size:11px">${c.source||'—'}</td>
-    </tr>`
-  ).join('') : empty(4, 'Контактов не найдено');
+  tb.innerHTML=contacts.length?contacts.map(c=>`<tr><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td></tr>`).join(''):empty(3,'Контактов не найдено')
 }
 
 function buildDash(deals,expenses,equipment){
-  const successfulStages = STAGES.filter(s => s.is_final && s.name.toLowerCase().includes('успешно')).map(s => s.name);
-  const won = deals.filter(d => successfulStages.includes(d.stage));
+  const ws=STAGES.find(s=>s.type==='success');
+  const won=ws?deals.filter(d=>d.stage===ws.name):deals;
   const rev=won.reduce((s,d)=>s+d.total,0);
   const exp=expenses.reduce((s,e)=>s+e.amount,0);
-  const prof=rev-exp; const marg=rev?Math.round(prof/rev*100):0;
+  const prof=rev-exp,marg=rev?Math.round(prof/rev*100):0;
   document.getElementById('kpi-revenue').textContent=fmt(rev);
   document.getElementById('kpi-deals-count').textContent=won.length+' успешных сделок';
   document.getElementById('kpi-expenses').textContent=fmt(exp);
@@ -1911,45 +746,34 @@ function buildDash(deals,expenses,equipment){
   document.getElementById('kpi-repair').textContent=equipment.filter(e=>e.status==='repair').length+' в ремонте';
 }
 
-async function loadData(year, force = false){
+// ── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadData(year){
   if(!year)return;
-  if (force) {
-      try { await api('/cache/invalidate', { method: 'POST' }); } catch(e){ console.warn('Cache invalidation failed', e) }
-  }
   showToast('⏳ Загрузка за '+year+'…');
   document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
   const yp='?year='+year;
-  const endpoints = {
-      deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
-      equipment: '/equipment', services: '/services', consumables: '/consumables',
-      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp,
-      expense_categories: '/expense-categories'
+  const ep={
+    stages:'/stages',deals:'/deals'+yp,tasks:'/tasks'+yp,
+    expenses:'/expenses'+yp,equipment:'/equipment',services:'/services',
+    consumables:'/consumables',contacts:'/contacts',
+    taxSummary:'/taxes/summary'+yp,taxPayments:'/taxes/payments'+yp
   };
-  const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
-  const data = {};
-  let hasError = false;
-  Object.keys(endpoints).forEach((key, i) => {
-      if (results[i].status === 'fulfilled') {
-          data[key] = results[i].value;
-      } else {
-          hasError = true;
-      }
-  });
-
+  const keys=Object.keys(ep);
+  const res=await Promise.allSettled(keys.map(k=>api(ep[k])));
+  const data={};let err=false;
+  res.forEach((r,i)=>{if(r.status==='fulfilled')data[keys[i]]=r.value;else err=true});
   STAGES=data.stages||[];
-  _expenseCategories = data.expense_categories || [];
-  
-  renderKanban(data.deals?.deals || data.deals || []);
-  renderTasks((data.tasks?.tasks || data.tasks) || []);
-  renderExpenses((data.expenses?.expenses || data.expenses) || []);
-  renderEquipment(data.equipment || []);
-  renderServices(data.services || []);
-  renderConsumables(data.consumables || []);
-  renderContacts(data.contacts || []);
-  renderMaintenanceHistory(data.maintenance || []);
-  buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
-  
-  showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
+  const deals=data.deals?.deals||[],expenses=data.expenses?.expenses||[],equipment=data.equipment||[];
+  renderKanban(deals);
+  renderTasks(data.tasks?.tasks||[]);
+  renderExpenses(expenses);
+  renderTaxes(data.taxSummary,data.taxPayments?.payments||[]);
+  renderEquipment(equipment);
+  renderServices(data.services||[]);
+  renderConsumables(data.consumables||[]);
+  renderContacts(data.contacts||[]);
+  buildDash(deals,expenses,equipment);
+  showToast(err?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
 
 async function populateYearSelector(){
@@ -1964,7 +788,7 @@ async function populateYearSelector(){
 
 async function checkAuth(){
   try{
-    CURRENT_USER = await api('/me');
+    await api('/me');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     await populateYearSelector();await loadData(SELECTED_YEAR);
@@ -1972,7 +796,7 @@ async function checkAuth(){
       const y=parseInt(document.getElementById('year-selector').value,10);
       if(y&&y!==SELECTED_YEAR){SELECTED_YEAR=y;loadData(y)}
     });
-    document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR, true));
+    document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR));
   }catch{document.getElementById('login-screen').style.display='flex'}
 }
 
@@ -1994,37 +818,10 @@ function applyTheme(th){
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
 
-document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auth_error') === 'access_denied') {
-        const loginScreen = document.getElementById('login-screen');
-        const loginSub = loginScreen.querySelector('.login-sub');
-        const loginBtn = loginScreen.querySelector('.login-btn');
-        const loginRule = loginScreen.querySelector('.login-rule');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTaskModal();closeTaxModal()}});
 
-        if (loginSub) {
-            loginSub.innerHTML = 'Доступ запрещён. Ваш аккаунт не имеет прав для доступа к этой системе. <br>Пожалуйста, обратитесь к администратору.';
-            loginSub.style.color = 'var(--red)';
-            loginSub.style.textTransform = 'none';
-            loginSub.style.letterSpacing = '0';
-            loginSub.style.lineHeight = '1.6';
-            loginSub.style.fontSize = '12px';
-        }
-        if (loginBtn) {
-            loginBtn.style.display = 'none';
-        }
-        if(loginRule) {
-            loginRule.style.display = 'none';
-        }
-        
-        loginScreen.style.display = 'flex';
-        document.getElementById('app').style.display = 'none';
-        
-        return; 
-    }
-
-    applyTheme(localStorage.getItem('crm_theme') || 'light');
-    checkAuth();
+document.addEventListener('DOMContentLoaded',()=>{
+  applyTheme(localStorage.getItem('crm_theme')||'light');checkAuth();
 });
 </script>
 </body>
