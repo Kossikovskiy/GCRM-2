@@ -1639,19 +1639,32 @@ function renderExpenses(expenses=[]){
   tb.innerHTML=expenses.length?expenses.map(e=>`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
 }
 
-function renderEquipment(eq=[]){
-  _equipment = eq;
-  const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
-  if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
-  const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
-  tb.innerHTML=eq.length?eq.map(e=>`<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования"><td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td><td><span class="badge ${cls}">${lbl}</span></td><td>${fmtDate(e.purchase_date)}</td><td>${fmt(e.purchase_cost)}</td><td>${fmtShort(e.engine_hours, '0')}</td><td>${e.fuel_norm!=null?e.fuel_norm+' л/ч':'—'}</td><td>${fmtDate(e.last_maintenance_date)}</td><td>${fmtDate(e.next_maintenance_date)}</td></tr>`).join(''):empty(8,'Техники не найдено');
-  if(_selectedEquipmentId) {
-      const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
-      if(row) row.classList.add('selected');
-      else selectEquipment(null);
-  } else {
-      selectEquipment(null);
-  }
+function renderEquipment(eq=[]) {
+    _equipment = eq;
+    const tb = document.getElementById('equipment-tbody'), cnt = document.getElementById('equipment-count');
+    if (cnt) cnt.textContent = eq.length ? eq.length + ' единиц' : '';
+    const SM = { active: ['b-green', 'Активна'], repair: ['b-amber', 'В ремонте'], retired: ['b-slate', 'Списана'] };
+    tb.innerHTML = eq.length ? eq.map(e => {
+        const [cls, lbl] = SM[e.status] || ['b-slate', e.status];
+        return `<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования">
+            <td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td>
+            <td><span class="badge ${cls}">${lbl}</span></td>
+            <td>${fmtDate(e.purchase_date)}</td>
+            <td>${fmt(e.purchase_cost)}</td>
+            <td>${fmtShort(e.engine_hours, '0')}</td>
+            <td>${e.fuel_norm != null ? e.fuel_norm + ' л/ч' : '—'}</td>
+            <td>${fmtDate(e.last_maintenance_date)}</td>
+            <td>${fmtDate(e.next_maintenance_date)}</td>
+        </tr>`;
+    }).join('') : empty(8, 'Техники не найдено');
+
+    if (_selectedEquipmentId) {
+        const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
+        if (row) row.classList.add('selected');
+        else selectEquipment(null);
+    } else {
+        selectEquipment(null);
+    }
 }
 
 function renderMaintenanceHistory(history) {
