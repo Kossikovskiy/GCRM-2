@@ -135,7 +135,7 @@ class EquipmentResponse(BaseModel):
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(app: FastAPI): 
+async def lifespan(app: FastAPI):
     print("App starting (v11.3)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
@@ -149,7 +149,7 @@ app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentia
 @lru_cache(maxsize=1)
 def get_jwks(): return httpx.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json", timeout=10).raise_for_status().json()
 def get_db(): db = SessionFactory(); yield db; db.close()
-def get_current_user(req: Request): 
+def get_current_user(req: Request):
     if not (user := req.session.get("user")): raise HTTPException(401, "Not authenticated")
     return user
 
@@ -291,7 +291,7 @@ def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current
 
 # --- CONTACTS ---
 @app.get("/api/contacts")
-def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)): 
+def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     return db.query(Contact).order_by(Contact.name).all()
 
 @app.post("/api/contacts", status_code=201)
@@ -328,7 +328,7 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
 
 # --- EQUIPMENT & MAINTENANCE ---
 @app.get("/api/equipment", response_model=List[EquipmentResponse])
-def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): 
+def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)):
     return db.query(Equipment).order_by(Equipment.name).all()
 
 @app.post("/api/equipment", status_code=201, response_model=EquipmentResponse)
@@ -449,7 +449,7 @@ def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends
 
 # --- CONSUMABLES ---
 @app.get("/api/consumables")
-def get_consumables(db:DBSession=Depends(get_db), _=Depends(get_current_user)): 
+def get_consumables(db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     return db.query(Consumable).order_by(Consumable.name).all()
 
 @app.post("/api/consumables", status_code=201)
@@ -472,7 +472,6 @@ def delete_consumable(c_id: int, db:DBSession=Depends(get_db), _=Depends(get_cur
         raise HTTPException(400, "Нельзя удалить расходник, который используется в записях о ТО.")
     item = db.query(Consumable).filter(Consumable.id == c_id).first()
     if item: db.delete(item); db.commit(); _cache.invalidate("consumables")
-
 
 # --- OTHER ---
 @app.get("/api/years")
@@ -515,7 +514,7 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
     if task: db.delete(task); db.commit(); _cache.invalidate("tasks")
 
 @app.get("/api/expenses")
-def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
+def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
     return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
 
