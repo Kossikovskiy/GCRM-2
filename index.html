@@ -384,14 +384,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-services">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Услуги</span></div>
-    <div class="ph-title">Прайс-<em>лист</em></div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
-    <table><thead><tr><th>#</th><th>Наименование</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
-  </div>
+    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+        <div>
+            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Услуги</span></div>
+            <div class="ph-title">Прайс-<em>лист</em></div>
+        </div>
+        <button class="add-btn" onclick="openServiceModal()">＋&nbsp;Новая услуга</button>
+    </div>
+    <div class="tcard">
+        <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
+        <table><thead><tr><th>#</th><th>Наименование</th><th>Ед. изм.</th><th>Цена</th><th>Мин. объём</th><th>Примечание</th></tr></thead><tbody id="services-tbody"></tbody></table>
+    </div>
 </div>
 
 <div class="page" id="page-stock">
@@ -419,7 +422,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- MODAL: задача -->
+<!-- MODALS -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
     <div class="modal-title">Новая <em>задача</em></div>
@@ -467,7 +470,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- MODAL: сделка -->
 <div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
   <div class="modal" style="max-width: 680px;">
     <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
@@ -517,7 +519,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- MODAL: выбор услуг -->
 <div class="overlay" id="service-selector-modal" onclick="if(event.target===this)closeServiceSelectorModal()">
     <div class="modal" style="max-width: 600px;">
         <div class="modal-content">
@@ -527,7 +528,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- MODAL: контакт -->
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
   <div class="modal">
     <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
@@ -553,6 +553,39 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
+<div class="overlay" id="service-modal" onclick="if(event.target===this)closeServiceModal()">
+    <div class="modal">
+        <div class="modal-title" id="service-modal-title">Новая <em>услуга</em></div>
+        <div class="field full">
+            <label>НАИМЕНОВАНИЕ УСЛУГИ</label>
+            <input type="text" id="s-name" placeholder="Стандартный покос" />
+        </div>
+        <div class="modal-grid">
+            <div class="field">
+                <label>Ед. изм.</label>
+                <input type="text" id="s-unit" placeholder="соток" />
+            </div>
+            <div class="field">
+                <label>Цена (₽)</label>
+                <input type="number" id="s-price" placeholder="790" />
+            </div>
+            <div class="field">
+                <label>Мин. объём</label>
+                <input type="number" id="s-min-volume" placeholder="1" />
+            </div>
+        </div>
+        <div class="field full">
+            <label>ПРИМЕЧАНИЕ</label>
+            <textarea id="s-notes" placeholder="Трава до 30 см"></textarea>
+        </div>
+        <div class="modal-row">
+            <button class="btn-sec btn-del-modal" id="btn-service-delete" style="display:none;">УДАЛИТЬ</button>
+            <button class="btn-sec" onclick="closeServiceModal()">ОТМЕНА</button>
+            <button class="btn-pri" id="btn-service-save">СОЗДАТЬ</button>
+        </div>
+    </div>
+</div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -560,11 +593,11 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 const API_BASE='/api';
 let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[],_services=[];
 
-function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
-function fmtShort(n){return n.toLocaleString('ru')}
+function fmt(n){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : '—'}
+function fmtShort(n){return n != null ? n.toLocaleString('ru') : '—'}
 function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
 function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
-function esc(s){return s.replace(/"/g,'&quot;').replace(/'/g,"&apos;")}
+function esc(s){return s != null ? String(s).replace(/"/g,'&quot;').replace(/'/g,"&apos;") : ''}
 
 async function api(ep,opts={}){
   try{
@@ -923,9 +956,7 @@ async function saveContact() {
         showToast(_currentContactId ? '✅ Контакт обновлен' : '✅ Контакт создан');
         closeContactModal();
         loadData(SELECTED_YEAR, true);
-    } catch (e) {
-        // Error toast is shown by api() function
-    }
+    } catch (e) {}
 }
 
 async function deleteContact(contactId) {
@@ -935,9 +966,88 @@ async function deleteContact(contactId) {
         showToast('🗑️ Контакт удален');
         closeContactModal();
         loadData(SELECTED_YEAR, true);
-    } catch (e) {
-        // Error toast is shown by api() function
+    } catch (e) {}
+}
+
+// ── SERVICE MODAL ──
+let _currentServiceId = null;
+function openServiceModal(service = null) {
+    const overlay = document.getElementById('service-modal');
+    const title = document.getElementById('service-modal-title');
+    const nameInput = document.getElementById('s-name');
+    const saveBtn = document.getElementById('btn-service-save');
+    const deleteBtn = document.getElementById('btn-service-delete');
+
+    nameInput.classList.remove('err');
+    _currentServiceId = null;
+
+    if (service) {
+        _currentServiceId = service.id;
+        title.innerHTML = 'Редактировать <em>услугу</em>';
+        nameInput.value = service.name || '';
+        document.getElementById('s-unit').value = service.unit || '';
+        document.getElementById('s-price').value = service.price || '';
+        document.getElementById('s-min-volume').value = service.min_volume || '';
+        document.getElementById('s-notes').value = service.notes || '';
+        saveBtn.textContent = 'СОХРАНИТЬ';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteService(_currentServiceId);
+    } else {
+        title.innerHTML = 'Новая <em>услуга</em>';
+        nameInput.value = '';
+        document.getElementById('s-unit').value = '';
+        document.getElementById('s-price').value = '';
+        document.getElementById('s-min-volume').value = '1';
+        document.getElementById('s-notes').value = '';
+        saveBtn.textContent = 'СОЗДАТЬ';
+        deleteBtn.style.display = 'none';
     }
+    saveBtn.onclick = saveService;
+    overlay.classList.add('open');
+    setTimeout(() => nameInput.focus(), 100);
+}
+
+function closeServiceModal() {
+    document.getElementById('service-modal').classList.remove('open');
+    _currentServiceId = null;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeServiceModal() });
+
+async function saveService() {
+    const name = document.getElementById('s-name').value.trim();
+    const price = parseFloat(document.getElementById('s-price').value);
+    if (!name || !price) {
+        document.getElementById('s-name').classList.toggle('err', !name);
+        document.getElementById('s-price').classList.toggle('err', !price);
+        return;
+    }
+    const data = {
+        name,
+        price,
+        unit: document.getElementById('s-unit').value.trim() || 'шт',
+        min_volume: parseFloat(document.getElementById('s-min-volume').value) || 1,
+        notes: document.getElementById('s-notes').value.trim() || null
+    };
+
+    try {
+        const endpoint = _currentServiceId ? `/services/${_currentServiceId}` : '/services';
+        const method = _currentServiceId ? 'PATCH' : 'POST';
+        await api(endpoint, { method, body: JSON.stringify(data) });
+        showToast(_currentServiceId ? '✅ Услуга обновлена' : '✅ Услуга создана');
+        closeServiceModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
+}
+
+async function deleteService(serviceId) {
+    if (!confirm('Вы уверены, что хотите удалить эту услугу? Это действие нельзя отменить.')) return;
+    try {
+        await api(`/services/${serviceId}`, { method: 'DELETE' });
+        showToast('🗑️ Услуга удалена');
+        closeServiceModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
 }
 
 // ── TASK MODAL ──
@@ -1060,9 +1170,19 @@ function renderEquipment(eq=[]){
 }
 
 function renderServices(services=[]){
-  const tb=document.getElementById('services-tbody'),cnt=document.getElementById('services-count');
-  if(cnt)cnt.textContent=services.length?services.length+' услуг':'';
-  tb.innerHTML=services.length?services.map(s=>`<tr><td>${s.id}</td><td style="color:var(--ink);font-weight:400">${s.name}</td><td><span class="money">${fmt(s.price)}</span></td><td style="color:var(--ink4);font-size:11px">${s.unit}</td></tr>`).join(''):empty(4,'Услуг не найдено')
+    const tb = document.getElementById('services-tbody');
+    const cnt = document.getElementById('services-count');
+    if (cnt) cnt.textContent = services.length ? services.length + ' услуг' : '';
+    tb.innerHTML = services.length ? services.map(s => 
+        `<tr onclick='openServiceModal(${JSON.stringify(s)})'>
+            <td>${s.id}</td>
+            <td style="color:var(--ink);font-weight:400">${s.name}</td>
+            <td style="color:var(--ink3);font-size:11px">${s.unit || '—'}</td>
+            <td><span class="money">${fmt(s.price)}</span></td>
+            <td style="color:var(--ink3);font-size:11px">${s.min_volume != null ? 'от ' + s.min_volume : '—'}</td>
+            <td style="color:var(--ink4);font-size:11px; white-space: pre-wrap; max-width: 300px;">${s.notes || '—'}</td>
+        </tr>`
+    ).join('') : empty(6, 'Услуг не найдено');
 }
 
 function renderConsumables(items=[]){
@@ -1128,13 +1248,13 @@ async function loadData(year, force = false){
   STAGES=data.stages||[]; _contacts=data.contacts||[]; _services=data.services||[];
   
   renderKanban(data.deals?.deals || data.deals || []);
-  renderTasks(data.tasks?.tasks || data.tasks || []);
-  renderExpenses(data.expenses?.expenses || data.expenses || []);
+  renderTasks((data.tasks?.tasks || data.tasks) || []);
+  renderExpenses((data.expenses?.expenses || data.expenses) || []);
   renderEquipment(data.equipment || []);
   renderServices(data.services || []);
   renderConsumables(data.consumables || []);
   renderContacts(data.contacts || []);
-  buildDash(data.deals?.deals || data.deals || [], data.expenses?.expenses || data.expenses || [], data.equipment || []);
+  buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
 
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }

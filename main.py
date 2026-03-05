@@ -61,8 +61,8 @@ engine = create_engine(DATABASE_URL, client_encoding='utf8')
 SessionFactory = sessionmaker(bind=engine)
 
 class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String)
-class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт")
-class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
+class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
+class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id",ondelete="RESTRICT")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
 class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(50),unique=True,index=True),Column(String(100)); deals = relationship("Deal",back_populates="contact")
 class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id"),nullable=False),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
@@ -73,14 +73,52 @@ class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Intege
 class Consumable(Base): __tablename__="consumables"; id,name,unit,stock_quantity,notes=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"),Column(Float,default=0.0),Column(Text)
 
 def init_and_seed_db():
-    try:
-        Base.metadata.create_all(engine)
-        with SessionFactory() as s:
-            if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
-            if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
-            if s.query(Service).count()==0: s.add_all([Service(**d) for d in [{"name":"Покос бурьяна/высокой травы","price":1500,"unit":"сотка"},{"name":"Покос газона","price":800,"unit":"сотка"},{"name":"Стрижка кустарника","price":500,"unit":"м.п."},{"name":"Вспашка земли мотоблоком","price":2000,"unit":"сотка"},{"name":"Спил дерева","price":1500,"unit":"шт"},{"name":"Вывоз мусора","price":3000,"unit":"рейс"}]])
-            s.commit()
-    except Exception as e: print(f"---!! DB INIT ERROR: {e} !!---", flush=True)
+    Base.metadata.create_all(engine)
+    with SessionFactory() as s:
+        if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
+        if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
+        if s.query(Service).count()==0:
+            seed_services = [
+                {"name":"Стандартный покос","unit":"соток","price":790,"min_volume":1,"notes":"Трава до 30 см. Цена за 1 сотку"},
+                {"name":"Запущенный покос (30-60 см)","unit":"соток","price":950,"min_volume":1,"notes":"Высокая трава, доп. усилие"},
+                {"name":"Сильно запущенный (>60 см)","unit":"соток","price":1200,"min_volume":1,"notes":"Очень высокая или плотная трава"},
+                {"name":"Покос борщевика","unit":"соток","price":1300,"min_volume":3,"notes":"Спец. защита, доп. средства"},
+                {"name":"Покос вдоль забора / обочина","unit":"п.м.","price":50,"min_volume":20,"notes":"Погонный метр обочины/периметра"},
+                {"name":"Еженедельное обслуживание (абонемент)","unit":"соток/мес","price":2800,"min_volume":5,"notes":"Скидка ~15% от разового тарифа"},
+                {"name":"Сбор скошенной травы","unit":"соток","price":790,"min_volume":1,"notes":"Ручной сбор в мешки после покоса"},
+                {"name":"Вывоз травы / мусора","unit":"соток","price":350,"min_volume":3,"notes":"Погрузка + вывоз. Объём до 1 прицепа на 10 соток"},
+                {"name":"Сбор листьев (осень)","unit":"соток","price":480,"min_volume":2,"notes":"Сбор в мешки, вывоз опционально"},
+                {"name":"Уборка участка (генеральная)","unit":"соток","price":1500,"min_volume":2,"notes":"Комплекс: трава+ветки+деревья"},
+                {"name":"Скарификация газона","unit":"соток","price":1000,"min_volume":1,"notes":"Прочёсывание дёрна, улучшение аэрации"},
+                {"name":"Аэрация газона","unit":"соток","price":1400,"min_volume":1,"notes":"Прокалывание почвы"},
+                {"name":"Прополка сорняков (ручная)","unit":"соток","price":1850,"min_volume":1,"notes":"Тщательная ручная прополка"},
+                {"name":"Культивация / рыхление","unit":"соток","price":1200,"min_volume":2,"notes":"Механическое рыхление почвы"},
+                {"name":"Посев газона","unit":"соток","price":2200,"min_volume":1,"notes":"Посев + полив (семена не включены)"},
+                {"name":"Засеивание (без семян)","unit":"соток","price":1500,"min_volume":1,"notes":"Только работа, семена заказчика"},
+                {"name":"Разравнивание участка","unit":"соток","price":1300,"min_volume":2,"notes":"Грубое выравнивание рельефа"},
+                {"name":"Обработка гербицидом (сорняки)","unit":"соток","price":550,"min_volume":5,"notes":"Химическая обработка от сорняков"},
+                {"name":"Обработка от клещей","unit":"соток","price":350,"min_volume":10,"notes":"Акарицид, сезонная защита"},
+                {"name":"Обработка парковки/твёрдых покрытий","unit":"м²","price":120,"min_volume":20,"notes":"Гербицид/мойка твёрдых поверхностей"},
+                {"name":"Спил дерева (до 5 м)","unit":"шт","price":2500,"min_volume":1,"notes":"Ствол до 30 см. Ветки укладываем на месте"},
+                {"name":"Спил дерева (5-10 м)","unit":"шт","price":4500,"min_volume":1,"notes":"Средние деревья, сложная разборка"},
+                {"name":"Выкорчёвывание пня / туй","unit":"шт","price":3500,"min_volume":1,"notes":"Включая засыпку ямы"},
+                {"name":"Обрезка кустарников","unit":"шт","price":400,"min_volume":5,"notes":"Формирующая обрезка"},
+                {"name":"Посадка однолетних цветов (клумба)","unit":"шт","price":250,"min_volume":10,"notes":"Петунии, бегонии, бархатцы и др. Без стоимости растений"},
+                {"name":"Посадка многолетних цветов","unit":"шт","price":380,"min_volume":5,"notes":"Розы, хосты, пионы и др. Без стоимости растений"},
+                {"name":"Посадка кустарника (малый, до 0.5 м)","unit":"шт","price":900,"min_volume":1,"notes":"Посадка с подготовкой ямы и удобрением"},
+                {"name":"Посадка кустарника (средний, 0.5-1.5 м)","unit":"шт","price":1800,"min_volume":1,"notes":"Включая яму, дренаж, полив после посадки"},
+                {"name":"Посадка крупного кустарника / живая изгородь","unit":"шт","price":3200,"min_volume":3,"notes":"Туи, сирень, боярышник. Включая разметку ряда"},
+                {"name":"Прополка клумбы (ручная)","unit":"м²","price":450,"min_volume":2,"notes":"Тщательная прополка, рыхление между растениями"},
+                {"name":"Прополка клумбы + мульчирование","unit":"м²","price":750,"min_volume":2,"notes":"Прополка + укладка мульчи 5-7 см (мульча включена)"},
+                {"name":"Подготовка клумбы под посадку","unit":"м²","price":600,"min_volume":2,"notes":"Перекопка, удаление сорняков, внесение удобрений"},
+                {"name":"Комплексный уход за клумбой (сезон)","unit":"м²/мес","price":1200,"min_volume":3,"notes":"Полив, прополка, подкормка — ежемесячно"},
+                {"name":"Удобрение газона (весна/осень, комплекс)","unit":"соток","price":1800,"min_volume":1,"notes":"~1100 Р минер. удобрение + 700 Р работа. NPK + микроэлементы"},
+                {"name":"Летняя азотная подкормка","unit":"соток","price":1400,"min_volume":1,"notes":"~700 Р удобрение + 700 Р работа. Стимуляция роста и цвета"},
+                {"name":"Аэрация + удобрение (комплекс)","unit":"соток","price":2800,"min_volume":1,"notes":"Сначала аэрация, затем внесение — максимальное усвоение"},
+                {"name":"Известкование (раскисление почвы)","unit":"соток","price":1600,"min_volume":1,"notes":"~900 Р доломитовая мука + 700 Р работа. Рекомендуется раз в 3 года"}
+            ]
+            s.add_all([Service(**d) for d in seed_services])
+        s.commit()
 
 # ── 5. МОДЕЛИ PYDANTIC ────────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
@@ -90,12 +128,15 @@ class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_da
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
 class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None
 class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None
+class ServiceCreate(BaseModel): name: str = Field(...,min_length=1); price: float; unit: str; min_volume: Optional[float]=1.0; notes: Optional[str]=None
+class ServiceUpdate(BaseModel): name: Optional[str]=Field(None,min_length=1); price: Optional[float]=None; unit: Optional[str]=None; min_volume: Optional[float]=None; notes: Optional[str]=None
+
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(app: FastAPI): print("App starting (v7.0)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
+async def lifespan(app: FastAPI): print("App starting (v8.0)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="7.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="8.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -138,10 +179,31 @@ def get_me(user:dict=Depends(get_current_user)): return user
 def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(User).all()
 @app.get("/api/stages")
 def get_stages(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
-@app.get("/api/services")
-def get_services(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Service).order_by(Service.name).all()
+
 @app.post("/api/cache/invalidate")
 def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate(); return {"status":"ok"}
+
+# --- SERVICES ---
+@app.get("/api/services")
+def get_services(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Service).order_by(Service.id).all()
+@app.post("/api/services", status_code=201)
+def create_service(data: ServiceCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    new_item = Service(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    _cache.invalidate("services"); return new_item
+@app.patch("/api/services/{service_id}")
+def update_service(service_id: int, data: ServiceUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Service).filter(Service.id == service_id).first()
+    if not item: raise HTTPException(404, "Услуга не найдена")
+    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
+    db.commit(); db.refresh(item)
+    _cache.invalidate("services", "deals"); return item
+@app.delete("/api/services/{service_id}", status_code=204)
+def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    if db.query(DealService).filter(DealService.service_id == service_id).count() > 0:
+        raise HTTPException(400, "Нельзя удалить услугу, которая используется в сделках.")
+    item = db.query(Service).filter(Service.id == service_id).first()
+    if item: db.delete(item); db.commit(); _cache.invalidate("services")
+    return None
 
 # --- DEALS ---
 @app.get("/api/deals")
@@ -323,4 +385,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v7.0) loaded.", flush=True)
+print(f"main.py (v8.0) loaded.", flush=True)
