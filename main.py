@@ -79,8 +79,8 @@ class Deal(Base):
     is_repeat=Column(Boolean,default=False)
     manager=Column(String(200))
     address=Column(Text)
-    tax_rate = Column(Float, default=0.0, nullable=False)
-    tax_included = Column(Boolean, default=False, nullable=False)
+    tax_rate = Column(Float, default=4.0, nullable=False)
+    tax_included = Column(Boolean, default=True, nullable=False)
     discount = Column(Float, default=0.0, nullable=False)
 
     contact=relationship("Contact",back_populates="deals")
@@ -118,8 +118,8 @@ class DealCreate(BaseModel):
     new_contact_name:Optional[str]=None; 
     manager:Optional[str]=None; 
     services:List[DealServiceItem]=[]
-    tax_rate: Optional[float] = 0.0
-    tax_included: Optional[bool] = False
+    tax_rate: Optional[float] = 4.0
+    tax_included: Optional[bool] = True
     discount: Optional[float] = 0.0
 
 class DealUpdate(BaseModel): 
@@ -181,13 +181,13 @@ class EquipmentResponse(BaseModel):
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v11.5)...",flush=True)
+    print("App starting (v11.6)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.5.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.6.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -691,4 +691,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.5) loaded.", flush=True)
+print(f"main.py (v11.6) loaded.", flush=True)

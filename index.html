@@ -925,8 +925,8 @@ async function setupDealModal(dealId = null) {
     document.getElementById('d-contact-input').value = '';
     document.getElementById('d-title').classList.remove('err');
     document.getElementById('d-discount').value = 0;
-    document.getElementById('d-tax-rate').value = 0;
-    document.getElementById('d-tax-included').checked = false;
+    document.getElementById('d-tax-rate').value = 4;
+    document.getElementById('d-tax-included').checked = true;
 
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
@@ -947,8 +947,8 @@ async function setupDealModal(dealId = null) {
         assigneeSel.value = deal.manager || '';
         stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
         document.getElementById('d-discount').value = deal.discount || 0;
-        document.getElementById('d-tax-rate').value = deal.tax_rate || 0;
-        document.getElementById('d-tax-included').checked = deal.tax_included || false;
+        document.getElementById('d-tax-rate').value = deal.tax_rate;
+        document.getElementById('d-tax-included').checked = deal.tax_included;
 
         _dealItems = deal.services.map(s => ({
             id: s.service.id,
@@ -973,15 +973,14 @@ async function setupDealModal(dealId = null) {
 
 function calculateDealTotal() {
     const subtotal = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = parseFloat(document.getElementById('d-discount').value) || 0;
+    const discountInput = document.getElementById('d-discount');
     const taxRate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
     const taxIncluded = document.getElementById('d-tax-included').checked;
 
-    if (subtotal > 10000 && document.getElementById('d-discount').value === "0") {
-        document.getElementById('d-discount').value = 5;
-        calculateDealTotal();
-        return;
+    if (subtotal > 10000 && parseFloat(discountInput.value) === 0) {
+        discountInput.value = 5;
     }
+    const discount = parseFloat(discountInput.value) || 0;
 
     const discountAmount = subtotal * (discount / 100);
     const discountedTotal = subtotal - discountAmount;
