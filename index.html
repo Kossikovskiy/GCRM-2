@@ -1,1811 +1,310 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GreenCRM · Система управления</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f5f2eb;--surface:#fdfcf8;--surface2:#f0ece3;
-  --border:#e2ddd4;--border2:#ede9e0;
-  --forest:#1a3318;--moss:#2d5426;--fern:#4a7c3f;--sage:#7ab566;--sage2:#a8cf98;--leaf:#d4eacc;
-  --ink:#1c211a;--ink2:#4a5247;--ink3:#8a9287;--ink4:#b8bdb6;
-  --gold:#b07d2c;--red:#8b3a2a;--blue:#2a5280;
-  --sh-s:0 1px 4px rgba(26,51,24,.07);--sh-m:0 4px 20px rgba(26,51,24,.10);--sh-l:0 12px 48px rgba(26,51,24,.14);
-  --r:10px;--hh:58px;
-}
-html[data-theme="dark"]{
-  --bg:#0d120c;--surface:#111810;--surface2:#182016;
-  --border:#243020;--border2:#1c2819;
-  --forest:#0a1009;--moss:#1a2e18;--fern:#5a9448;--sage:#7ab566;--sage2:#4a7c3f;--leaf:#1e3419;
-  --ink:#e4ede0;--ink2:#a8b8a4;--ink3:#607060;--ink4:#384838;
-  --gold:#c8952a;--red:#c85040;--blue:#4a80c0;
-  --sh-s:0 1px 4px rgba(0,0,0,.3);--sh-m:0 4px 20px rgba(0,0,0,.4);--sh-l:0 12px 48px rgba(0,0,0,.5);
-}
-html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--sage2)}
-
-/* LOGIN */
-#login-screen{
-  position:fixed;inset:0;z-index:999;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--forest);
-  background-image:radial-gradient(ellipse 120% 80% at 10% 110%,rgba(74,124,63,.3) 0%,transparent 55%),radial-gradient(ellipse 70% 50% at 90% -10%,rgba(122,181,102,.12) 0%,transparent 50%);
-}
-.login-box{position:relative;text-align:center;padding:64px 56px;z-index:1}
-.login-box::before,.login-box::after{content:'';position:absolute;border:1px solid rgba(122,181,102,.18);border-radius:4px;pointer-events:none}
-.login-box::before{inset:0}
-.login-box::after{inset:8px;border-color:rgba(122,181,102,.08)}
-.login-eyebrow{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:rgba(122,181,102,.6);font-weight:500;margin-bottom:20px}
-.login-logo{font-family:'Playfair Display',serif;font-size:56px;font-weight:400;color:#fff;letter-spacing:-1px;line-height:1;margin-bottom:6px}
-.login-logo em{font-style:italic;color:var(--sage)}
-.login-rule{width:40px;height:1px;background:linear-gradient(90deg,transparent,rgba(122,181,102,.5),transparent);margin:20px auto}
-.login-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:40px;font-weight:300}
-.login-btn{
-  display:inline-flex;align-items:center;gap:12px;
-  border:1px solid rgba(122,181,102,.35);color:rgba(255,255,255,.75);
-  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;
-  padding:13px 36px;border-radius:3px;text-decoration:none;
-  transition:all .3s ease;background:rgba(122,181,102,.05)
-}
-.login-btn:hover{border-color:rgba(122,181,102,.7);background:rgba(122,181,102,.12);color:#fff;gap:18px}
-.login-btn span{transition:transform .3s}
-.login-btn:hover span:last-child{transform:translateX(4px)}
-
-/* HEADER */
-#app{display:none}
-header{
-  height:var(--hh);background:var(--forest);
-  display:flex;align-items:center;padding:0 24px 0 28px;
-  position:sticky;top:0;z-index:200;
-  border-bottom:1px solid rgba(74,124,63,.2);
-  box-shadow:0 2px 24px rgba(0,0,0,.18)
-}
-.logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;margin-right:28px;flex-shrink:0;white-space:nowrap}
-.logo em{font-style:italic;color:var(--sage)}
-.logo sup{font-family:'DM Sans',sans-serif;font-size:7px;font-weight:500;letter-spacing:1px;color:rgba(122,181,102,.5);vertical-align:super;margin-left:3px}
-nav{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
-nav::-webkit-scrollbar{display:none}
-nav button{
-  background:none;border:none;color:rgba(255,255,255,.35);
-  font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;
-  padding:8px 13px;cursor:pointer;transition:color .2s;white-space:nowrap;border-radius:4px;flex-shrink:0;position:relative
-}
-nav button::after{content:'';position:absolute;bottom:2px;left:50%;right:50%;height:1px;background:var(--sage);transition:left .25s ease,right .25s ease}
-nav button:hover{color:rgba(255,255,255,.65)}
-nav button.active{color:var(--sage)}
-nav button.active::after{left:13px;right:13px}
-.header-end{display:flex;align-items:center;gap:6px;margin-left:16px;flex-shrink:0}
-#year-selector-container{display:flex;align-items:center;gap:5px}
-#year-selector{
-  background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);
-  border:1px solid rgba(122,181,102,.22);border-radius:5px;
-  padding:5px 9px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;
-  cursor:pointer;outline:none;transition:border-color .2s
-}
-#year-selector:focus{border-color:rgba(122,181,102,.6)}
-#year-selector option{background:#1a3318}
-.hbtn{
-  width:30px;height:30px;border-radius:6px;
-  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
-  color:rgba(255,255,255,.4);cursor:pointer;font-size:13px;
-  display:inline-flex;align-items:center;justify-content:center;transition:all .2s
-}
-.hbtn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.18)}
-
-/* PAGES */
-.page{display:none;padding:40px 44px;min-height:calc(100vh - var(--hh));animation:pageIn .32s ease both}
-.page.active{display:block}
-@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-/* PAGE HEAD */
-.ph{margin-bottom:36px}
-.ph-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.ph-line{width:20px;height:1px;background:var(--fern)}
-.ph-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--fern);font-weight:500}
-.ph-title{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;color:var(--ink);line-height:1.05;letter-spacing:-.5px}
-.ph-title em{font-style:italic;color:var(--fern)}
-.ph-year{
-  display:inline-block;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:400;
-  color:var(--ink3);border:1px solid var(--border);border-radius:20px;
-  padding:2px 12px;margin-left:14px;vertical-align:middle;letter-spacing:0
-}
-
-/* KPI */
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px}
-.kpi-card{
-  background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);
-  padding:26px 24px 22px;position:relative;overflow:hidden;
-  box-shadow:var(--sh-s);transition:box-shadow .2s,transform .2s
-}
-.kpi-card:hover{box-shadow:var(--sh-m);transform:translateY(-1px)}
-.kpi-card::before{
-  content:'';position:absolute;left:0;top:16px;bottom:16px;
-  width:3px;border-radius:0 2px 2px 0;background:var(--kpi-accent,var(--sage))
-}
-.kpi-icon{font-size:17px;margin-bottom:14px;display:block;opacity:.55}
-.kpi-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:7px;letter-spacing:-.5px}
-.kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
-.kpi-sub{font-size:11px;color:var(--ink3);font-weight:300}
-
-/* TABLE CARD */
-.tcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-s)}
-.tcard-head{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 20px;border-bottom:1px solid var(--border2);background:var(--surface2)
-}
-.tcard-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500}
-.tcard-meta{font-size:11px;color:var(--ink4)}
-table{width:100%;border-collapse:collapse}
-thead tr{background:var(--surface2)}
-th{text-align:left;padding:12px 20px;font-size:9px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2);white-space:nowrap}
-td{padding:12px 20px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--ink2);font-weight:300;transition:background .15s}
-td:first-child{color:var(--ink4);font-size:11px;width:44px}
-tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:var(--surface2)}
-tbody tr{cursor:pointer}
-tbody tr.selected td{background:var(--leaf)}
-html[data-theme=dark] tbody tr.selected td{background:var(--moss)}
-
-/* BADGE */
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.3px}
-.b-green{background:#dcfce7;color:#16a34a}
-.b-amber{background:#fef3c7;color:#b45309}
-.b-slate{background:#f1f5f9;color:#64748b}
-.b-blue{background:#dbeafe;color:#1d4ed8}
-html[data-theme="dark"] .b-green{background:#14532d;color:#4ade80}
-html[data-theme="dark"] .b-amber{background:#451a03;color:#fb923c}
-html[data-theme="dark"] .b-slate{background:#1e293b;color:#94a3b8}
-html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
-
-.money{font-family:'Playfair Display',serif;font-size:14px;font-weight:500;color:var(--ink)}
-.m-neg{color:var(--red)}
-.m-pos{color:#16a34a}
-.cat-tag{font-size:10px;color:var(--fern);background:var(--leaf);padding:2px 8px;border-radius:20px;display:inline-block}
-html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
-
-/* KANBAN */
-.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;padding-bottom:12px}
-.k-col{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 200px);box-shadow:var(--sh-s);transition:background .15s,border-color .15s}
-.k-col.drag-over{background:var(--leaf);border-color:var(--sage)}
-html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color:var(--fern)}
-.k-head{padding:13px 15px 11px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px}
-.k-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.k-name{font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;flex:1}
-.k-count{font-size:10px;color:var(--ink4);background:var(--surface2);border:1px solid var(--border2);padding:1px 7px;border-radius:20px;min-width:22px;text-align:center}
-.k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
-.k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
-.k-cards::-webkit-scrollbar{width:3px}
-.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
-.k-card:hover{box-shadow:var(--sh-m);transform:translateY(-2px);background:var(--surface)}
-.k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
-.k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
-html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
-.k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px}
-.k-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
-.k-client{font-size:11px;color:var(--fern);font-weight:300}
-.k-hr{height:1px;background:var(--border2);margin:8px 0}
-.k-date{font-size:10px;color:var(--ink4);font-weight:300}
-
-/* EMPTY */
-.empty{padding:56px 32px;text-align:center}
-.empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
-.empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
-
-/* TABS */
-.tabs-row{display:flex;gap:10px;margin-bottom:18px}
-.tab-btn{
-  background:none;border:1px solid var(--border);border-radius:7px;padding:7px 16px;
-  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--ink3);
-  cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px
-}
-.tab-btn.active{background:var(--fern);border-color:var(--fern);color:#fff}
-.tab-btn:hover:not(.active){border-color:var(--ink3);color:var(--ink)}
-
-/* ADD BUTTON */
-.add-btn{display:inline-flex;align-items:center;gap:7px;background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;box-shadow:var(--sh-s)}
-.add-btn:hover{background:var(--moss);transform:translateY(-1px);box-shadow:var(--sh-m)}
-
-/* MODAL */
-.overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
-.overlay.open{opacity:1;pointer-events:all}
-.item-selector-modal { z-index: 501; }
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:540px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
-.overlay.open .modal{transform:none}
-.modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--ink);margin-bottom:24px}
-.modal-title em{font-style:italic;color:var(--fern)}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.field{margin-bottom:16px}
-.field.full{grid-column:span 2}
-.field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:7px}
-.field input, .field textarea, .field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
-.field textarea{resize:vertical;min-height:80px}
-.field input:focus, .field textarea:focus, .field select:focus{border-color:var(--fern)}
-.field input.err{border-color:var(--red)}
-.modal-row{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:24px}
-.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
-.btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
-.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
-.btn-pri:hover{background:var(--moss)}
-.btn-del-modal{margin-right:auto;border-color:var(--red);color:var(--red)}
-.btn-del-modal:hover{background:var(--red);color:#fff}
-
-
-#d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
-#d-services-table th, #m-consumables-table th {font-size:8px;padding:8px 10px}
-#d-services-table td, #m-consumables-table td {font-size:11px;padding:8px 10px}
-#d-services-table .btn-del, #m-consumables-table .btn-del {cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
-
-.item-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column;}
-.item-selector-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px;}
-.item-selector-results{overflow-y:auto;padding:8px;}
-.item-result{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;border-radius:8px;}
-.item-result:hover{background:var(--surface2);}
-.item-result-name{font-weight:500;}
-.item-result-sub{font-size:11px;color:var(--ink3)}
-.item-result-price{color:var(--fern);}
-
-#page-equipment-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:24px}
-
-/* TOAST */
-.toast{
-  position:fixed;bottom:22px;right:22px;z-index:400;
-  background:var(--forest);color:rgba(255,255,255,.82);
-  border:1px solid rgba(122,181,102,.2);border-radius:8px;
-  padding:11px 18px;font-size:12px;font-weight:400;
-  box-shadow:var(--sh-l);
-  transform:translateY(60px);opacity:0;
-  transition:all .35s cubic-bezier(.34,1.46,.64,1);max-width:300px
-}
-.toast.show{transform:translateY(0);opacity:1}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .table-container { max-height: calc(100vh - 250px); overflow-y: auto; }
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
-<body>
+<body class="bg-gray-100" x-data="app">
 
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-eyebrow">Система управления бизнесом</div>
-    <div class="login-logo">Green<em>CRM</em></div>
-    <div class="login-rule"></div>
-    <div class="login-sub">Покос и благоустройство</div>
-    <a class="login-btn" href="/api/auth/login">
-      <span>Войти в систему</span>
-      <span>→</span>
-    </a>
-  </div>
-</div>
+    <!-- Main container -->
+    <div x-cloak x-show="isReady" class="flex h-screen">
 
-<div id="app">
-<header>
-  <a class="logo" href="#">Green<em>CRM</em><sup>PRO</sup></a>
-  <nav id="main-nav">
-    <button class="active" onclick="showPage('dash',this)">Дашборд</button>
-    <button onclick="showPage('kanban',this)">Сделки</button>
-    <button onclick="showPage('tasks',this)">Задачи</button>
-    <button onclick="showPage('expenses',this)">Расходы</button>
-    <button onclick="showPage('equipment',this)">Техника</button>
-    <button onclick="showPage('services',this)">Прайс-лист</button>
-    <button onclick="showPage('stock',this)">Склад</button>
-    <button onclick="showPage('contacts',this)">Контакты</button>
-  </nav>
-  <div class="header-end">
-    <div id="year-selector-container">
-      <select id="year-selector"></select>
-      <button class="hbtn" id="year-refresh" title="Обновить">↺</button>
-    </div>
-    <button class="hbtn" id="theme-toggle" onclick="toggleTheme()" title="Тема">◑</button>
-    <button class="hbtn" onclick="window.location='/api/auth/logout'" title="Выйти">⏻</button>
-  </div>
-</header>
-
-<div class="page active" id="page-dash">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Обзор</span></div>
-    <div class="ph-title">Ключевые <em>показатели</em><span class="ph-year year-display"></span></div>
-  </div>
-  <div class="kpi-strip">
-    <div class="kpi-card" style="--kpi-accent:#16a34a">
-      <span class="kpi-icon">💰</span>
-      <div class="kpi-val" id="kpi-revenue">—</div>
-      <div class="kpi-label">Выручка</div>
-      <div class="kpi-sub" id="kpi-deals-count">— успешных сделок</div>
-    </div>
-    <div class="kpi-card" style="--kpi-accent:#dc2626">
-      <span class="kpi-icon">📉</span>
-      <div class="kpi-val" id="kpi-expenses">—</div>
-      <div class="kpi-label">Расходы</div>
-      <div class="kpi-sub" id="kpi-exp-count">— записей</div>
-    </div>
-    <div class="kpi-card" style="--kpi-accent:#7c3aed">
-      <span class="kpi-icon">📈</span>
-      <div class="kpi-val" id="kpi-profit">—</div>
-      <div class="kpi-label">Прибыль</div>
-      <div class="kpi-sub" id="kpi-margin">маржа —%</div>
-    </div>
-    <div class="kpi-card" style="--kpi-accent:#d97706">
-      <span class="kpi-icon">🔧</span>
-      <div class="kpi-val" id="kpi-equip">—</div>
-      <div class="kpi-label">Единиц техники</div>
-      <div class="kpi-sub" id="kpi-repair">— в ремонте</div>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-kanban">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-    <div>
-      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Воронка продаж</span></div>
-      <div class="ph-title">Сделки <em>по этапам</em><span class="ph-year year-display"></span></div>
-    </div>
-    <button class="add-btn" onclick="openDealModal()">＋&nbsp;Новая сделка</button>
-  </div>
-  <div class="kanban" id="kanban-board"></div>
-</div>
-
-<div class="page" id="page-tasks">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-    <div>
-      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Управление</span></div>
-      <div class="ph-title">Задачи<span class="ph-year year-display"></span></div>
-    </div>
-    <button class="add-btn" onclick="openTaskModal()">＋&nbsp;Новая задача</button>
-  </div>
-  <div class="tabs-row">
-    <button class="tab-btn active" id="btn-tasks-active" onclick="loadTasks(false)">Активные</button>
-    <button class="tab-btn" id="btn-tasks-done" onclick="loadTasks(true)">Завершенные</button>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
-    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
-  </div>
-</div>
-
-<div class="page" id="page-expenses">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
-    <div class="ph-title">Расходы<span class="ph-year year-display"></span></div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
-    <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
-  </div>
-</div>
-
-<div class="page" id="page-equipment">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Парк</span></div>
-            <div class="ph-title">Учёт <em>техники</em></div>
-        </div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn-sec" id="btn-add-maintenance" onclick="openMaintenanceModal()">＋ ТО</button>
-            <button class="add-btn" onclick="openEquipmentModal()">＋ Техника</button>
-        </div>
-    </div>
-    <div id="page-equipment-layout">
-        <div class="tcard">
-            <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
-            <div style="overflow-x: auto;">
-                <table><thead><tr><th>Техника</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h1 class="text-2xl font-bold">GCRM <span class="text-sm text-gray-400" x-text="`v${version}`"></span></h1>
+                <p class="text-sm text-gray-400" x-text="user.name"></p>
             </div>
-        </div>
-        <div class="tcard">
-            <div class="tcard-head"><span class="tcard-title">Журнал ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
-            <table><thead><tr><th>Техника</th><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
-        </div>
-    </div>
-</div>
+            <nav class="flex-1 p-2 space-y-1">
+                <template x-for="item in menuItems" :key="item.id">
+                    <a href="#" @click.prevent="activeTab = item.id"
+                       :class="{'bg-gray-900': activeTab === item.id, 'hover:bg-gray-700': activeTab !== item.id}"
+                       class="flex items-center px-4 py-2 rounded-lg transition-colors duration-200">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="item.iconClass" x-html="item.iconPath"></svg>
+                        <span x-text="item.name"></span>
+                    </a>
+                </template>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <select x-model="currentYear" @change="fetchDataForYear" class="bg-gray-700 text-white rounded-md border-gray-600 text-sm w-full">
+                        <template x-for="year in years" :key="year">
+                            <option :value="year" x-text="year"></option>
+                        </template>
+                    </select>
+                    <button @click="logout()" class="p-2 rounded-md hover:bg-gray-700">
+                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
 
-<div class="page" id="page-services">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Услуги</span></div>
-            <div class="ph-title">Прайс-<em>лист</em></div>
-        </div>
-        <button class="add-btn" onclick="openServiceModal()">＋&nbsp;Новая услуга</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
-        <table><thead><tr><th>#</th><th>Наименование</th><th>Ед. изм.</th><th>Цена</th><th>Мин. объём</th><th>Примечание</th></tr></thead><tbody id="services-tbody"></tbody></table>
-    </div>
-</div>
+        <!-- Main content -->
+        <main class="flex-1 p-6">
+            <!-- Equipment & Maintenance Tab -->
+            <div x-show="activeTab === 'equipment'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Equipment List -->
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Инвентарный список</h2>
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 flex justify-between items-center">
+                             <input type="text" placeholder="Поиск..." x-model="equipmentSearch" class="w-full p-2 border rounded-md">
+                             <button @click="openModal('equipment', {})" class="ml-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 whitespace-nowrap">+ Техника</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th @click="sort('equipment', 'name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Название</th>
+                                        <th @click="sort('equipment', 'engine_hours')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Моточасы</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="item in filteredEquipment" :key="item.id">
+                                        <tr @click="selectEquipment(item)" :class="{'bg-blue-100': selectedEquipment && selectedEquipment.id === item.id}" class="hover:bg-gray-50 cursor-pointer">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="item.name"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="item.engine_hours"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <span :class="getStatusClass(item.status)" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" x-text="item.status"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
-<div class="page" id="page-stock">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Материалы</span></div>
-            <div class="ph-title">Склад <em>и расходники</em></div>
-        </div>
-        <button class="add-btn" onclick="openConsumableModal()">＋&nbsp;Новый расходник</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Остатки</span><span class="tcard-meta" id="consumables-count"></span></div>
-        <table><thead><tr><th>#</th><th>Название</th><th>Остаток</th><th>Цена</th><th>Заметки</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
-    </div>
-</div>
+                <!-- Maintenance Log -->
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Журнал ТО</h2>
+                        <button @click="addMaintenance()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">+ ТО</button>
+                    </div>
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4">
+                             <input type="text" placeholder="Поиск по работам..." x-model="maintenanceSearch" class="w-full p-2 border rounded-md">
+                        </div>
+                        <div class="table-container">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th @click="sort('maintenanceLog', 'date')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Дата</th>
+                                        <th @click="sort('maintenanceLog', 'equipment_name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Техника</th>
+                                        <th @click="sort('maintenanceLog', 'work_description')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Работы</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Стоимость</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="log in filteredMaintenanceLog" :key="log.id">
+                                        <tr @click="openMaintenanceDetails(log)" class="hover:bg-gray-50 cursor-pointer">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(log.date)"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="log.equipment.name"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="log.work_description"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatCurrency(log.cost)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div class="page" id="page-contacts">
-    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-        <div>
-            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">База клиентов</span></div>
-            <div class="ph-title">Контакты</div>
-        </div>
-        <button class="add-btn" onclick="openContactModal()">＋&nbsp;Новый контакт</button>
-    </div>
-    <div class="tcard">
-        <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
-        <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th>Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
-    </div>
-</div>
-
-<!-- MODALS -->
-<div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
-  <div class="modal">
-    <div class="modal-title">Новая <em>задача</em></div>
-    <div class="field full">
-      <label>НАЗВАНИЕ</label>
-      <input type="text" id="t-title" placeholder="Позвонить клиенту, подготовить КП..." />
-    </div>
-    <div class="field full">
-      <label>ОПИСАНИЕ</label>
-      <textarea id="t-desc" placeholder="Кратко опишите задачу"></textarea>
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>СРОК</label>
-        <input type="date" id="t-date" />
-      </div>
-      <div class="field">
-        <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="t-assignee"></select>
-      </div>
-      <div class="field">
-        <label>ПРИОРИТЕТ</label>
-        <select id="t-priority">
-          <option value="Низкий">Низкий</option>
-          <option value="Обычный" selected>Обычный</option>
-          <option value="Высокий">Высокий</option>
-          <option value="Критический">Критический</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>СТАТУС</label>
-        <select id="t-status">
-          <option value="Открыта" selected>Открыта</option>
-          <option value="В работе">В работе</option>
-          <option value="Отложена">Отложена</option>
-          <option value="Выполнена">Выполнена</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-row">
-      <button class="btn-sec btn-del-modal" id="btn-task-delete" style="display:none">УДАЛИТЬ</button>
-      <button class="btn-sec" onclick="closeTaskModal()">ОТМЕНА</button>
-      <button class="btn-pri" onclick="saveTask()">СОХРАНИТЬ</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
-  <div class="modal" style="max-width: 680px;">
-    <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
-    <div class="field full">
-      <label>НАЗВАНИЕ СДЕЛКИ</label>
-      <input type="text" id="d-title" placeholder="Покос участка 10 соток" />
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>КЛИЕНТ</label>
-        <input list="d-contact-list" id="d-contact-input" placeholder="Начните вводить имя...">
-        <datalist id="d-contact-list"></datalist>
-      </div>
-      <div class="field">
-        <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="d-assignee"></select>
-      </div>
-    </div>
-
-    <div id="d-services-block">
-        <label>УСЛУГИ</label>
-        <div class="tcard" style="margin-bottom: 12px;">
-            <table id="d-services-table">
-                <thead><tr><th>Услуга</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        <button class="btn-sec" style="width:100%" onclick="openItemSelectorModal('service')">＋ Добавить услугу</button>
+             <!-- Other tabs placeholder -->
+            <template x-if="activeTab !== 'equipment'">
+                <div x-text="`Контент для вкладки '${activeTab}' появится здесь.`" class="text-gray-500"></div>
+            </template>
+        </main>
     </div>
     
-    <div class="modal-grid" style="margin-top: 20px;">
-      <div class="field">
-        <label>ЭТАП</label>
-        <select id="d-stage"></select>
-      </div>
-      <div class="field">
-        <label>ИТОГОВАЯ СУММА</label>
-        <input type="text" id="d-total" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
-      </div>
-    </div>
+    <!-- Toast Notification -->
+    <div x-show="toast.show" x-transition
+         class="fixed top-5 right-5 z-50 p-4 rounded-md shadow-lg"
+         :class="toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
+         x-text="toast.message"></div>
 
-    <div class="modal-row">
-        <button class="btn-sec btn-del-modal" id="btn-deal-delete" style="display:none;">Удалить</button>
-        <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
-        <button class="btn-pri" id="btn-deal-save">СОЗДАТЬ</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay item-selector-modal" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
-    <div class="modal" style="max-width: 600px;">
-        <div class="modal-content">
-            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
-            <div class="item-selector-results" id="item-selector-results"></div>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
-  <div class="modal">
-    <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
-    <div class="field full">
-      <label>ИМЯ КЛИЕНТА</label>
-      <input type="text" id="c-name" placeholder="Иван Петров" />
-    </div>
-    <div class="modal-grid">
-      <div class="field">
-        <label>ТЕЛЕФОН</label>
-        <input type="tel" id="c-phone" placeholder="+7 (999) 123-45-67" />
-      </div>
-      <div class="field">
-        <label>ИСТОЧНИК</label>
-        <input type="text" id="c-source" placeholder="Рекомендация" />
-      </div>
-    </div>
-    <div class="modal-row">
-      <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;">УДАЛИТЬ</button>
-      <button class="btn-sec" onclick="closeContactModal()">ОТМЕНА</button>
-      <button class="btn-pri" id="btn-contact-save">СОЗДАТЬ</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="service-modal" onclick="if(event.target===this)closeServiceModal()">
-    <div class="modal">
-        <div class="modal-title" id="service-modal-title">Новая <em>услуга</em></div>
-        <div class="field full">
-            <label>НАИМЕНОВАНИЕ УСЛУГИ</label>
-            <input type="text" id="s-name" placeholder="Стандартный покос" />
-        </div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Ед. изм.</label>
-                <input type="text" id="s-unit" placeholder="соток" />
-            </div>
-            <div class="field">
-                <label>Цена (₽)</label>
-                <input type="number" id="s-price" placeholder="790" />
-            </div>
-            <div class="field">
-                <label>Мин. объём</label>
-                <input type="number" id="s-min-volume" placeholder="1" />
-            </div>
-        </div>
-        <div class="field full">
-            <label>ПРИМЕЧАНИЕ</label>
-            <textarea id="s-notes" placeholder="Трава до 30 см"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-service-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeServiceModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-service-save">СОЗДАТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="equipment-modal" onclick="if(event.target===this)closeEquipmentModal()">
-    <div class="modal" style="max-width: 720px;">
-        <div class="modal-title" id="equipment-modal-title">Новая <em>техника</em></div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Название</label>
-                <input type="text" id="eq-name" placeholder="Газонокосилка #1">
-            </div>
-            <div class="field">
-                <label>Модель</label>
-                <input type="text" id="eq-model" placeholder="Husqvarna 525">
-            </div>
-             <div class="field full">
-                <label>Серийный номер</label>
-                <input type="text" id="eq-serial">
-            </div>
-            <div class="field">
-                <label>Дата покупки</label>
-                <input type="date" id="eq-purchase-date">
-            </div>
-            <div class="field">
-                <label>Стоимость</label>
-                <input type="number" id="eq-purchase-cost" placeholder="25000">
-            </div>
-            <div class="field">
-                <label>Статус</label>
-                <select id="eq-status">
-                    <option value="active">Активна</option>
-                    <option value="repair">В ремонте</option>
-                    <option value="retired">Списана</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Моточасы</label>
-                <input type="number" id="eq-engine-hours" placeholder="120.5">
-            </div>
-            <div class="field">
-                <label>Норма ГСМ (л/ч)</label>
-                <input type="number" id="eq-fuel-norm" placeholder="1.2">
-            </div>
-             <div class="field">
-                <label>Последнее ТО</label>
-                <input type="date" id="eq-last-maintenance">
-            </div>
-             <div class="field">
-                <label>Следующее ТО</label>
-                <input type="date" id="eq-next-maintenance">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Примечание</label>
-            <textarea id="eq-notes"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-equipment-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeEquipmentModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-equipment-save">СОЗДАТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="maintenance-modal" onclick="if(event.target===this)closeMaintenanceModal()">
-    <div class="modal" style="max-width: 680px;">
-        <div class="modal-title" id="maintenance-modal-title">Запись <em>о ТО</em></div>
-        <div class="modal-grid">
-             <div class="field">
-                <label>Проведенные работы</label>
-                <input type="text" id="m-work" placeholder="Замена масла, чистка фильтра">
-            </div>
-            <div class="field">
-                <label>Дата</label>
-                <input type="date" id="m-date">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Примечание</label>
-            <textarea id="m-notes"></textarea>
-        </div>
-        <div id="m-consumables-block" style="margin-top: 20px; border-top: 1px solid var(--border2); padding-top: 20px;">
-            <label>РАСХОДНИКИ</label>
-            <div class="tcard" style="margin-bottom: 12px;">
-                <table id="m-consumables-table">
-                    <thead><tr><th>Название</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <button class="btn-sec" style="width:100%" onclick="openItemSelectorModal('consumable')">＋ Добавить расходник</button>
-        </div>
-        <div class="modal-grid" style="margin-top:20px;">
-            <div class="field full">
-                 <label>ИТОГОВАЯ СТОИМОСТЬ ТО</label>
-                 <input type="text" id="m-total-cost" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
-            </div>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-maintenance-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeMaintenanceModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-maintenance-save">СОХРАНИТЬ</button>
-        </div>
-    </div>
-</div>
-
-<div class="overlay" id="consumable-modal" onclick="if(event.target===this)closeConsumableModal()">
-    <div class="modal">
-        <div class="modal-title" id="consumable-modal-title">Новый <em>расходник</em></div>
-        <div class="field full">
-            <label>Название</label>
-            <input type="text" id="cn-name" placeholder="Масло 4Т 10W-30">
-        </div>
-        <div class="modal-grid">
-            <div class="field">
-                <label>Ед. изм.</label>
-                <input type="text" id="cn-unit" placeholder="л">
-            </div>
-            <div class="field">
-                <label>Кол-во на складе</label>
-                <input type="number" id="cn-stock">
-            </div>
-            <div class="field">
-                <label>Цена за ед.</label>
-                <input type="number" id="cn-price" placeholder="800">
-            </div>
-        </div>
-        <div class="field full">
-            <label>Заметки</label>
-            <textarea id="cn-notes"></textarea>
-        </div>
-        <div class="modal-row">
-            <button class="btn-sec btn-del-modal" id="btn-consumable-delete" style="display:none;">УДАЛИТЬ</button>
-            <button class="btn-sec" onclick="closeConsumableModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-consumable-save">СОХРАНИТЬ</button>
-        </div>
-    </div>
-</div>
-
-</div>
-<div class="toast" id="toast"></div>
-
-<script>
-const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
-let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[];
-let _selectedEquipmentId = null;
-
-function fmt(n, z = '—'){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : z}
-function fmtShort(n, z='—'){return n != null ? n.toLocaleString('ru') : z}
-function fmtDate(s, z='—'){ if (!s) return z; const d = new Date(s); return d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}) }
-function toISODate(d) { if (!d) return null; const date = new Date(d); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().split('T')[0]; }
-
-function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
-function esc(s){return s != null ? String(s).replace(/"/g,'&quot;').replace(/'/g,"&apos;") : ''}
-
-async function api(ep,opts={}){
-  try{
-    const r=await fetch(`${API_BASE}${ep}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
-    if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
-    if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP Error ${r.status}`)}
-    return r.status===204?null:r.json()
-  }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
-}
-
-// ── KANBAN STATE ──
-let _deals=[], _dragEl=null, _dragSrcStage=null;
-
-function renderKanban(deals=[]){
-  _deals=[...deals];
-  const board=document.getElementById('kanban-board');
-  if(!STAGES.length){board.innerHTML='<p style="color:var(--ink4);padding:24px">Нет этапов</p>';return}
-  board.innerHTML=STAGES.map(st=>{
-    const c=st.color||'#7ab566';
-    const cards=deals.filter(d=>d.stage===st.name);
-    const total=cards.reduce((s,d)=>s+d.total,0);
-    const cardsHtml=cards.length
-      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" onclick="openDealModal(${d.id})" data-stage="${esc(st.name)}" style="--c:${c}">
-          <div class="k-sum">${fmt(d.total)}</div>
-          <div class="k-title">${d.title}</div>
-          <div class="k-client">${d.client}</div>
-          <div class="k-hr"></div>
-          <div class="k-date">${fmtDate(d.created_at)}</div>
-        </div>`).join('')
-      :`<div class="empty"><div class="empty-ico" style="font-size:20px">🌿</div><div class="empty-txt">Пусто</div></div>`;
-    return`<div class="k-col" data-stage="${esc(st.name)}">
-      <div class="k-head"><div class="k-dot" style="background:${c}"></div><span class="k-name" style="color:${c}">${st.name}</span><span class="k-count">${cards.length}</span></div>
-      <div class="k-total" style="${cards.length?'':'visibility:hidden'}">${fmt(total)}</div>
-      <div class="k-cards">${cardsHtml}</div>
-    </div>`;
-  }).join('');
-  initDrag();
-}
-
-function initDrag(){
-  const board=document.getElementById('kanban-board');
-  board.querySelectorAll('.k-card[draggable]').forEach(el=>{
-    el.addEventListener('dragstart',e=>{
-      e.stopPropagation();
-      _dragEl=el; _dragSrcStage=el.dataset.stage;
-      requestAnimationFrame(()=>el.classList.add('dragging'));
-      e.dataTransfer.effectAllowed='move';
-      e.dataTransfer.setData('text/plain',el.dataset.id);
-    });
-    el.addEventListener('dragend',()=>{
-      if(_dragEl)_dragEl.classList.remove('dragging');
-      board.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
-      board.querySelectorAll('.k-col').forEach(c=>c.classList.remove('drag-over'));
-      _dragEl=null;
-    });
-  });
-  board.querySelectorAll('.k-col').forEach(col=>{
-    col.addEventListener('dragover',e=>{
-      e.preventDefault(); e.dataTransfer.dropEffect='move';
-      col.classList.add('drag-over');
-      const cards=col.querySelector('.k-cards');
-      const ph=col.querySelector('.k-placeholder');
-      if(!ph){const p=document.createElement('div');p.className='k-placeholder';cards.appendChild(p);}
-    });
-    col.addEventListener('dragleave',e=>{
-      if(!col.contains(e.relatedTarget)){
-        col.classList.remove('drag-over');
-        col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
-      }
-    });
-    col.addEventListener('drop',e=>{
-      e.preventDefault(); e.stopPropagation();
-      col.classList.remove('drag-over');
-      col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
-      const id=e.dataTransfer.getData('text/plain');
-      const newStageName=col.dataset.stage;
-      if(!id||_dragSrcStage===newStageName)return;
-      
-      const deal=_deals.find(d=>String(d.id)===String(id));
-      if(!deal)return;
-      
-      const stage = STAGES.find(s => s.name === newStageName);
-      if (!stage) return;
-
-      const oldStageName = deal.stage;
-      deal.stage = newStageName;
-      renderKanban(_deals);
-
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
-        .then(()=>showToast('✅ → '+newStageName))
-        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
-    });
-  });
-}
-
-// ── DEAL MODAL ──
-let _dealItems = [];
-
-async function setupDealModal(dealId = null) {
-    const titleEl = document.getElementById('d-modal-title');
-    const saveBtn = document.getElementById('btn-deal-save');
-    const deleteBtn = document.getElementById('btn-deal-delete');
-    const contactList = document.getElementById('d-contact-list');
-    const stageSel = document.getElementById('d-stage');
-    const assigneeSel = document.getElementById('d-assignee');
-
-    document.getElementById('d-title').value = '';
-    document.getElementById('d-contact-input').value = '';
-    document.getElementById('d-title').classList.remove('err');
-
-    contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
-    const users = await api('/users').catch(() => []);
-    assigneeSel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-
-    if (dealId) {
-        titleEl.innerHTML = `Сделка <em>№${dealId}</em>`;
-        saveBtn.textContent = 'Сохранить';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteDeal(dealId);
-        saveBtn.onclick = () => saveDeal(dealId);
-
-        const deal = await api(`/deals/${dealId}`);
-        if (!deal) { closeDealModal(); return; }
-        
-        document.getElementById('d-title').value = deal.title || '';
-        if(deal.contact) document.getElementById('d-contact-input').value = deal.contact.name || '';
-        assigneeSel.value = deal.manager || '';
-        stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
-
-        _dealItems = deal.services.map(s => ({
-            id: s.service.id,
-            name: s.service.name,
-            price: s.price_at_moment, 
-            quantity: s.quantity,
-            unit: s.service.unit
-        }));
-
-    } else {
-        titleEl.innerHTML = 'Новая <em>сделка</em>';
-        saveBtn.textContent = 'Создать';
-        deleteBtn.style.display = 'none';
-        saveBtn.onclick = () => saveDeal();
-        stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
-        _dealItems = [];
-    }
-
-    renderDealServices();
-}
-
-async function openDealModal(dealId = null) {
-    try {
-        await setupDealModal(dealId);
-        document.getElementById('deal-overlay').classList.add('open');
-        setTimeout(() => document.getElementById('d-title').focus(), 100);
-    } catch(e) {
-        showToast('❌ Не удалось загрузить данные сделки');
-        console.error(e);
-    }
-}
-
-function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
-
-function addDealService(service) {
-    const existingItem = _dealItems.find(item => item.id === service.id);
-    if (existingItem) {
-        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
-    } else {
-        _dealItems.push({ ...service, quantity: 1 });
-    }
-    renderDealServices();
-}
-
-function removeDealService(serviceId) {
-    _dealItems = _dealItems.filter(item => item.id !== serviceId);
-    renderDealServices();
-}
-
-function updateDealServiceQty(serviceId, newQuantity) {
-    const item = _dealItems.find(item => item.id === serviceId);
-    if (item) {
-        const qty = parseFloat(newQuantity);
-        if (qty > 0) item.quantity = qty; else removeDealService(serviceId);
-    }
-    renderDealServices();
-}
-
-function renderDealServices() {
-    const tbody = document.getElementById('d-services-table').querySelector('tbody');
-    if (_dealItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;font-size:11px;color:var(--ink4)">Услуги не добавлены</td></tr>`;
-    } else {
-        tbody.innerHTML = _dealItems.map(item => `
-            <tr>
-                <td>${item.name} ${item.id === -1 ? '<small style="color:var(--red)">[удалена]</small>' : ''}</td>
-                <td>${fmt(item.price)}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
-                <td>${fmt(item.price * item.quantity)}</td>
-                <td><button class="btn-del" onclick="removeDealService(${item.id})" title="Удалить">⊗</button></td>
-            </tr>
-        `).join('');
-    }
-    const total = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    document.getElementById('d-total').value = fmt(total);
-}
-
-function getContactIdByName(name) {
-    const el = document.querySelector(`#d-contact-list option[value="${esc(name)}"]`);
-    return el ? parseInt(el.dataset.id, 10) : null;
-}
-
-async function saveDeal(dealId = null) {
-  const title = document.getElementById('d-title').value.trim();
-  const contactName = document.getElementById('d-contact-input').value.trim();
-  const stage_id = parseInt(document.getElementById('d-stage').value, 10);
-  const manager = document.getElementById('d-assignee').value;
-
-  if (!title) { document.getElementById('d-title').classList.add('err'); return; }
-  if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
-
-  const dealData = { 
-      title, 
-      stage_id, 
-      manager: manager || null,
-      services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity }))
-  };
-  
-  const contact_id = getContactIdByName(contactName);
-  if (contact_id) {
-    dealData.contact_id = contact_id;
-  } else if (contactName) {
-    dealData.new_contact_name = contactName;
-  }
-
-  const method = dealId ? 'PATCH' : 'POST';
-  const endpoint = dealId ? `/deals/${dealId}` : '/deals';
-
-  try {
-    await api(endpoint, { method, body: JSON.stringify(dealData) });
-    closeDealModal();
-    showToast(dealId ? '✅ Сделка обновлена' : '✅ Сделка создана');
-    loadData(SELECTED_YEAR, true);
-  } catch (e) {}
-}
-
-async function deleteDeal(dealId) {
-    if (!confirm(`Вы уверены, что хотите удалить сделку №${dealId}?`)) return;
-    try {
-        await api(`/deals/${dealId}`, { method: 'DELETE' });
-        closeDealModal();
-        showToast('🗑️ Сделка удалена');
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// --- ITEM SELECTOR (replaces service selector) ---
-let _itemSelectorCallback = null;
-let _itemSelectorSource = [];
-
-function openItemSelectorModal(type) {
-    document.getElementById('item-selector-search').value = '';
-    if (type === 'service') {
-        _itemSelectorSource = _services;
-        _itemSelectorCallback = (item) => addDealService(item);
-    } else if (type === 'consumable') {
-        _itemSelectorSource = _consumables;
-        _itemSelectorCallback = (item) => addMaintenanceConsumable(item);
-    }
-    renderItemSelectorResults();
-    document.getElementById('item-selector-modal').classList.add('open');
-    setTimeout(() => document.getElementById('item-selector-search').focus(), 50);
-}
-
-function closeItemSelectorModal() {
-    document.getElementById('item-selector-modal').classList.remove('open');
-}
-
-function renderItemSelectorResults() {
-    const searchTerm = document.getElementById('item-selector-search').value.toLowerCase();
-    const resultsContainer = document.getElementById('item-selector-results');
-    const filteredItems = _itemSelectorSource.filter(i => i.name.toLowerCase().includes(searchTerm));
-
-    if (filteredItems.length === 0) {
-        resultsContainer.innerHTML = `<div class="empty-txt" style="padding: 24px;">Ничего не найдено</div>`;
-        return;
-    }
-
-    resultsContainer.innerHTML = filteredItems.map(i => {
-      const sub = i.stock_quantity != null ? `На складе: ${fmtShort(i.stock_quantity)} ${i.unit || ''}` : (i.unit || '');
-      return `
-        <div class="item-result" onclick="selectItem(${i.id})">
-            <div>
-                <div class="item-result-name">${i.name}</div>
-                <div class="item-result-sub">${sub}</div>
-            </div>
-            <div class="item-result-price">${fmt(i.price)}</div>
-        </div>
-    `}).join('');
-}
-
-function selectItem(itemId) {
-    if (_itemSelectorCallback) {
-        const item = _itemSelectorSource.find(i => i.id === itemId);
-        if(item) _itemSelectorCallback(item);
-    }
-    closeItemSelectorModal();
-}
-
-// ── CONTACT MODAL ──
-let _currentContactId = null;
-function openContactModal(contact = null) {
-    const overlay = document.getElementById('contact-overlay');
-    const title = document.getElementById('contact-modal-title');
-    const nameInput = document.getElementById('c-name');
-    const phoneInput = document.getElementById('c-phone');
-    const sourceInput = document.getElementById('c-source');
-    const saveBtn = document.getElementById('btn-contact-save');
-    const deleteBtn = document.getElementById('btn-contact-delete');
-
-    nameInput.classList.remove('err');
-    _currentContactId = null;
-
-    if (contact) {
-        _currentContactId = contact.id;
-        title.innerHTML = 'Редактировать <em>контакт</em>';
-        nameInput.value = contact.name || '';
-        phoneInput.value = contact.phone || '';
-        sourceInput.value = contact.source || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteContact(_currentContactId);
-    } else {
-        title.innerHTML = 'Новый <em>контакт</em>';
-        nameInput.value = '';
-        phoneInput.value = '';
-        sourceInput.value = '';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveContact;
-    overlay.classList.add('open');
-    setTimeout(() => nameInput.focus(), 100);
-}
-
-function closeContactModal() {
-    document.getElementById('contact-overlay').classList.remove('open');
-    _currentContactId = null;
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContactModal() });
-
-async function saveContact() {
-    const name = document.getElementById('c-name').value.trim();
-    if (!name) {
-        document.getElementById('c-name').classList.add('err');
-        return;
-    }
-    const data = {
-        name,
-        phone: document.getElementById('c-phone').value.trim() || null,
-        source: document.getElementById('c-source').value.trim() || null
-    };
-
-    try {
-        const endpoint = _currentContactId ? `/contacts/${_currentContactId}` : '/contacts';
-        const method = _currentContactId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentContactId ? '✅ Контакт обновлен' : '✅ Контакт создан');
-        closeContactModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteContact(contactId) {
-    if (!confirm('Вы уверены, что хотите удалить этот контакт? Это действие нельзя отменить.')) return;
-    try {
-        await api(`/contacts/${contactId}`, { method: 'DELETE' });
-        showToast('🗑️ Контакт удален');
-        closeContactModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── SERVICE MODAL ──
-let _currentServiceId = null;
-function openServiceModal(service = null) {
-    const overlay = document.getElementById('service-modal');
-    const title = document.getElementById('service-modal-title');
-    const nameInput = document.getElementById('s-name');
-    const saveBtn = document.getElementById('btn-service-save');
-    const deleteBtn = document.getElementById('btn-service-delete');
-
-    nameInput.classList.remove('err');
-    _currentServiceId = null;
-
-    if (service) {
-        _currentServiceId = service.id;
-        title.innerHTML = 'Редактировать <em>услугу</em>';
-        nameInput.value = service.name || '';
-        document.getElementById('s-unit').value = service.unit || '';
-        document.getElementById('s-price').value = service.price || '';
-        document.getElementById('s-min-volume').value = service.min_volume || '';
-        document.getElementById('s-notes').value = service.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteService(_currentServiceId);
-    } else {
-        title.innerHTML = 'Новая <em>услуга</em>';
-        nameInput.value = '';
-        document.getElementById('s-unit').value = '';
-        document.getElementById('s-price').value = '';
-        document.getElementById('s-min-volume').value = '1';
-        document.getElementById('s-notes').value = '';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveService;
-    overlay.classList.add('open');
-    setTimeout(() => nameInput.focus(), 100);
-}
-
-function closeServiceModal() {
-    document.getElementById('service-modal').classList.remove('open');
-    _currentServiceId = null;
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeServiceModal() });
-
-async function saveService() {
-    const name = document.getElementById('s-name').value.trim();
-    const price = parseFloat(document.getElementById('s-price').value);
-    if (!name || !price) {
-        document.getElementById('s-name').classList.toggle('err', !name);
-        document.getElementById('s-price').classList.toggle('err', !price);
-        return;
-    }
-    const data = {
-        name,
-        price,
-        unit: document.getElementById('s-unit').value.trim() || 'шт',
-        min_volume: parseFloat(document.getElementById('s-min-volume').value) || 1,
-        notes: document.getElementById('s-notes').value.trim() || null
-    };
-
-    try {
-        const endpoint = _currentServiceId ? `/services/${_currentServiceId}` : '/services';
-        const method = _currentServiceId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentServiceId ? '✅ Услуга обновлена' : '✅ Услуга создана');
-        closeServiceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteService(serviceId) {
-    if (!confirm('Вы уверены, что хотите удалить эту услугу? Это действие нельзя отменить.')) return;
-    try {
-        await api(`/services/${serviceId}`, { method: 'DELETE' });
-        showToast('🗑️ Услуга удалена');
-        closeServiceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── EQUIPMENT & MAINTENANCE ──
-let _currentEquipmentId = null;
-let _maintenanceItems = [];
-let _currentMaintenanceId = null;
-
-function selectEquipment(eqId, rowElement) {
-    _selectedEquipmentId = eqId;
-    document.querySelectorAll('#equipment-tbody tr').forEach(row => row.classList.remove('selected'));
-    if (rowElement) rowElement.classList.add('selected');
-}
-
-function openEquipmentModal(eq = null) {
-    const overlay = document.getElementById('equipment-modal');
-    const title = document.getElementById('equipment-modal-title');
-    const saveBtn = document.getElementById('btn-equipment-save');
-    const deleteBtn = document.getElementById('btn-equipment-delete');
-
-    _currentEquipmentId = null;
-    const fields = ['name', 'model', 'serial', 'purchase-date', 'purchase-cost', 'status', 'engine-hours', 'fuel-norm', 'last-maintenance', 'next-maintenance', 'notes'];
-    fields.forEach(f => document.getElementById(`eq-${f}`).value = '');
-    document.getElementById('eq-status').value = 'active';
-
-    if (eq) {
-        _currentEquipmentId = eq.id;
-        title.innerHTML = 'Редактировать <em>технику</em>';
-        document.getElementById('eq-name').value = eq.name || '';
-        document.getElementById('eq-model').value = eq.model || '';
-        document.getElementById('eq-serial').value = eq.serial || '';
-        document.getElementById('eq-purchase-date').value = toISODate(eq.purchase_date);
-        document.getElementById('eq-purchase-cost').value = eq.purchase_cost;
-        document.getElementById('eq-status').value = eq.status || 'active';
-        document.getElementById('eq-engine-hours').value = eq.engine_hours;
-        document.getElementById('eq-fuel-norm').value = eq.fuel_norm;
-        document.getElementById('eq-last-maintenance').value = toISODate(eq.last_maintenance_date);
-        document.getElementById('eq-next-maintenance').value = toISODate(eq.next_maintenance_date);
-        document.getElementById('eq-notes').value = eq.notes || '';
-
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteEquipment(_currentEquipmentId);
-    } else {
-        title.innerHTML = 'Новая <em>техника</em>';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveEquipment;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('eq-name').focus(), 100);
-}
-
-function closeEquipmentModal() {
-    document.getElementById('equipment-modal').classList.remove('open');
-    _currentEquipmentId = null;
-}
-
-async function saveEquipment() {
-    const name = document.getElementById('eq-name').value.trim();
-    if (!name) {
-        document.getElementById('eq-name').classList.add('err');
-        return;
-    }
-    const data = {
-        name,
-        model: document.getElementById('eq-model').value.trim() || null,
-        serial: document.getElementById('eq-serial').value.trim() || null,
-        purchase_date: document.getElementById('eq-purchase-date').value || null,
-        purchase_cost: parseFloat(document.getElementById('eq-purchase-cost').value) || null,
-        status: document.getElementById('eq-status').value,
-        engine_hours: parseFloat(document.getElementById('eq-engine-hours').value) || null,
-        fuel_norm: parseFloat(document.getElementById('eq-fuel-norm').value) || null,
-        last_maintenance_date: document.getElementById('eq-last-maintenance').value || null,
-        next_maintenance_date: document.getElementById('eq-next-maintenance').value || null,
-        notes: document.getElementById('eq-notes').value.trim() || null,
-    };
-
-    try {
-        const endpoint = _currentEquipmentId ? `/equipment/${_currentEquipmentId}` : '/equipment';
-        const method = _currentEquipmentId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentEquipmentId ? '✅ Техника обновлена' : '✅ Техника добавлена');
-        closeEquipmentModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteEquipment(eqId) {
-    if (!confirm('Вы уверены, что хотите удалить эту единицу техники? Все записи о ТО также будут удалены.')) return;
-    try {
-        await api(`/equipment/${eqId}`, { method: 'DELETE' });
-        showToast('🗑️ Техника удалена');
-        closeEquipmentModal();
-        _selectedEquipmentId = null;
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function openMaintenanceModal(mId = null) {
-    if (!mId && !_selectedEquipmentId) {
-        showToast('💡 Сначала выберите технику в левой таблице');
-        return;
-    }
-    const overlay = document.getElementById('maintenance-modal');
-    const title = document.getElementById('maintenance-modal-title');
-    const saveBtn = document.getElementById('btn-maintenance-save');
-    const deleteBtn = document.getElementById('btn-maintenance-delete');
-    
-    _currentMaintenanceId = null;
-    document.getElementById('m-work').classList.remove('err');
-    document.getElementById('m-date').value = toISODate(new Date());
-    document.getElementById('m-work').value = '';
-    document.getElementById('m-notes').value = '';
-
-    if (mId) {
-        _currentMaintenanceId = mId;
-        const m = await api(`/maintenance/${mId}`);
-        if (!m) { showToast('Ошибка загрузки ТО'); return; }
-        
-        selectEquipment(m.equipment_id, document.querySelector(`#equipment-tbody tr[data-id="${m.equipment_id}"]`));
-        title.innerHTML = `Запись <em>о ТО #${m.id}</em>`;
-        document.getElementById('m-date').value = toISODate(m.date);
-        document.getElementById('m-work').value = m.work_description || '';
-        document.getElementById('m-notes').value = m.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteMaintenance(_currentMaintenanceId);
-
-        _maintenanceItems = m.consumables_used.map(c => ({ 
-            id: c.consumable.id, 
-            name: c.consumable.name, 
-            price: c.price_at_moment, 
-            quantity: c.quantity,
-            unit: c.consumable.unit
-        }));
-
-    } else {
-        title.innerHTML = 'Новая запись <em>о ТО</em>';
-        _maintenanceItems = [];
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    renderMaintenanceConsumables();
-    saveBtn.onclick = saveMaintenance;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('m-work').focus(), 100);
-}
-
-function closeMaintenanceModal() {
-    document.getElementById('maintenance-modal').classList.remove('open');
-    _currentMaintenanceId = null;
-}
-
-function addMaintenanceConsumable(consumable) {
-    const existingItem = _maintenanceItems.find(item => item.id === consumable.id);
-    if (existingItem) {
-        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
-    } else {
-        _maintenanceItems.push({ ...consumable, quantity: 1 });
-    }
-    renderMaintenanceConsumables();
-}
-
-function removeMaintenanceConsumable(consumableId) {
-    _maintenanceItems = _maintenanceItems.filter(item => item.id !== consumableId);
-    renderMaintenanceConsumables();
-}
-
-function updateMaintenanceConsumableQty(consumableId, newQuantity) {
-    const item = _maintenanceItems.find(item => item.id === consumableId);
-    if (item) {
-        const qty = parseFloat(newQuantity);
-        if (qty > 0) item.quantity = qty; else removeMaintenanceConsumable(consumableId);
-    }
-    renderMaintenanceConsumables();
-}
-
-function renderMaintenanceConsumables() {
-    const tbody = document.getElementById('m-consumables-table').querySelector('tbody');
-    if (_maintenanceItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;font-size:11px;color:var(--ink4)">Расходники не добавлены</td></tr>`;
-    } else {
-        tbody.innerHTML = _maintenanceItems.map(item => `
-            <tr>
-                <td>${item.name}</td>
-                <td>${fmt(item.price, '0 ₽')} / ${item.unit}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateMaintenanceConsumableQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
-                <td>${fmt(item.price * item.quantity)}</td>
-                <td><button class="btn-del" onclick="removeMaintenanceConsumable(${item.id})" title="Удалить">⊗</button></td>
-            </tr>
-        `).join('');
-    }
-    const total = _maintenanceItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    document.getElementById('m-total-cost').value = fmt(total);
-}
-
-async function saveMaintenance() {
-    const work = document.getElementById('m-work').value.trim();
-    if (!work) { document.getElementById('m-work').classList.add('err'); return; }
-    
-    const data = {
-        date: document.getElementById('m-date').value || toISODate(new Date()),
-        work_description: work,
-        notes: document.getElementById('m-notes').value.trim() || null,
-        consumables: _maintenanceItems.map(item => ({ consumable_id: item.id, quantity: item.quantity }))
-    };
-
-    const method = _currentMaintenanceId ? 'PATCH' : 'POST';
-    const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
-    if (method === 'POST') {
-        if (!_selectedEquipmentId) { showToast('❌ Ошибка: не выбрана техника для ТО'); return; }
-        data.equipment_id = _selectedEquipmentId;
-    }
-
-    try {
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentMaintenanceId ? '✅ Запись о ТО обновлена' : '✅ Запись о ТО добавлена');
-        closeMaintenanceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-async function deleteMaintenance(mId) {
-    if (!confirm('Удалить эту запись о ТО? Расходники вернутся на склад.')) return;
-    try {
-        await api(`/maintenance/${mId}`, { method: 'DELETE' });
-        showToast('🗑️ Запись удалена');
-        closeMaintenanceModal();
-        loadData(SELECTED_YEAR, true);
-    } catch (e) {}
-}
-
-// ── CONSUMABLE (STOCK) MODAL ──
-let _currentConsumableId = null;
-function openConsumableModal(c = null) {
-    const overlay = document.getElementById('consumable-modal');
-    const title = document.getElementById('consumable-modal-title');
-    const saveBtn = document.getElementById('btn-consumable-save');
-    const deleteBtn = document.getElementById('btn-consumable-delete');
-
-    _currentConsumableId = null;
-    document.getElementById('cn-name').value = '';
-    document.getElementById('cn-unit').value = '';
-    document.getElementById('cn-stock').value = '';
-    document.getElementById('cn-price').value = '';
-    document.getElementById('cn-notes').value = '';
-    document.getElementById('cn-name').classList.remove('err');
-
-    if (c) {
-        _currentConsumableId = c.id;
-        title.innerHTML = 'Редактировать <em>расходник</em>';
-        document.getElementById('cn-name').value = c.name;
-        document.getElementById('cn-unit').value = c.unit;
-        document.getElementById('cn-stock').value = c.stock_quantity;
-        document.getElementById('cn-price').value = c.price;
-        document.getElementById('cn-notes').value = c.notes || '';
-        saveBtn.textContent = 'СОХРАНИТЬ';
-        deleteBtn.style.display = 'block';
-        deleteBtn.onclick = () => deleteConsumable(_currentConsumableId);
-    } else {
-        title.innerHTML = 'Новый <em>расходник</em>';
-        saveBtn.textContent = 'СОЗДАТЬ';
-        deleteBtn.style.display = 'none';
-    }
-    saveBtn.onclick = saveConsumable;
-    overlay.classList.add('open');
-    setTimeout(() => document.getElementById('cn-name').focus(), 100);
-}
-function closeConsumableModal() { document.getElementById('consumable-modal').classList.remove('open'); }
-
-async function saveConsumable() {
-    const name = document.getElementById('cn-name').value.trim();
-    if (!name) { document.getElementById('cn-name').classList.add('err'); return; }
-
-    const data = {
-        name,
-        unit: document.getElementById('cn-unit').value.trim() || 'шт',
-        stock_quantity: parseFloat(document.getElementById('cn-stock').value) || 0,
-        price: parseFloat(document.getElementById('cn-price').value) || 0,
-        notes: document.getElementById('cn-notes').value.trim() || null
-    };
-    
-    try {
-        const endpoint = _currentConsumableId ? `/consumables/${_currentConsumableId}` : '/consumables';
-        const method = _currentConsumableId ? 'PATCH' : 'POST';
-        await api(endpoint, { method, body: JSON.stringify(data) });
-        showToast(_currentConsumableId ? '✅ Расходник обновлен' : '✅ Расходник добавлен');
-        closeConsumableModal();
-        loadData(SELECTED_YEAR, true);
-    } catch(e) { }
-}
-
-async function deleteConsumable(cId) {
-    if (!confirm('Вы уверены, что хотите удалить этот расходник? Его нельзя будет восстановить.')) return;
-    try {
-        await api(`/consumables/${cId}`, { method: 'DELETE' });
-        showToast('🗑️ Расходник удален');
-        closeConsumableModal();
-        loadData(SELECTED_YEAR, true);
-    } catch(e) { }
-}
-
-// ── TASK MODAL ──
-let _currentTaskId = null;
-
-async function populateAssignees(selectedId){
-  const sel = document.getElementById('t-assignee');
-  try {
-    const users = await api('/users');
-    sel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name}</option>`).join('');
-  } catch(e) {
-    sel.innerHTML = `<option value="">Ошибка загрузки</option>`;
-  }
-}
-
-async function openTaskModal(taskId = null){
-    _currentTaskId = taskId;
-    const overlay = document.getElementById('task-overlay');
-    const titleEl = document.getElementById('t-title');
-    const descEl = document.getElementById('t-desc');
-    const dateEl = document.getElementById('t-date');
-    const priorityEl = document.getElementById('t-priority');
-    const statusEl = document.getElementById('t-status');
-    const deleteBtn = document.getElementById('btn-task-delete');
-
-    titleEl.value = ''; descEl.value = ''; 
-    dateEl.valueAsDate = new Date(Date.now() + 864e5);
-    priorityEl.value = 'Обычный'; statusEl.value = 'Открыта';
-    titleEl.classList.remove('err');
-    deleteBtn.style.display = 'none';
-
-    if (taskId) {
-        try {
-            const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=false`);
-            const task = (tasks).find(t => t.id === taskId);
-            if (task) {
-                titleEl.value = task.title || '';
-                descEl.value = task.description || '';
-                if (task.due_date) dateEl.value = toISODate(task.due_date);
-                priorityEl.value = task.priority || 'Обычный';
-                statusEl.value = task.status || 'Открыта';
-                await populateAssignees(task.assignee);
-                deleteBtn.style.display = 'block';
-                deleteBtn.onclick = () => deleteTask(taskId);
-            } else { throw new Error('Task not found'); }
-        } catch(e) { showToast('❌ Не удалось загрузить задачу'); return; }
-    } else {
-        await populateAssignees(CURRENT_USER?.sub);
-    }
-
-    overlay.classList.add('open');
-    setTimeout(() => titleEl.focus(), 100);
-}
-
-async function deleteTask(id){
-  if(!confirm('Удалить задачу?')) return;
-  try{
-    await api(`/tasks/${id}`, {method:'DELETE'});
-    closeTaskModal();
-    showToast('🗑️ Задача удалена');
-    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
-  }catch{}
-}
-
-function closeTaskModal(){document.getElementById('task-overlay').classList.remove('open')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
-
-async function saveTask(){
-  const title=document.getElementById('t-title').value.trim();
-  const description=document.getElementById('t-desc').value.trim();
-  const due_date=document.getElementById('t-date').value;
-  const priority=document.getElementById('t-priority').value;
-  const status=document.getElementById('t-status').value;
-  const assignee=document.getElementById('t-assignee').value;
-
-  if(!title){document.getElementById('t-title').classList.add('err');return}
-  try{
-    const method = _currentTaskId ? 'PATCH' : 'POST';
-    const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
-    const is_done = status === 'Выполнена';
-    
-    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
-    closeTaskModal();
-    showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
-    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
-  }catch{}
-}
-
-async function loadTasks(isDone){
-  document.getElementById('btn-tasks-active').classList.toggle('active', !isDone);
-  document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
-  const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
-  renderTasks(tasks || []);
-}
-
-function renderTasks(tasks=[]){
-  const tb=document.getElementById('tasks-tbody'),cnt=document.getElementById('tasks-count');
-  if(cnt)cnt.textContent=tasks.length?tasks.length+' задач':'';
-  const getBadge=(s)=>{
-    if(s==='Выполнена'||s==='Выполнено')return'b-green';
-    if(s==='Отложена')return'b-amber';
-    if(s==='В работе')return'b-blue';
-    return 'b-slate';
-  };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${esc(t.description||'')}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
-}
-
-function renderExpenses(expenses=[]){
-  const tb=document.getElementById('expenses-tbody'),cnt=document.getElementById('expenses-count');
-  const total=expenses.reduce((s,e)=>s+e.amount,0);
-  if(cnt)cnt.textContent=expenses.length?`${expenses.length} записей · ${fmt(total)}`:'';
-  tb.innerHTML=expenses.length?expenses.map(e=>`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
-}
-
-function renderEquipment(eq=[]){
-  _equipment = eq;
-  const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
-  if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
-  const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
-  tb.innerHTML=eq.length?eq.map(e=>`<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования"><td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td><td><span class="badge ${cls}">${lbl}</span></td><td>${fmtDate(e.purchase_date)}</td><td>${fmt(e.purchase_cost)}</td><td>${fmtShort(e.engine_hours, '0')}</td><td>${e.fuel_norm!=null?e.fuel_norm+' л/ч':'—'}</td><td>${fmtDate(e.last_maintenance_date)}</td><td>${fmtDate(e.next_maintenance_date)}</td></tr>`).join(''):empty(8,'Техники не найдено');
-  if(_selectedEquipmentId) {
-      const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
-      if(row) row.classList.add('selected');
-      else selectEquipment(null);
-  } else {
-      selectEquipment(null);
-  }
-}
-
-function renderMaintenanceHistory(history) {
-    _maintenanceHistory = history;
-    const tbody = document.getElementById('maintenance-tbody');
-    const countEl = document.getElementById('maintenance-count');
-    tbody.innerHTML = history.length ? history.map(h => 
-        `<tr onclick='openMaintenanceModal(${h.id})'>
-            <td style="font-size:11px;color:var(--ink3)">${h.equipment.name}</td>
-            <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
-            <td>${fmt(h.cost)}</td>
-            <td>${fmtDate(h.date)}</td>
-        </tr>`
-    ).join('') : empty(4, 'Записей о ТО нет');
-    countEl.textContent = history.length ? `${history.length} записей` : '';
-}
-
-function renderServices(services=[]){
-    _services = services;
-    const tb = document.getElementById('services-tbody');
-    const cnt = document.getElementById('services-count');
-    if (cnt) cnt.textContent = services.length ? services.length + ' услуг' : '';
-    tb.innerHTML = services.length ? services.map(s => 
-        `<tr onclick='openServiceModal(${JSON.stringify(s)})'>
-            <td>${s.id}</td>
-            <td style="color:var(--ink);font-weight:400">${s.name}</td>
-            <td style="color:var(--ink3);font-size:11px">${s.unit || '—'}</td>
-            <td><span class="money">${fmt(s.price)}</span></td>
-            <td style="color:var(--ink3);font-size:11px">${s.min_volume != null ? 'от ' + s.min_volume : '—'}</td>
-            <td style="color:var(--ink4);font-size:11px; white-space: pre-wrap; max-width: 300px;">${s.notes || '—'}</td>
-        </tr>`
-    ).join('') : empty(6, 'Услуг не найдено');
-}
-
-function renderConsumables(items=[]){
-  _consumables = items;
-  const tb=document.getElementById('consumables-tbody'),cnt=document.getElementById('consumables-count');
-  if(cnt)cnt.textContent=items.length?items.length+' позиций':'';
-  tb.innerHTML=items.length?items.map(c=>`<tr onclick='openConsumableModal(${JSON.stringify(c)})'><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td><span class="money">${c.stock_quantity||0}</span> <span style="font-size:11px;color:var(--ink4)">${c.unit||''}</span></td><td>${fmt(c.price, '0 ₽')}</td><td style="color:var(--ink4);font-size:11px;">${c.notes || '-'}</td></tr>`).join(''):empty(5,'Позиций не найдено')
-}
-
-function renderContacts(contacts=[]){
-  _contacts = contacts;
-  const tb=document.getElementById('contacts-tbody'),cnt=document.getElementById('contacts-count');
-  if(cnt)cnt.textContent=contacts.length?contacts.length+' контактов':'';
-  tb.innerHTML = contacts.length ? contacts.map(c => 
-    `<tr onclick='openContactModal(${JSON.stringify(c)})'>
-        <td>${c.id}</td>
-        <td style="color:var(--ink);font-weight:400">${c.name}</td>
-        <td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td>
-        <td style="color:var(--ink3);font-size:11px">${c.source||'—'}</td>
-    </tr>`
-  ).join('') : empty(4, 'Контактов не найдено');
-}
-
-function buildDash(deals,expenses,equipment){
-  const successfulStages = STAGES.filter(s => s.is_final && s.name.toLowerCase().includes('успешно')).map(s => s.name);
-  const won = deals.filter(d => successfulStages.includes(d.stage));
-  const rev=won.reduce((s,d)=>s+d.total,0);
-  const exp=expenses.reduce((s,e)=>s+e.amount,0);
-  const prof=rev-exp; const marg=rev?Math.round(prof/rev*100):0;
-  document.getElementById('kpi-revenue').textContent=fmt(rev);
-  document.getElementById('kpi-deals-count').textContent=won.length+' успешных сделок';
-  document.getElementById('kpi-expenses').textContent=fmt(exp);
-  document.getElementById('kpi-exp-count').textContent=expenses.length+' записей';
-  const pel=document.getElementById('kpi-profit');
-  pel.textContent=fmt(prof);pel.className='kpi-val '+(prof>=0?'m-pos':'m-neg');
-  document.getElementById('kpi-margin').textContent='маржа '+marg+'%';
-  document.getElementById('kpi-equip').textContent=equipment.length;
-  document.getElementById('kpi-repair').textContent=equipment.filter(e=>e.status==='repair').length+' в ремонте';
-}
-
-async function loadData(year, force = false){
-  if(!year)return;
-  if (force) {
-      try { await api('/cache/invalidate', { method: 'POST' }); } catch(e){ console.warn('Cache invalidation failed', e) }
-  }
-  showToast('⏳ Загрузка за '+year+'…');
-  document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
-  const yp='?year='+year;
-  const endpoints = {
-      deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
-      equipment: '/equipment', services: '/services', consumables: '/consumables',
-      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp
-  };
-  const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
-  const data = {};
-  let hasError = false;
-  Object.keys(endpoints).forEach((key, i) => {
-      if (results[i].status === 'fulfilled') {
-          data[key] = results[i].value;
-      } else {
-          hasError = true;
-      }
-  });
-
-  STAGES=data.stages||[];
-  
-  renderKanban(data.deals?.deals || data.deals || []);
-  renderTasks((data.tasks?.tasks || data.tasks) || []);
-  renderExpenses((data.expenses?.expenses || data.expenses) || []);
-  renderEquipment(data.equipment || []);
-  renderServices(data.services || []);
-  renderConsumables(data.consumables || []);
-  renderContacts(data.contacts || []);
-  renderMaintenanceHistory(data.maintenance || []);
-  buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
-  
-  showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
-}
-
-async function populateYearSelector(){
-  const sel=document.getElementById('year-selector');
-  try{
-    const years=await api('/years');
-    if(!years?.length){sel.innerHTML=`<option>${SELECTED_YEAR}</option>`;return}
-    SELECTED_YEAR=years[0];
-    sel.innerHTML=years.map(y=>`<option value="${y}"${y===SELECTED_YEAR?' selected':''}>${y}</option>`).join('')
-  }catch{sel.innerHTML=`<option>${SELECTED_YEAR}</option>`}
-}
-
-async function checkAuth(){
-  try{
-    CURRENT_USER = await api('/me');
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    await populateYearSelector();await loadData(SELECTED_YEAR);
-    document.getElementById('year-selector').addEventListener('change',()=>{
-      const y=parseInt(document.getElementById('year-selector').value,10);
-      if(y&&y!==SELECTED_YEAR){SELECTED_YEAR=y;loadData(y)}
-    });
-    document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR, true));
-  }catch{document.getElementById('login-screen').style.display='flex'}
-}
-
-function showPage(id,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  if(btn)btn.classList.add('active');
-}
-
-function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
-}
-
-function applyTheme(th){
-  document.documentElement.setAttribute('data-theme',th);localStorage.setItem('crm_theme',th);
-  const b=document.getElementById('theme-toggle');if(b)b.textContent=th==='dark'?'○':'◑';
-}
-function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
-
-document.addEventListener('DOMContentLoaded',()=>{
-  applyTheme(localStorage.getItem('crm_theme')||'light');checkAuth();
-});
-</script>
 </body>
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('app', () => ({
+        version: '11.1',
+        isReady: false,
+        user: { name: '' },
+        activeTab: 'equipment',
+        menuItems: [
+            { id: 'deals', name: 'Сделки', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' },
+            { id: 'tasks', name: 'Задачи', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />' },
+            { id: 'equipment', name: 'Техника', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />' },
+            { id: 'consumables', name: 'Расходники', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />' },
+            { id: 'expenses', name: 'Расходы', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01" />' },
+            { id: 'reports', name: 'Отчеты', iconPath: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />' },
+        ],
+        
+        years: [],
+        currentYear: new Date().getFullYear(),
+
+        // Data stores
+        equipment: [],
+        maintenanceLog: [],
+
+        // State
+        selectedEquipment: null,
+        equipmentSearch: '',
+        maintenanceSearch: '',
+        sortConfig: { equipment: { key: 'name', asc: true }, maintenanceLog: { key: 'date', asc: false } },
+        toast: { show: false, message: '', type: 'success' },
+
+        // Computed
+        get filteredEquipment() {
+            return this.equipment
+                .filter(item => item.name.toLowerCase().includes(this.equipmentSearch.toLowerCase()))
+                .sort((a, b) => {
+                    const dir = this.sortConfig.equipment.asc ? 1 : -1;
+                    if (a[this.sortConfig.equipment.key] > b[this.sortConfig.equipment.key]) return 1 * dir;
+                    if (a[this.sortConfig.equipment.key] < b[this.sortConfig.equipment.key]) return -1 * dir;
+                    return 0;
+                });
+        },
+        
+        get filteredMaintenanceLog() {
+            return this.maintenanceLog
+                .filter(log => log.work_description.toLowerCase().includes(this.maintenanceSearch.toLowerCase()))
+                .sort((a, b) => {
+                    const dir = this.sortConfig.maintenanceLog.asc ? 1 : -1;
+                    if (a[this.sortConfig.maintenanceLog.key] > b[this.sortConfig.maintenanceLog.key]) return 1 * dir;
+                    if (a[this.sortConfig.maintenanceLog.key] < b[this.sortConfig.maintenanceLog.key]) return -1 * dir;
+                    return 0;
+                });
+        },
+
+        // Methods
+        init() {
+            this.api = this.createApiHandler();
+            this.api.get('/me').then(user => {
+                this.user = user;
+                const year = new Date().getFullYear();
+                this.currentYear = year;
+                return this.fetchYears().then(() => this.fetchDataForYear());
+            }).finally(() => {
+                this.isReady = true;
+            });
+        },
+        
+        fetchDataForYear() {
+            const fetches = [
+                this.api.get('/equipment').then(data => { this.equipment = data; }),
+                this.api.get(`/maintenance?year=${this.currentYear}`).then(data => { this.maintenanceLog = data; })
+            ];
+            return Promise.all(fetches).catch(err => console.error("Ошибка при загрузке данных:", err));
+        },
+
+        fetchYears() {
+            return this.api.get('/years').then(data => {
+                this.years = data;
+                if (!this.years.includes(this.currentYear)) {
+                    this.years.unshift(this.currentYear);
+                }
+            });
+        },
+
+        selectEquipment(item) {
+            this.selectedEquipment = item;
+        },
+        
+        openMaintenanceDetails(log) {
+             // При клике на запись в журнале, подсвечиваем соответствующую технику
+            const equipmentItem = this.equipment.find(e => e.id === log.equipment_id);
+            if (equipmentItem) {
+                this.selectEquipment(equipmentItem);
+            }
+            // TODO: Open modal with full details
+            this.showToast(`Выбрана запись ТО #${log.id} для ${log.equipment.name}`, 'success');
+        },
+        
+        addMaintenance() {
+            if (!this.selectedEquipment) {
+                 this.showToast("💡 Сначала выберите технику в левой таблице.", 'error');
+                return;
+            }
+            // TODO: Open modal to add maintenance for this.selectedEquipment
+            this.showToast(`Добавление ТО для: ${this.selectedEquipment.name}`);
+        },
+
+        logout() { window.location.href = '/api/auth/logout'; },
+
+        getStatusClass(status) {
+            switch(status) {
+                case 'active': return 'bg-green-100 text-green-800';
+                case 'in_repair': return 'bg-yellow-100 text-yellow-800';
+                case 'written_off': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        },
+
+        sort(table, key) {
+            if (this.sortConfig[table].key === key) {
+                this.sortConfig[table].asc = !this.sortConfig[table].asc;
+            } else {
+                this.sortConfig[table].key = key;
+                this.sortConfig[table].asc = true;
+            }
+        },
+        
+        formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('ru-RU');
+        },
+
+        formatCurrency(amount) {
+            if (typeof amount !== 'number') return '-';
+            return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(amount);
+        },
+        
+        showToast(message, type = 'success') {
+            this.toast.message = message;
+            this.toast.type = type;
+            this.toast.show = true;
+            setTimeout(() => this.toast.show = false, 3000);
+        },
+        
+        createApiHandler() {
+            const handleResponse = async (response) => {
+                if (response.status === 401) {
+                    this.logout();
+                    throw new Error("Unauthorized");
+                }
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                    throw new Error(errorData.detail || "Server Error");
+                }
+                return response.json();
+            };
+
+            return {
+                get: (url) => fetch(`/api${url}`).then(handleResponse),
+                post: (url, data) => fetch(`/api${url}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).then(handleResponse),
+                 patch: (url, data) => fetch(`/api${url}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                }).then(handleResponse),
+                 delete: (url) => fetch(`/api${url}`, { method: 'DELETE' }).then(handleResponse),
+            };
+        }
+    }))
+})
+</script>
 </html>
