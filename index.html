@@ -393,7 +393,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <div class="tcard">
             <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
             <div style="overflow-x: auto;">
-                <table><thead><tr><th>Техника</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
+                <table><thead><tr><th>Тип</th><th>Наименование</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
             </div>
         </div>
         <div class="tcard">
@@ -1647,7 +1647,8 @@ function renderEquipment(eq=[]) {
     tb.innerHTML = eq.length ? eq.map(e => {
         const [cls, lbl] = SM[e.status] || ['b-slate', e.status];
         return `<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования">
-            <td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td>
+            <td style="font-weight:500;color:var(--ink)">${e.name}</td>
+            <td style="font-size:11px;color:var(--ink3)">${e.model || '—'}</td>
             <td><span class="badge ${cls}">${lbl}</span></td>
             <td>${fmtDate(e.purchase_date)}</td>
             <td>${fmt(e.purchase_cost)}</td>
@@ -1656,7 +1657,7 @@ function renderEquipment(eq=[]) {
             <td>${fmtDate(e.last_maintenance_date)}</td>
             <td>${fmtDate(e.next_maintenance_date)}</td>
         </tr>`;
-    }).join('') : empty(8, 'Техники не найдено');
+    }).join('') : empty(9, 'Техники не найдено');
 
     if (_selectedEquipmentId) {
         const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
