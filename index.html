@@ -104,7 +104,7 @@ nav button.active::after{left:13px;right:13px}
 .page{display:none;padding:40px 44px;min-height:calc(100vh - var(--hh));animation:pageIn .32s ease both}
 .page.active{display:block}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
+.page-grid{display:grid;grid-template-columns:1fr 2fr;gap:24px;}
 /* PAGE HEAD */
 .ph{margin-bottom:36px}
 .ph-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -134,19 +134,6 @@ nav button.active::after{left:13px;right:13px}
 .kpi-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:7px;letter-spacing:-.5px}
 .kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
 .kpi-sub{font-size:11px;color:var(--ink3);font-weight:300}
-
-/* TAX KPI STRIP — 3 col */
-.kpi-strip-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
-
-/* TAX PROGRESS BAR */
-.tax-progress-wrap{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:24px 28px;margin-bottom:24px;box-shadow:var(--sh-s)}
-.tax-progress-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.tax-progress-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500}
-.tax-progress-pct{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:500}
-.tax-bar-bg{width:100%;height:8px;background:var(--border2);border-radius:4px;overflow:hidden}
-.tax-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#16a34a,#4ade80);transition:width .6s ease}
-.tax-bar-fill.overpaid{background:linear-gradient(90deg,#2563eb,#60a5fa)}
-.tax-bar-fill.danger{background:linear-gradient(90deg,#dc2626,#f87171)}
 
 /* TABLE CARD */
 .tcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-s)}
@@ -303,7 +290,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <button onclick="showPage('kanban',this)">Сделки</button>
     <button onclick="showPage('tasks',this)">Задачи</button>
     <button onclick="showPage('expenses',this)">Расходы</button>
-    <button onclick="showPage('taxes',this)">Налоги</button>
+    <button onclick="showPage('taxes',this)">Налог</button>
     <button onclick="showPage('equipment',this)">Техника</button>
     <button onclick="showPage('services',this)">Прайс-лист</button>
     <button onclick="showPage('stock',this)">Склад</button>
@@ -327,27 +314,27 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   <div class="kpi-strip">
     <div class="kpi-card" style="--kpi-accent:#16a34a">
       <span class="kpi-icon">💰</span>
-      <div class="kpi-val" id="kpi-revenue">—</div>
+      <div class="kpi-val" id="kpi-revenue">_</div>
       <div class="kpi-label">Выручка</div>
-      <div class="kpi-sub" id="kpi-deals-count">— успешных сделок</div>
+      <div class="kpi-sub" id="kpi-deals-count">_ успешных сделок</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#dc2626">
       <span class="kpi-icon">📉</span>
-      <div class="kpi-val" id="kpi-expenses">—</div>
+      <div class="kpi-val" id="kpi-expenses">_</div>
       <div class="kpi-label">Расходы</div>
-      <div class="kpi-sub" id="kpi-exp-count">— записей</div>
+      <div class="kpi-sub" id="kpi-exp-count">_ записей</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#7c3aed">
       <span class="kpi-icon">📈</span>
-      <div class="kpi-val" id="kpi-profit">—</div>
+      <div class="kpi-val" id="kpi-profit">_</div>
       <div class="kpi-label">Прибыль</div>
-      <div class="kpi-sub" id="kpi-margin">маржа —%</div>
+      <div class="kpi-sub" id="kpi-margin">маржа _%</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#d97706">
       <span class="kpi-icon">🔧</span>
-      <div class="kpi-val" id="kpi-equip">—</div>
+      <div class="kpi-val" id="kpi-equip">_</div>
       <div class="kpi-label">Единиц техники</div>
-      <div class="kpi-sub" id="kpi-repair">— в ремонте</div>
+      <div class="kpi-sub" id="kpi-repair">_ в ремонте</div>
     </div>
   </div>
 </div>
@@ -395,54 +382,41 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- TAXES -->
 <div class="page" id="page-taxes">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
-    <div>
-      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">УСН · Доходы</span></div>
-      <div class="ph-title">Налоги <em>к уплате</em><span class="ph-year year-display"></span></div>
+    <div class="ph">
+        <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
+        <div class="ph-title">Уплата <em>налогов</em><span class="ph-year year-display"></span></div>
     </div>
-    <button class="add-btn" onclick="openTaxModal()">＋&nbsp;Внести платёж</button>
-  </div>
-  <div class="tax-progress-wrap">
-    <div class="tax-progress-label">
-      <span class="tax-progress-title">Уплачено от начисленного</span>
-      <span class="tax-progress-pct" id="tax-pct">—%</span>
+    <div class="page-grid">
+        <div>
+            <div class="kpi-card" style="--kpi-accent:#2a5280">
+                <span class="kpi-icon">🏛️</span>
+                <div class="kpi-val m-neg" id="tax-balance">_</div>
+                <div class="kpi-label">Налог к уплате</div>
+                <div class="kpi-sub" id="tax-sub">_</div>
+            </div>
+            <div class="tcard" style="margin-top:24px;">
+                <div class="tcard-head"><span class="tcard-title">Новый платёж</span></div>
+                <div style="padding: 20px;">
+                    <div class="field">
+                        <label>СУММА ПЛАТЕЖА</label>
+                        <input type="number" id="tax-payment-amount" placeholder="10000" />
+                    </div>
+                    <div class="field" style="margin-top: 16px;">
+                        <label>ДАТА</label>
+                        <input type="date" id="tax-payment-date" />
+                    </div>
+                    <div class="modal-row" style="justify-content:flex-start; margin-top: 20px;">
+                         <button class="add-btn" onclick="saveTaxPayment()">＋ Добавить платёж</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tcard">
+            <div class="tcard-head"><span class="tcard-title">История платежей</span><span class="tcard-meta" id="tax-payments-count"></span></div>
+            <table><thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th>Примечание</th></tr></thead><tbody id="tax-payments-tbody"></tbody></table>
+        </div>
     </div>
-    <div class="tax-bar-bg">
-      <div class="tax-bar-fill" id="tax-bar" style="width:0%"></div>
-    </div>
-  </div>
-  <div class="kpi-strip-3">
-    <div class="kpi-card" style="--kpi-accent:#7c3aed">
-      <span class="kpi-icon">📊</span>
-      <div class="kpi-val" id="kpi-tax-revenue">—</div>
-      <div class="kpi-label">Налоговая база</div>
-      <div class="kpi-sub" id="kpi-tax-rate-lbl">ставка —%</div>
-    </div>
-    <div class="kpi-card" style="--kpi-accent:#dc2626">
-      <span class="kpi-icon">🧾</span>
-      <div class="kpi-val" id="kpi-tax-accrued">—</div>
-      <div class="kpi-label">Начислено налога</div>
-      <div class="kpi-sub">по итогам года</div>
-    </div>
-    <div class="kpi-card" style="--kpi-accent:#16a34a">
-      <span class="kpi-icon">✅</span>
-      <div class="kpi-val" id="kpi-tax-balance">—</div>
-      <div class="kpi-label" id="kpi-tax-balance-lbl">Остаток к уплате</div>
-      <div class="kpi-sub" id="kpi-tax-paid-sub">уплачено —</div>
-    </div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head">
-      <span class="tcard-title">История платежей</span>
-      <span class="tcard-meta" id="tax-payments-count"></span>
-    </div>
-    <table>
-      <thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th>Примечание</th><th>Год</th></tr></thead>
-      <tbody id="tax-payments-tbody"></tbody>
-    </table>
-  </div>
 </div>
 
 <div class="page" id="page-equipment">
@@ -543,7 +517,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- TASK MODAL -->
+<!-- MODALS -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
     <div class="modal-title">Новая <em>задача</em></div>
@@ -591,7 +565,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- DEAL MODAL -->
 <div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
   <div class="modal" style="max-width: 680px;">
     <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
@@ -660,7 +633,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- ITEM SELECTOR MODAL -->
 <div class="overlay item-selector-modal" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
     <div class="modal" style="max-width: 600px;">
         <div class="modal-content">
@@ -670,7 +642,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- CONTACT MODAL -->
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
   <div class="modal">
     <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
@@ -696,7 +667,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
-<!-- SERVICE MODAL -->
 <div class="overlay" id="service-modal" onclick="if(event.target===this)closeServiceModal()">
     <div class="modal">
         <div class="modal-title" id="service-modal-title">Новая <em>услуга</em></div>
@@ -730,7 +700,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- EQUIPMENT MODAL -->
 <div class="overlay" id="equipment-modal" onclick="if(event.target===this)closeEquipmentModal()">
     <div class="modal" style="max-width: 720px;">
         <div class="modal-title" id="equipment-modal-title">Новая <em>техника</em></div>
@@ -792,7 +761,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- MAINTENANCE MODAL -->
 <div class="overlay" id="maintenance-modal" onclick="if(event.target===this)closeMaintenanceModal()">
     <div class="modal" style="max-width: 680px;">
         <div class="modal-title" id="maintenance-modal-title">Запись <em>о ТО</em></div>
@@ -834,7 +802,6 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- CONSUMABLE MODAL -->
 <div class="overlay" id="consumable-modal" onclick="if(event.target===this)closeConsumableModal()">
     <div class="modal">
         <div class="modal-title" id="consumable-modal-title">Новый <em>расходник</em></div>
@@ -868,30 +835,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
-<!-- TAX PAYMENT MODAL -->
-<div class="overlay" id="tax-overlay" onclick="if(event.target===this)closeTaxModal()">
-  <div class="modal">
-    <div class="modal-title">Налоговый <em>платёж</em></div>
-    <div class="field">
-      <label>Сумма (₽)</label>
-      <input type="number" id="tx-amount" placeholder="0" min="1" step="1" />
-    </div>
-    <div class="field">
-      <label>Дата платежа</label>
-      <input type="date" id="tx-date" />
-    </div>
-    <div class="field">
-      <label>Примечание</label>
-      <input type="text" id="tx-note" placeholder="Аванс Q1, итоговый платёж…" />
-    </div>
-    <div class="modal-row">
-      <button class="btn-sec" onclick="closeTaxModal()">Отмена</button>
-      <button class="btn-pri" onclick="saveTaxPayment()">Сохранить</button>
-    </div>
-  </div>
 </div>
-
-</div><!-- /app -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -986,13 +930,17 @@ function initDrag(){
       const id=e.dataTransfer.getData('text/plain');
       const newStageName=col.dataset.stage;
       if(!id||_dragSrcStage===newStageName)return;
+      
       const deal=_deals.find(d=>String(d.id)===String(id));
       if(!deal)return;
+      
       const stage = STAGES.find(s => s.name === newStageName);
       if (!stage) return;
+
       const oldStageName = deal.stage;
       deal.stage = newStageName;
       renderKanban(_deals);
+
       api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
         .then(()=>showToast('✅ → '+newStageName))
         .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
@@ -1015,8 +963,8 @@ async function setupDealModal(dealId = null) {
     document.getElementById('d-contact-input').value = '';
     document.getElementById('d-title').classList.remove('err');
     document.getElementById('d-discount').value = 0;
-    document.getElementById('d-tax-rate').value = 0;
-    document.getElementById('d-tax-included').checked = false;
+    document.getElementById('d-tax-rate').value = 4;
+    document.getElementById('d-tax-included').checked = true;
 
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
@@ -1037,8 +985,8 @@ async function setupDealModal(dealId = null) {
         assigneeSel.value = deal.manager || '';
         stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
         document.getElementById('d-discount').value = deal.discount || 0;
-        document.getElementById('d-tax-rate').value = deal.tax_rate || 0;
-        document.getElementById('d-tax-included').checked = deal.tax_included || false;
+        document.getElementById('d-tax-rate').value = deal.tax_rate;
+        document.getElementById('d-tax-included').checked = deal.tax_included;
 
         _dealItems = deal.services.map(s => ({
             id: s.service.id,
@@ -1063,15 +1011,14 @@ async function setupDealModal(dealId = null) {
 
 function calculateDealTotal() {
     const subtotal = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = parseFloat(document.getElementById('d-discount').value) || 0;
+    const discountInput = document.getElementById('d-discount');
     const taxRate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
     const taxIncluded = document.getElementById('d-tax-included').checked;
 
-    if (subtotal > 10000 && document.getElementById('d-discount').value === "0") {
-        document.getElementById('d-discount').value = 5;
-        calculateDealTotal();
-        return;
+    if (subtotal > 10000 && parseFloat(discountInput.value) === 0) {
+        discountInput.value = 5;
     }
+    const discount = parseFloat(discountInput.value) || 0;
 
     const discountAmount = subtotal * (discount / 100);
     const discountedTotal = subtotal - discountAmount;
@@ -1099,6 +1046,7 @@ async function openDealModal(dealId = null) {
 }
 
 function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
 
 function addDealService(service) {
     const existingItem = _dealItems.find(item => item.id === service.id);
@@ -1160,10 +1108,13 @@ async function saveDeal(dealId = null) {
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
 
   const dealData = { 
-      title, stage_id, 
+      title, 
+      stage_id, 
       manager: manager || null,
       services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity })),
-      discount, tax_rate, tax_included
+      discount,
+      tax_rate,
+      tax_included
   };
   
   const contact_id = getContactIdByName(contactName);
@@ -1194,7 +1145,7 @@ async function deleteDeal(dealId) {
     } catch (e) {}
 }
 
-// ── ITEM SELECTOR ──
+// --- ITEM SELECTOR (replaces service selector) ---
 let _itemSelectorCallback = null;
 let _itemSelectorSource = [];
 
@@ -1272,7 +1223,9 @@ function openContactModal(contact = null) {
         deleteBtn.onclick = () => deleteContact(_currentContactId);
     } else {
         title.innerHTML = 'Новый <em>контакт</em>';
-        nameInput.value = ''; phoneInput.value = ''; sourceInput.value = '';
+        nameInput.value = '';
+        phoneInput.value = '';
+        sourceInput.value = '';
         saveBtn.textContent = 'СОЗДАТЬ';
         deleteBtn.style.display = 'none';
     }
@@ -1286,14 +1239,20 @@ function closeContactModal() {
     _currentContactId = null;
 }
 
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContactModal() });
+
 async function saveContact() {
     const name = document.getElementById('c-name').value.trim();
-    if (!name) { document.getElementById('c-name').classList.add('err'); return; }
+    if (!name) {
+        document.getElementById('c-name').classList.add('err');
+        return;
+    }
     const data = {
         name,
         phone: document.getElementById('c-phone').value.trim() || null,
         source: document.getElementById('c-source').value.trim() || null
     };
+
     try {
         const endpoint = _currentContactId ? `/contacts/${_currentContactId}` : '/contacts';
         const method = _currentContactId ? 'PATCH' : 'POST';
@@ -1305,7 +1264,7 @@ async function saveContact() {
 }
 
 async function deleteContact(contactId) {
-    if (!confirm('Вы уверены, что хотите удалить этот контакт?')) return;
+    if (!confirm('Вы уверены, что хотите удалить этот контакт? Это действие нельзя отменить.')) return;
     try {
         await api(`/contacts/${contactId}`, { method: 'DELETE' });
         showToast('🗑️ Контакт удален');
@@ -1357,6 +1316,8 @@ function closeServiceModal() {
     _currentServiceId = null;
 }
 
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeServiceModal() });
+
 async function saveService() {
     const name = document.getElementById('s-name').value.trim();
     const price = parseFloat(document.getElementById('s-price').value);
@@ -1366,11 +1327,13 @@ async function saveService() {
         return;
     }
     const data = {
-        name, price,
+        name,
+        price,
         unit: document.getElementById('s-unit').value.trim() || 'шт',
         min_volume: parseFloat(document.getElementById('s-min-volume').value) || 1,
         notes: document.getElementById('s-notes').value.trim() || null
     };
+
     try {
         const endpoint = _currentServiceId ? `/services/${_currentServiceId}` : '/services';
         const method = _currentServiceId ? 'PATCH' : 'POST';
@@ -1382,7 +1345,7 @@ async function saveService() {
 }
 
 async function deleteService(serviceId) {
-    if (!confirm('Вы уверены, что хотите удалить эту услугу?')) return;
+    if (!confirm('Вы уверены, что хотите удалить эту услугу? Это действие нельзя отменить.')) return;
     try {
         await api(`/services/${serviceId}`, { method: 'DELETE' });
         showToast('🗑️ Услуга удалена');
@@ -1427,6 +1390,7 @@ function openEquipmentModal(eq = null) {
         document.getElementById('eq-last-maintenance').value = toISODate(eq.last_maintenance_date);
         document.getElementById('eq-next-maintenance').value = toISODate(eq.next_maintenance_date);
         document.getElementById('eq-notes').value = eq.notes || '';
+
         saveBtn.textContent = 'СОХРАНИТЬ';
         deleteBtn.style.display = 'block';
         deleteBtn.onclick = () => deleteEquipment(_currentEquipmentId);
@@ -1447,7 +1411,10 @@ function closeEquipmentModal() {
 
 async function saveEquipment() {
     const name = document.getElementById('eq-name').value.trim();
-    if (!name) { document.getElementById('eq-name').classList.add('err'); return; }
+    if (!name) {
+        document.getElementById('eq-name').classList.add('err');
+        return;
+    }
     const data = {
         name,
         model: document.getElementById('eq-model').value.trim() || null,
@@ -1461,6 +1428,7 @@ async function saveEquipment() {
         next_maintenance_date: document.getElementById('eq-next-maintenance').value || null,
         notes: document.getElementById('eq-notes').value.trim() || null,
     };
+
     try {
         const endpoint = _currentEquipmentId ? `/equipment/${_currentEquipmentId}` : '/equipment';
         const method = _currentEquipmentId ? 'PATCH' : 'POST';
@@ -1472,7 +1440,7 @@ async function saveEquipment() {
 }
 
 async function deleteEquipment(eqId) {
-    if (!confirm('Вы уверены, что хотите удалить эту единицу техники?')) return;
+    if (!confirm('Вы уверены, что хотите удалить эту единицу техники? Все записи о ТО также будут удалены.')) return;
     try {
         await api(`/equipment/${eqId}`, { method: 'DELETE' });
         showToast('🗑️ Техника удалена');
@@ -1502,6 +1470,7 @@ async function openMaintenanceModal(mId = null) {
         _currentMaintenanceId = mId;
         const m = await api(`/maintenance/${mId}`);
         if (!m) { showToast('Ошибка загрузки ТО'); return; }
+        
         selectEquipment(m.equipment_id, document.querySelector(`#equipment-tbody tr[data-id="${m.equipment_id}"]`));
         title.innerHTML = `Запись <em>о ТО #${m.id}</em>`;
         document.getElementById('m-date').value = toISODate(m.date);
@@ -1510,10 +1479,15 @@ async function openMaintenanceModal(mId = null) {
         saveBtn.textContent = 'СОХРАНИТЬ';
         deleteBtn.style.display = 'block';
         deleteBtn.onclick = () => deleteMaintenance(_currentMaintenanceId);
+
         _maintenanceItems = m.consumables_used.map(c => ({ 
-            id: c.consumable.id, name: c.consumable.name, 
-            price: c.price_at_moment, quantity: c.quantity, unit: c.consumable.unit
+            id: c.consumable.id, 
+            name: c.consumable.name, 
+            price: c.price_at_moment, 
+            quantity: c.quantity,
+            unit: c.consumable.unit
         }));
+
     } else {
         title.innerHTML = 'Новая запись <em>о ТО</em>';
         _maintenanceItems = [];
@@ -1533,8 +1507,11 @@ function closeMaintenanceModal() {
 
 function addMaintenanceConsumable(consumable) {
     const existingItem = _maintenanceItems.find(item => item.id === consumable.id);
-    if (existingItem) { existingItem.quantity = parseFloat(existingItem.quantity) + 1; }
-    else { _maintenanceItems.push({ ...consumable, quantity: 1 }); }
+    if (existingItem) {
+        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
+    } else {
+        _maintenanceItems.push({ ...consumable, quantity: 1 });
+    }
     renderMaintenanceConsumables();
 }
 
@@ -1574,18 +1551,21 @@ function renderMaintenanceConsumables() {
 async function saveMaintenance() {
     const work = document.getElementById('m-work').value.trim();
     if (!work) { document.getElementById('m-work').classList.add('err'); return; }
+    
     const data = {
         date: document.getElementById('m-date').value || toISODate(new Date()),
         work_description: work,
         notes: document.getElementById('m-notes').value.trim() || null,
         consumables: _maintenanceItems.map(item => ({ consumable_id: item.id, quantity: item.quantity }))
     };
+
     const method = _currentMaintenanceId ? 'PATCH' : 'POST';
     const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
     if (method === 'POST') {
         if (!_selectedEquipmentId) { showToast('❌ Ошибка: не выбрана техника для ТО'); return; }
         data.equipment_id = _selectedEquipmentId;
     }
+
     try {
         await api(endpoint, { method, body: JSON.stringify(data) });
         showToast(_currentMaintenanceId ? '✅ Запись о ТО обновлена' : '✅ Запись о ТО добавлена');
@@ -1604,7 +1584,7 @@ async function deleteMaintenance(mId) {
     } catch (e) {}
 }
 
-// ── CONSUMABLE MODAL ──
+// ── CONSUMABLE (STOCK) MODAL ──
 let _currentConsumableId = null;
 function openConsumableModal(c = null) {
     const overlay = document.getElementById('consumable-modal');
@@ -1645,6 +1625,7 @@ function closeConsumableModal() { document.getElementById('consumable-modal').cl
 async function saveConsumable() {
     const name = document.getElementById('cn-name').value.trim();
     if (!name) { document.getElementById('cn-name').classList.add('err'); return; }
+
     const data = {
         name,
         unit: document.getElementById('cn-unit').value.trim() || 'шт',
@@ -1652,6 +1633,7 @@ async function saveConsumable() {
         price: parseFloat(document.getElementById('cn-price').value) || 0,
         notes: document.getElementById('cn-notes').value.trim() || null
     };
+    
     try {
         const endpoint = _currentConsumableId ? `/consumables/${_currentConsumableId}` : '/consumables';
         const method = _currentConsumableId ? 'PATCH' : 'POST';
@@ -1663,7 +1645,7 @@ async function saveConsumable() {
 }
 
 async function deleteConsumable(cId) {
-    if (!confirm('Вы уверены, что хотите удалить этот расходник?')) return;
+    if (!confirm('Вы уверены, что хотите удалить этот расходник? Его нельзя будет восстановить.')) return;
     try {
         await api(`/consumables/${cId}`, { method: 'DELETE' });
         showToast('🗑️ Расходник удален');
@@ -1686,7 +1668,7 @@ async function openExpenseModal(expense = null) {
     const saveBtn = overlay.querySelector('.btn-pri');
     const deleteBtn = document.getElementById('btn-expense-delete');
     
-    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}">`).join('');
+    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}"></option>`).join('');
 
     nameInput.classList.remove('err');
     amountInput.classList.remove('err');
@@ -1704,7 +1686,8 @@ async function openExpenseModal(expense = null) {
         deleteBtn.onclick = () => deleteExpense(_currentExpenseId);
     } else {
         title.innerHTML = 'Новый <em>расход</em>';
-        nameInput.value = ''; amountInput.value = '';
+        nameInput.value = '';
+        amountInput.value = '';
         dateInput.valueAsDate = new Date();
         categoryInput.value = '';
         saveBtn.textContent = 'СОЗДАТЬ';
@@ -1719,6 +1702,8 @@ function closeExpenseModal() {
     document.getElementById('expense-overlay').classList.remove('open');
     _currentExpenseId = null;
 }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExpenseModal() });
+
 
 async function saveExpense() {
     const name = document.getElementById('ex-name').value.trim();
@@ -1751,33 +1736,6 @@ async function deleteExpense(expenseId) {
         closeExpenseModal();
         loadData(SELECTED_YEAR, true);
     } catch (e) {}
-}
-
-// ── TAX MODAL ──
-function openTaxModal(){
-  document.getElementById('tx-amount').value='';
-  document.getElementById('tx-note').value='';
-  document.getElementById('tx-date').value=new Date().toISOString().slice(0,10);
-  document.getElementById('tx-amount').classList.remove('err');
-  document.getElementById('tax-overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('tx-amount').focus(),100);
-}
-function closeTaxModal(){document.getElementById('tax-overlay').classList.remove('open')}
-
-async function saveTaxPayment(){
-  const amount=parseFloat(document.getElementById('tx-amount').value);
-  const date=document.getElementById('tx-date').value;
-  const note=document.getElementById('tx-note').value.trim();
-  if(!amount||amount<=0){document.getElementById('tx-amount').classList.add('err');return}
-  try{
-    await api('/taxes/payments',{method:'POST',body:JSON.stringify({amount,date:date||null,note:note||null,year:SELECTED_YEAR})});
-    closeTaxModal();showToast('✅ Платёж сохранён');
-    const [summary,payments]=await Promise.all([
-      api('/taxes/summary?year='+SELECTED_YEAR),
-      api('/taxes/payments?year='+SELECTED_YEAR)
-    ]);
-    renderTaxes(summary,payments?.payments||[]);
-  }catch{}
 }
 
 // ── TASK MODAL ──
@@ -1843,6 +1801,7 @@ async function deleteTask(id){
 }
 
 function closeTaskModal(){document.getElementById('task-overlay').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
 
 async function saveTask(){
   const title=document.getElementById('t-title').value.trim();
@@ -1857,6 +1816,7 @@ async function saveTask(){
     const method = _currentTaskId ? 'PATCH' : 'POST';
     const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
     const is_done = status === 'Выполнена';
+    
     await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
     closeTaskModal();
     showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
@@ -1869,42 +1829,6 @@ async function loadTasks(isDone){
   document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
   const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
   renderTasks(tasks || []);
-}
-
-// ── RENDER FUNCTIONS ──
-function renderTaxes(summary, payments=[]){
-  if(summary){
-    const rate=Math.round((summary.tax_rate||0.06)*100);
-    document.getElementById('kpi-tax-revenue').textContent=fmt(summary.revenue||0);
-    document.getElementById('kpi-tax-rate-lbl').textContent='ставка '+rate+'%';
-    document.getElementById('kpi-tax-accrued').textContent=fmt(summary.tax_accrued||0);
-    const bal=summary.balance||0;
-    const balEl=document.getElementById('kpi-tax-balance');
-    const lblEl=document.getElementById('kpi-tax-balance-lbl');
-    balEl.textContent=fmt(Math.abs(bal));
-    if(bal<0){balEl.className='kpi-val m-pos';lblEl.textContent='Переплата'}
-    else if(bal===0){balEl.className='kpi-val';lblEl.textContent='Полностью уплачено'}
-    else{balEl.className='kpi-val m-neg';lblEl.textContent='Остаток к уплате'}
-    document.getElementById('kpi-tax-paid-sub').textContent='уплачено '+fmt(summary.paid||0);
-    const accrued=summary.tax_accrued||0;
-    const paid=summary.paid||0;
-    const pct=accrued>0?Math.min(Math.round(paid/accrued*100),100):0;
-    document.getElementById('tax-pct').textContent=pct+'%';
-    const bar=document.getElementById('tax-bar');
-    bar.style.width=pct+'%';
-    bar.className='tax-bar-fill'+(paid>accrued?' overpaid':bal>0?' danger':'');
-  }
-  const tb=document.getElementById('tax-payments-tbody');
-  const cnt=document.getElementById('tax-payments-count');
-  const total=payments.reduce((s,p)=>s+p.amount,0);
-  if(cnt)cnt.textContent=payments.length?`${payments.length} платежей · ${fmt(total)}`:'';
-  tb.innerHTML=payments.length?payments.map(p=>`<tr>
-    <td>${p.id}</td>
-    <td><span class="money m-pos">${fmt(p.amount)}</span></td>
-    <td>${fmtDate(p.date)}</td>
-    <td style="color:var(--ink3)">${p.note||'—'}</td>
-    <td><span class="badge b-slate">${p.year}</span></td>
-  </tr>`).join(''):empty(5,'Платежей не найдено')
 }
 
 function renderTasks(tasks=[]){
@@ -2025,6 +1949,59 @@ function buildDash(deals,expenses,equipment){
   document.getElementById('kpi-repair').textContent=equipment.filter(e=>e.status==='repair').length+' в ремонте';
 }
 
+function renderTaxSummary(summary) {
+    if (!summary) return;
+    const balanceEl = document.getElementById('tax-balance');
+    balanceEl.textContent = fmt(summary.balance);
+    balanceEl.classList.toggle('m-pos', summary.balance <= 0);
+    balanceEl.classList.toggle('m-neg', summary.balance > 0);
+    document.getElementById('tax-sub').textContent = `Начислено: ${fmt(summary.tax_accrued)}, уплачено: ${fmt(summary.paid)}`;
+}
+
+function renderTaxPayments(payments) {
+    const tbody = document.getElementById('tax-payments-tbody');
+    const countEl = document.getElementById('tax-payments-count');
+    if(countEl) countEl.textContent = payments.length ? `${payments.length} записей` : '';
+    tbody.innerHTML = payments.length ? payments.map(p => 
+        `<tr>
+            <td>${p.id}</td>
+            <td style="color:var(--ink);font-weight:400">${fmt(p.amount)}</td>
+            <td>${fmtDate(p.date)}</td>
+            <td style="color:var(--ink4);font-size:11px;">${p.note || '—'}</td>
+        </tr>`
+    ).join('') : empty(4, 'Платежей не найдено');
+}
+
+async function saveTaxPayment() {
+    const amountInput = document.getElementById('tax-payment-amount');
+    const dateInput = document.getElementById('tax-payment-date');
+    const amount = parseFloat(amountInput.value);
+
+    if (!amount || amount <= 0) {
+        showToast('❌ Введите корректную сумму');
+        amountInput.classList.add('err');
+        return;
+    }
+    amountInput.classList.remove('err');
+
+    const data = {
+        amount: amount,
+        date: dateInput.value || toISODate(new Date()),
+        year: SELECTED_YEAR
+    };
+
+    try {
+        await api('/taxes/payments', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Платёж добавлен');
+        amountInput.value = '';
+        dateInput.value = '';
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {
+        showToast('❌ Ошибка при добавлении платежа');
+    }
+}
+
+
 async function loadData(year, force = false){
   if(!year)return;
   if (force) {
@@ -2037,15 +2014,19 @@ async function loadData(year, force = false){
       deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
       equipment: '/equipment', services: '/services', consumables: '/consumables',
       contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp,
-      expense_categories: '/expense-categories',
-      taxSummary: '/taxes/summary'+yp, taxPayments: '/taxes/payments'+yp
+      expense_categories: '/expense-categories', 
+      taxes_summary: '/taxes/summary'+yp, 
+      tax_payments: '/taxes/payments'+yp
   };
   const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
   const data = {};
   let hasError = false;
   Object.keys(endpoints).forEach((key, i) => {
-      if (results[i].status === 'fulfilled') { data[key] = results[i].value; }
-      else { hasError = true; }
+      if (results[i].status === 'fulfilled') {
+          data[key] = results[i].value;
+      } else {
+          hasError = true;
+      }
   });
 
   STAGES=data.stages||[];
@@ -2054,14 +2035,17 @@ async function loadData(year, force = false){
   renderKanban(data.deals?.deals || data.deals || []);
   renderTasks((data.tasks?.tasks || data.tasks) || []);
   renderExpenses((data.expenses?.expenses || data.expenses) || []);
-  renderTaxes(data.taxSummary, data.taxPayments?.payments || []);
   renderEquipment(data.equipment || []);
   renderServices(data.services || []);
   renderConsumables(data.consumables || []);
   renderContacts(data.contacts || []);
   renderMaintenanceHistory(data.maintenance || []);
   buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
+  renderTaxSummary(data.taxes_summary);
+  renderTaxPayments(data.tax_payments?.payments || []);
   
+  document.getElementById('tax-payment-date').value = toISODate(new Date());
+
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
 
@@ -2107,15 +2091,6 @@ function applyTheme(th){
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
 
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        closeDealModal(); closeTaskModal(); closeContactModal();
-        closeServiceModal(); closeEquipmentModal(); closeMaintenanceModal();
-        closeConsumableModal(); closeExpenseModal(); closeTaxModal();
-        closeItemSelectorModal();
-    }
-});
-
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auth_error') === 'access_denied') {
@@ -2123,6 +2098,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginSub = loginScreen.querySelector('.login-sub');
         const loginBtn = loginScreen.querySelector('.login-btn');
         const loginRule = loginScreen.querySelector('.login-rule');
+
         if (loginSub) {
             loginSub.innerHTML = 'Доступ запрещён. Ваш аккаунт не имеет прав для доступа к этой системе. <br>Пожалуйста, обратитесь к администратору.';
             loginSub.style.color = 'var(--red)';
@@ -2131,12 +2107,19 @@ document.addEventListener('DOMContentLoaded', () => {
             loginSub.style.lineHeight = '1.6';
             loginSub.style.fontSize = '12px';
         }
-        if (loginBtn) loginBtn.style.display = 'none';
-        if(loginRule) loginRule.style.display = 'none';
+        if (loginBtn) {
+            loginBtn.style.display = 'none';
+        }
+        if(loginRule) {
+            loginRule.style.display = 'none';
+        }
+        
         loginScreen.style.display = 'flex';
         document.getElementById('app').style.display = 'none';
+        
         return; 
     }
+
     applyTheme(localStorage.getItem('crm_theme') || 'light');
     checkAuth();
 });
