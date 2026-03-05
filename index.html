@@ -1819,8 +1819,37 @@ function applyTheme(th){
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
 
-document.addEventListener('DOMContentLoaded',()=>{
-  applyTheme(localStorage.getItem('crm_theme')||'light');checkAuth();
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auth_error') === 'access_denied') {
+        const loginScreen = document.getElementById('login-screen');
+        const loginSub = loginScreen.querySelector('.login-sub');
+        const loginBtn = loginScreen.querySelector('.login-btn');
+        const loginRule = loginScreen.querySelector('.login-rule');
+
+        if (loginSub) {
+            loginSub.innerHTML = 'Доступ запрещён. Ваш аккаунт не имеет прав для доступа к этой системе. <br>Пожалуйста, обратитесь к администратору.';
+            loginSub.style.color = 'var(--red)';
+            loginSub.style.textTransform = 'none';
+            loginSub.style.letterSpacing = '0';
+            loginSub.style.lineHeight = '1.6';
+            loginSub.style.fontSize = '12px';
+        }
+        if (loginBtn) {
+            loginBtn.style.display = 'none';
+        }
+        if(loginRule) {
+            loginRule.style.display = 'none';
+        }
+        
+        loginScreen.style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+        
+        return; 
+    }
+
+    applyTheme(localStorage.getItem('crm_theme') || 'light');
+    checkAuth();
 });
 </script>
 </body>
