@@ -147,9 +147,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.4-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.5-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.4.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.5.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -221,7 +221,8 @@ def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)): re
 def get_deals(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     q = db.query(Deal).outerjoin(Deal.contact).outerjoin(Deal.stage).order_by(Deal.created_at.desc())
     if year: q = q.filter(extract("year", Deal.deal_date) == year)
-    return [{"id": d.id, "title": d.title or "", "total": d.total or 0.0, "client": d.contact.name if d.contact else "", "stage": d.stage.name if d.stage else "", "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
+    deals_list = [{"id": d.id, "title": d.title or "", "total": d.total or 0.0, "client": d.contact.name if d.contact else "", "stage": d.stage.name if d.stage else "", "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
+    return {"deals": deals_list}
 
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -284,4 +285,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.4-stable) loaded.", flush=True)
+print(f"main.py (v4.5-stable) loaded.", flush=True)
