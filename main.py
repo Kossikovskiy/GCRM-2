@@ -242,12 +242,12 @@ def get_current_user(request: Request) -> dict:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.0)...", flush=True)
+    print("App starting (v4.1-debug)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.1.0-debug", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
@@ -336,6 +336,8 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
             raise HTTPException(500, f"Failed to get user profile from Auth0: {profile_resp.text}")
         
         user_profile = profile_resp.json()
+        print(f"--- AUTH0 USER PROFILE: {user_profile} ---", flush=True)
+
 
     # 3. Извлечь данные и обновить/создать пользователя в БД
     user_id = user_profile.get("sub")
@@ -591,4 +593,4 @@ async def serve_frontend(full_path: str):
         return FileResponse(path)
     return FileResponse("./index.html")
 
-print("main.py (v4.0) loaded.", flush=True)
+print("main.py (v4.1-debug) loaded.", flush=True)
