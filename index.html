@@ -203,19 +203,22 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* MODAL */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:400px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:540px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
 .overlay.open .modal{transform:none}
 .modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--ink);margin-bottom:24px}
 .modal-title em{font-style:italic;color:var(--fern)}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .field{margin-bottom:16px}
+.field.full{grid-column:span 2}
 .field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:7px}
-.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
-.field input:focus{border-color:var(--fern)}
+.field input, .field textarea, .field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
+.field textarea{resize:vertical;min-height:80px}
+.field input:focus, .field textarea:focus, .field select:focus{border-color:var(--fern)}
 .field input.err{border-color:var(--red)}
 .modal-row{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
-.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s}
+.btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
-.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s}
+.btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-pri:hover{background:var(--moss)}
 
 /* TOAST */
@@ -383,17 +386,47 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
     <div class="modal-title">Новая <em>задача</em></div>
-    <div class="field">
-      <label>Название</label>
-      <input type="text" id="t-title" placeholder="Что нужно сделать?" />
+    <div class="field full">
+      <label>НАЗВАНИЕ</label>
+      <input type="text" id="t-title" placeholder="Позвонить клиенту, подготовить КП..." />
     </div>
-    <div class="field">
-      <label>Срок</label>
-      <input type="date" id="t-date" />
+    <div class="field full">
+      <label>ОПИСАНИЕ</label>
+      <textarea id="t-desc" placeholder="Кратко опишите задачу"></textarea>
+    </div>
+    <div class="modal-grid">
+      <div class="field">
+        <label>СРОК</label>
+        <input type="date" id="t-date" />
+      </div>
+      <div class="field">
+        <label>ОТВЕТСТВЕННЫЙ</label>
+        <select id="t-assignee" disabled>
+          <option>— Авто: текущий пользователь —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ПРИОРИТЕТ</label>
+        <select id="t-priority">
+          <option value="Низкий">Низкий</option>
+          <option value="Обычный" selected>Обычный</option>
+          <option value="Высокий">Высокий</option>
+          <option value="Критический">Критический</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>СТАТУС</label>
+        <select id="t-status">
+          <option value="Открыта" selected>Открыта</option>
+          <option value="В работе">В работе</option>
+          <option value="Отложена">Отложена</option>
+          <option value="Выполнена">Выполнена</option>
+        </select>
+      </div>
     </div>
     <div class="modal-row">
-      <button class="btn-sec" onclick="closeTaskModal()">Отмена</button>
-      <button class="btn-pri" onclick="saveTask()">Сохранить</button>
+      <button class="btn-sec" onclick="closeTaskModal()">ОТМЕНА</button>
+      <button class="btn-pri" onclick="saveTask()">СОХРАНИТЬ</button>
     </div>
   </div>
 </div>
@@ -501,7 +534,10 @@ function initDrag(){
 // ── TASK MODAL ──
 function openTaskModal(){
   document.getElementById('t-title').value='';
+  document.getElementById('t-desc').value='';
   document.getElementById('t-date').value='';
+  document.getElementById('t-priority').value='Обычный';
+  document.getElementById('t-status').value='Открыта';
   document.getElementById('t-title').classList.remove('err');
   document.getElementById('task-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('t-title').focus(),100);
@@ -511,10 +547,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
 
 async function saveTask(){
   const title=document.getElementById('t-title').value.trim();
-  const date=document.getElementById('t-date').value;
+  const description=document.getElementById('t-desc').value.trim();
+  const due_date=document.getElementById('t-date').value;
+  const priority=document.getElementById('t-priority').value;
+  const status=document.getElementById('t-status').value;
+
   if(!title){document.getElementById('t-title').classList.add('err');return}
   try{
-    await api('/tasks',{method:'POST',body:JSON.stringify({title,due_date:date||null})});
+    await api('/tasks',{method:'POST',body:JSON.stringify({title,description,due_date:due_date||null,priority,status})});
     closeTaskModal();
     showToast('✅ Задача добавлена');
     // invalidate cache then reload
@@ -527,7 +567,13 @@ async function saveTask(){
 function renderTasks(tasks=[]){
   const tb=document.getElementById('tasks-tbody'),cnt=document.getElementById('tasks-count');
   if(cnt)cnt.textContent=tasks.length?tasks.length+' задач':'';
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr><td>${t.id}</td><td style="color:var(--ink);font-weight:400">${t.title}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${t.status==='Выполнено'?'b-green':'b-blue'}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
+  const getBadge=(s)=>{
+    if(s==='Выполнена'||s==='Выполнено')return'b-green';
+    if(s==='Отложена')return'b-amber';
+    if(s==='В работе')return'b-blue';
+    return 'b-slate';
+  };
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){
