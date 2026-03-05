@@ -23,7 +23,6 @@ from pydantic import BaseModel
 import httpx
 from jose import jwt, JWTError
 
-
 # ── 1. КОНФИГ ─────────────────────────────────────────────────────────────────
 DATABASE_URL   = os.getenv("DATABASE_URL")
 AUTH0_DOMAIN   = os.getenv("AUTH0_DOMAIN")
@@ -45,7 +44,6 @@ for _var, _val in [
 ]:
     if not _val:
         raise RuntimeError(f"FATAL: {_var} is not set.")
-
 
 # ── 2. КЭШ В ПАМЯТИ ──────────────────────────────────────────────────────────
 class _Cache:
@@ -75,7 +73,6 @@ class _Cache:
 
 _cache = _Cache(ttl=CACHE_TTL)
 
-
 # ── 3. БАЗА ДАННЫХ ────────────────────────────────────────────────────────────
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, client_encoding='utf8')
@@ -92,7 +89,7 @@ class Stage(Base):
 
 class Contact(Base):
     __tablename__ = "contacts"
-    id, name, phone, source = Column(Integer, primary_key=True), Column(String(200), nullable=False), Column(String(50), unique=True, index=True, nullable=True), Column(String(100), nullable=True)
+    id, name, phone, source = Column(Integer, primary_key=True), Column(String(200), nullable=False), Column(String(50), unique=True, index=True), Column(String(100))
     deals = relationship("Deal", back_populates="contact")
 
 class Deal(Base):
@@ -107,7 +104,6 @@ class Task(Base):
     id, title, description, is_done = Column(Integer, primary_key=True), Column(String, nullable=False), Column(Text), Column(Boolean, default=False)
     due_date, assignee, priority, status = Column(Date), Column(String), Column(String, default="Обычный"), Column(String, default="Открыта")
 
-# ... (Other models remain the same)
 class ExpenseCategory(Base):
     __tablename__ = "expense_categories"
     id, name = Column(Integer, primary_key=True), Column(String(100), nullable=False, unique=True)
@@ -151,16 +147,16 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.3)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.4-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.3.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.4.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @lru_cache(maxsize=1)
 def get_jwks(): return httpx.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json", timeout=10).raise_for_status().json()
 def get_db(): db = SessionFactory(); yield db; db.close()
-def get_current_user(req: Request): 
+def get_current_user(req: Request):
     if not (user := req.session.get("user")): raise HTTPException(401, "Not authenticated")
     return user
 
@@ -214,9 +210,18 @@ def get_users(db: DBSession = Depends(get_db), _=Depends(get_current_user)): ret
 @app.get("/api/years")
 def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     if (cached := _cache.get("years")) is not None: return cached
-    years = sorted({r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM deal_date)::int FROM deals")).fetchall() if r[0]} | 
-                   {r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM date)::int FROM expenses")).fetchall() if r[0]}, reverse=True) or [datetime.utcnow().year]
+    years = sorted({r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM deal_date)::int FROM deals WHERE deal_date IS NOT NULL")).fetchall() if r[0]} | 
+                   {r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM date)::int FROM expenses WHERE date IS NOT NULL")).fetchall() if r[0]}, reverse=True) or [datetime.utcnow().year]
     _cache.set("years", years); return years
+
+@app.get("/api/stages")
+def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
+
+@app.get("/api/deals")
+def get_deals(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(Deal).outerjoin(Deal.contact).outerjoin(Deal.stage).order_by(Deal.created_at.desc())
+    if year: q = q.filter(extract("year", Deal.deal_date) == year)
+    return [{"id": d.id, "title": d.title or "", "total": d.total or 0.0, "client": d.contact.name if d.contact else "", "stage": d.stage.name if d.stage else "", "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
 
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -237,7 +242,10 @@ def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DB
     return result
 
 @app.post("/api/tasks", status_code=201)
-_cache.invalidate("tasks"); return new_task
+def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    new_task = Task(title=task.title, description=task.description, due_date=task.due_date or (date.today() + timedelta(days=1)), priority=task.priority, status=task.status, assignee=task.assignee or user["sub"])
+    db.add(new_task); db.commit(); db.refresh(new_task)
+    _cache.invalidate("tasks"); return new_task
 
 @app.patch("/api/tasks/{task_id}")
 def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -249,13 +257,31 @@ def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get
     db.commit(); _cache.invalidate("tasks"); return {"status": "ok"}
 
 @app.delete("/api/tasks/{task_id}", status_code=204)
-_cache.invalidate("tasks")
+def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task: db.delete(task); db.commit(); _cache.invalidate("tasks")
 
-# ... (Rest of the endpoints)
+@app.get("/api/expenses")
+def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
+    q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
+    return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
+
+@app.get("/api/equipment")
+def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
+
+@app.get("/api/consumables")
+def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Consumable).order_by(Consumable.name).all()
+
+@app.get("/api/contacts")
+def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Contact).order_by(Contact.name).all()
+
+@app.post("/api/cache/invalidate")
+def invalidate_cache(_=Depends(get_current_user)):
+    _cache.invalidate(); return {"status": "ok", "message": "Кэш сброшен."}
 
 @app.get("/{full_path:path}", response_class=FileResponse)
 async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.3) loaded.", flush=True)
+print(f"main.py (v4.4-stable) loaded.", flush=True)
