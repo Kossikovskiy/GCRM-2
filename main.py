@@ -88,8 +88,11 @@ class Service(Base):
 
 class DealService(Base):
     __tablename__ = "deal_services"
-    id, deal_id, service_id = Column(Integer, primary_key=True), Column(Integer, ForeignKey("deals.id")), Column(Integer, ForeignKey("services.id"))
-    quantity, price = Column(Float, default=1.0), Column(Float, default=0.0)
+    id = Column(Integer, primary_key=True)
+    deal_id = Column(Integer, ForeignKey("deals.id"))
+    service_id = Column(Integer, ForeignKey("services.id"))
+    quantity = Column(Float, default=1.0)
+    service = relationship("Service")
 
 class Stage(Base):
     __tablename__ = "stages"
@@ -166,9 +169,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.9-fix)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.10-hotfix)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.9.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.10.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -275,7 +278,7 @@ def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depend
         service = db.query(Service).filter(Service.id == item.service_id).first()
         if not service: continue
         total += service.price * item.quantity
-        service_items.append(DealService(service_id=service.id, quantity=item.quantity, price=service.price))
+        service_items.append(DealService(service_id=service.id, quantity=item.quantity))
 
     new_deal = Deal(
         title=deal_data.title, 
@@ -362,4 +365,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.9-fix) loaded.", flush=True)
+print(f"main.py (v4.10-hotfix) loaded.", flush=True)
