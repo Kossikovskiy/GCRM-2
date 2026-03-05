@@ -1630,7 +1630,7 @@ async function openExpenseModal(expense = null) {
     const saveBtn = overlay.querySelector('.btn-pri');
     const deleteBtn = document.getElementById('btn-expense-delete');
     
-    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}">`).join('');
+    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}"></option>`).join('');
 
     nameInput.classList.remove('err');
     amountInput.classList.remove('err');
