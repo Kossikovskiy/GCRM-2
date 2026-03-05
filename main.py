@@ -19,7 +19,7 @@ from sqlalchemy import (
     Boolean, ForeignKey, Text, text, MetaData, extract, Double, func
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, joinedload
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import httpx
 from jose import jwt, JWTError
 
@@ -106,26 +106,43 @@ class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_descript
 class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
 
 # --- Response Models to prevent serialization cycles ---
-class EquipmentForMaintResponse(BaseModel): id: int; name: str
-class MaintenanceForListResponse(BaseModel): id: int; date: date; work_description: str; cost: Optional[float]; equipment_id: int; equipment: EquipmentForMaintResponse
-class ConsumableForMaintResponse(BaseModel): id: int; name: str; unit: Optional[str]
-class MaintConsumableForDetailResponse(BaseModel): quantity: float; price_at_moment: float; consumable: ConsumableForMaintResponse
-class MaintenanceDetailResponse(BaseModel): id: int; equipment_id: int; date: date; work_description: str; notes: Optional[str]; cost: Optional[float]; consumables_used: List[MaintConsumableForDetailResponse]
-class EquipmentResponse(BaseModel): id:int; name:str; model:Optional[str]; serial:Optional[str]; purchase_date:Optional[date]; purchase_cost:Optional[float]; status:Optional[str]; notes:Optional[str]; engine_hours:Optional[float]; fuel_norm:Optional[float]; last_maintenance_date:Optional[date]; next_maintenance_date:Optional[date]
+class EquipmentForMaintResponse(BaseModel):
+    id: int; name: str
+    model_config = ConfigDict(from_attributes=True)
 
-class Config: from_attributes = True
-[m.Config.from_attributes for m in [EquipmentForMaintResponse, MaintenanceForListResponse, ConsumableForMaintResponse, MaintConsumableForDetailResponse, MaintenanceDetailResponse, EquipmentResponse]]
+class MaintenanceForListResponse(BaseModel):
+    id: int; date: date; work_description: str; cost: Optional[float]; equipment_id: int
+    equipment: EquipmentForMaintResponse
+    model_config = ConfigDict(from_attributes=True)
+
+class ConsumableForMaintResponse(BaseModel):
+    id: int; name: str; unit: Optional[str]
+    model_config = ConfigDict(from_attributes=True)
+
+class MaintConsumableForDetailResponse(BaseModel):
+    quantity: float; price_at_moment: float
+    consumable: ConsumableForMaintResponse
+    model_config = ConfigDict(from_attributes=True)
+
+class MaintenanceDetailResponse(BaseModel):
+    id: int; equipment_id: int; date: date; work_description: str; notes: Optional[str]; cost: Optional[float]
+    consumables_used: List[MaintConsumableForDetailResponse]
+    model_config = ConfigDict(from_attributes=True)
+
+class EquipmentResponse(BaseModel):
+    id:int; name:str; model:Optional[str]; serial:Optional[str]; purchase_date:Optional[date]; purchase_cost:Optional[float]; status:Optional[str]; notes:Optional[str]; engine_hours:Optional[float]; fuel_norm:Optional[float]; last_maintenance_date:Optional[date]; next_maintenance_date:Optional[date]
+    model_config = ConfigDict(from_attributes=True)
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v11.2)...",flush=True)
+    print("App starting (v11.3)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.2.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.3.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -176,13 +193,13 @@ def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate(); return {
 def get_services(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Service).order_by(Service.id).all()
 @app.post("/api/services", status_code=201)
 def create_service(data: ServiceCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    new_item = Service(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    new_item = Service(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("services"); return new_item
 @app.patch("/api/services/{service_id}")
 def update_service(service_id: int, data: ServiceUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Service).filter(Service.id == service_id).first()
     if not item: raise HTTPException(404, "Услуга не найдена")
-    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
+    for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
     _cache.invalidate("services", "deals"); return item
 @app.delete("/api/services/{service_id}", status_code=204)
@@ -239,7 +256,7 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if not deal: raise HTTPException(404, "Сделка не найдена")
 
-    update_data = deal_data.dict(exclude_unset=True)
+    update_data = deal_data.model_dump(exclude_unset=True)
 
     if "new_contact_name" in update_data:
         new_contact = Contact(name=update_data["new_contact_name"]); db.add(new_contact); db.flush(); db.refresh(new_contact)
@@ -282,7 +299,7 @@ def create_contact(contact_data: ContactCreate, db: DBSession = Depends(get_db),
     if contact_data.phone and contact_data.phone.strip():
         existing = db.query(Contact).filter(Contact.phone == contact_data.phone).first()
         if existing: raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
-    new_contact = Contact(**contact_data.dict()); db.add(new_contact); db.commit(); db.refresh(new_contact)
+    new_contact = Contact(**contact_data.model_dump()); db.add(new_contact); db.commit(); db.refresh(new_contact)
     _cache.invalidate("contacts"); return new_contact
 
 @app.patch("/api/contacts/{contact_id}")
@@ -290,7 +307,7 @@ def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession =
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact: raise HTTPException(status_code=404, detail="Контакт не найден")
     
-    update_data = contact_data.dict(exclude_unset=True)
+    update_data = contact_data.model_dump(exclude_unset=True)
     if "phone" in update_data and update_data["phone"] and update_data["phone"].strip():
         existing = db.query(Contact).filter(Contact.phone == update_data["phone"], Contact.id != contact_id).first()
         if existing: raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
@@ -314,16 +331,16 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
 def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): 
     return db.query(Equipment).order_by(Equipment.name).all()
 
-@app.post("/api/equipment", status_code=201)
+@app.post("/api/equipment", status_code=201, response_model=EquipmentResponse)
 def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    new_item = Equipment(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    new_item = Equipment(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("equipment"); return new_item
 
-@app.patch("/api/equipment/{eq_id}")
+@app.patch("/api/equipment/{eq_id}", response_model=EquipmentResponse)
 def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
     if not item: raise HTTPException(404, "Техника не найдена")
-    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
+    for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
     _cache.invalidate("equipment"); return item
 
@@ -397,7 +414,7 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
                 db.add(MaintenanceConsumable(maintenance_id=m_id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
             m_record.cost = total_cost
 
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         if 'date' in update_data: m_record.date = update_data['date']
         if 'work_description' in update_data: m_record.work_description = update_data['work_description']
         if 'notes' in update_data: m_record.notes = update_data['notes']
@@ -437,14 +454,14 @@ def get_consumables(db:DBSession=Depends(get_db), _=Depends(get_current_user)):
 
 @app.post("/api/consumables", status_code=201)
 def create_consumable(data: ConsumableCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    new_item = Consumable(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    new_item = Consumable(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("consumables"); return new_item
 
 @app.patch("/api/consumables/{c_id}")
 def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Consumable).filter(Consumable.id == c_id).first()
     if not item: raise HTTPException(404, "Расходник не найден")
-    update_data = data.dict(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
     _cache.invalidate("consumables"); return item
@@ -479,7 +496,7 @@ def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DB
 
 @app.post("/api/tasks", status_code=201)
 def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    new_task = Task(title=task.title, description=task.description, due_date=task.due_date or (date.today() + timedelta(days=1)), priority=task.priority, status=task.status, assignee=task.assignee or user["sub"])
+    new_task = Task(title=task.title, description=task.description, due_date=task.due_date or (date.today() + timedelta(days=1)), priority=task.priority, status=task.status, assignee=task.assignee or user['sub'])
     db.add(new_task); db.commit(); db.refresh(new_task)
     _cache.invalidate("tasks"); return new_task
 
@@ -487,7 +504,7 @@ def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = 
 def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task: raise HTTPException(404, "Task not found")
-    for key, value in task_data.dict(exclude_unset=True).items(): setattr(task, key, value)
+    for key, value in task_data.model_dump(exclude_unset=True).items(): setattr(task, key, value)
     if task_data.is_done: task.status = "Выполнена"
     elif task_data.status == "Выполнена": task.is_done = True
     db.commit(); _cache.invalidate("tasks"); return {"status": "ok"}
@@ -507,4 +524,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.2) loaded.", flush=True)
+print(f"main.py (v11.3) loaded.", flush=True)
