@@ -57,7 +57,7 @@ _cache = _Cache(ttl=CACHE_TTL)
 # ── 3. БАЗА ДАННЫХ ────────────────────────────────────────────────────────────
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, client_encoding='utf8')
-SessionFactory = sessionmaker(bind=engine)
+SessionFactory = sessionmaker(bind=engine, autoflush=False) # Autoflush off for complex transactions
 
 class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String)
 class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
@@ -67,13 +67,13 @@ class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Int
 class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id"),nullable=False),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
 class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта")
 class ExpenseCategory(Base): __tablename__="expense_categories"; id,name=Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True); expenses=relationship("Expense",back_populates="category")
+class Consumable(Base): __tablename__="consumables"; id,name,unit=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"); stock_quantity,notes,price=Column(Float,default=0.0),Column(Text),Column(Float,default=0.0)
+class MaintenanceConsumable(Base): __tablename__="maintenance_consumables"; id=Column(Integer,primary_key=True); maintenance_id=Column(Integer,ForeignKey("equipment_maintenance.id",ondelete="CASCADE"),nullable=False); consumable_id=Column(Integer,ForeignKey("consumables.id",ondelete="RESTRICT"),nullable=False); quantity=Column(Float,nullable=False); price_at_moment=Column(Float,nullable=False); consumable=relationship("Consumable"); maintenance_record=relationship("EquipmentMaintenance",back_populates="consumables_used")
+class EquipmentMaintenance(Base): __tablename__ = "equipment_maintenance"; id=Column(Integer,primary_key=True); equipment_id=Column(Integer,ForeignKey("equipment.id",ondelete="CASCADE"),nullable=False); date=Column(Date,nullable=False); work_description=Column(Text,nullable=False); cost=Column(Float); notes=Column(Text); equipment = relationship("Equipment", back_populates="maintenance_records"); consumables_used = relationship("MaintenanceConsumable", back_populates="maintenance_record", cascade="all, delete-orphan")
 class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost=Column(Date),Column(Double,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); engine_hours=Column(Double,default=0.0); fuel_norm=Column(Double,default=0.0); last_maintenance_date=Column(Date); next_maintenance_date=Column(Date); expenses=relationship("Expense",back_populates="equipment"); maintenance_records = relationship("EquipmentMaintenance", back_populates="equipment", cascade="all, delete-orphan")
-class EquipmentMaintenance(Base): __tablename__ = "equipment_maintenance"; id=Column(Integer,primary_key=True); equipment_id=Column(Integer,ForeignKey("equipment.id",ondelete="CASCADE"),nullable=False); date=Column(Date,nullable=False); work_description=Column(Text,nullable=False); cost=Column(Double); notes=Column(Text); equipment = relationship("Equipment", back_populates="maintenance_records")
 class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Integer,primary_key=True),Column(Date,nullable=False,default=date.today),Column(String(300),nullable=False),Column(Float,nullable=False); category_id,equipment_id=Column(Integer,ForeignKey("expense_categories.id")),Column(Integer,ForeignKey("equipment.id")); category=relationship("ExpenseCategory",back_populates="expenses"); equipment=relationship("Equipment",back_populates="expenses")
-class Consumable(Base): __tablename__="consumables"; id,name,unit,stock_quantity,notes=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"),Column(Float,default=0.0),Column(Text)
 
 def init_db_structure(): Base.metadata.create_all(engine)
-
 def seed_initial_data(s: DBSession):
     if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
     if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
@@ -81,18 +81,13 @@ def seed_initial_data(s: DBSession):
 
 # ── 4. HELPERS ────────────────────────────────────────────────────────────────
 def update_equipment_last_maintenance(db: DBSession, equipment_id: int):
-    equipment_item = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+    equipment_item = db.query(Equipment).filter(Equipment.id == equipment_id).first();
     if not equipment_item: return
-
-    latest_maintenance_date = db.query(func.max(EquipmentMaintenance.date))\
-                                .filter(EquipmentMaintenance.equipment_id == equipment_id)\
-                                .scalar()
-    
-    equipment_item.last_maintenance_date = latest_maintenance_date
-    db.commit()
+    latest_maintenance_date = db.query(func.max(EquipmentMaintenance.date)).filter(EquipmentMaintenance.equipment_id == equipment_id).scalar()
+    equipment_item.last_maintenance_date = latest_maintenance_date; db.commit()
     _cache.invalidate("equipment")
 
-# ── 5. МОДЕЛИ PYDANTIC ────────────────────────────────────────────────────────
+# ── 5. PYDANTIC MODELS ───────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
 class DealCreate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:List[DealServiceItem]=[]
 class DealUpdate(BaseModel): title:Optional[str]=None; stage_id:Optional[int]=None; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:Optional[List[DealServiceItem]]=None
@@ -104,20 +99,22 @@ class ServiceCreate(BaseModel): name: str = Field(...,min_length=1); price: floa
 class ServiceUpdate(BaseModel): name: Optional[str]=Field(None,min_length=1); price: Optional[float]=None; unit: Optional[str]=None; min_volume: Optional[float]=None; notes: Optional[str]=None
 class EquipmentCreate(BaseModel): name: str; model: Optional[str]=None; serial: Optional[str]=None; purchase_date: Optional[date]=None; purchase_cost: Optional[float]=None; status: Optional[str]='active'; notes: Optional[str]=None; engine_hours: Optional[float]=None; fuel_norm: Optional[float]=None; last_maintenance_date: Optional[date]=None; next_maintenance_date: Optional[date]=None
 class EquipmentUpdate(BaseModel): name: Optional[str]=None; model: Optional[str]=None; serial: Optional[str]=None; purchase_date: Optional[date]=None; purchase_cost: Optional[float]=None; status: Optional[str]=None; notes: Optional[str]=None; engine_hours: Optional[float]=None; fuel_norm: Optional[float]=None; last_maintenance_date: Optional[date]=None; next_maintenance_date: Optional[date]=None
-class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_description: str; cost: Optional[float]=None; notes: Optional[str]=None
-class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; cost: Optional[float]=None; notes: Optional[str]=None
+class ConsumableCreate(BaseModel): name: str; unit: Optional[str] = 'шт'; stock_quantity: Optional[float] = 0.0; price: Optional[float] = 0.0; notes: Optional[str] = None
+class ConsumableUpdate(BaseModel): name: Optional[str] = None; unit: Optional[str] = None; stock_quantity: Optional[float] = None; price: Optional[float] = None; notes: Optional[str] = None
+class MaintenanceConsumableItem(BaseModel): consumable_id: int; quantity: float
+class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_description: str; notes: Optional[str]=None; consumables: List[MaintenanceConsumableItem] = []
+class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: List[MaintenanceConsumableItem] = []
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v9.1)...",flush=True)
+    print("App starting (v10.0)...",flush=True)
     init_db_structure()
-    with SessionFactory() as db:
-        seed_initial_data(db)
+    with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="9.1.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="10.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -304,12 +301,10 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
 # --- EQUIPMENT & MAINTENANCE ---
 @app.get("/api/equipment")
 def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
-
 @app.post("/api/equipment", status_code=201)
 def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     new_item = Equipment(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("equipment"); return new_item
-
 @app.patch("/api/equipment/{eq_id}")
 def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
@@ -324,37 +319,123 @@ def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_cur
     if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
     return None
 
-@app.get("/api/equipment/{eq_id}/maintenance")
-def get_maintenance_history(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    return db.query(EquipmentMaintenance).filter(EquipmentMaintenance.equipment_id == eq_id).order_by(EquipmentMaintenance.date.desc()).all()
+@app.get("/api/maintenance/{m_id}")
+def get_maintenance_details(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used).joinedload(MaintenanceConsumable.consumable)).filter(EquipmentMaintenance.id == m_id).first()
+    if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
+    return m_record
 
 @app.post("/api/maintenance", status_code=201)
 def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    new_item = EquipmentMaintenance(**data.dict()); db.add(new_item); db.commit()
-    update_equipment_last_maintenance(db, data.equipment_id)
-    db.refresh(new_item)
-    return new_item
+    total_cost = 0
+    try:
+        for item_data in data.consumables:
+            consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).with_for_update().first()
+            if not consumable or consumable.stock_quantity < item_data.quantity:
+                raise HTTPException(400, f"Недостаточно '{consumable.name if consumable else 'ID:'+str(item_data.consumable_id)}' на складе.")
+            consumable.stock_quantity -= item_data.quantity
+            total_cost += (consumable.price or 0) * item_data.quantity
+        
+        new_item = EquipmentMaintenance(equipment_id=data.equipment_id, date=data.date, work_description=data.work_description, notes=data.notes, cost=total_cost)
+        db.add(new_item)
+        db.flush() # Flush to get new_item.id
+
+        for item_data in data.consumables:
+            consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).first()
+            db.add(MaintenanceConsumable(maintenance_id=new_item.id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
+        
+        db.commit()
+        update_equipment_last_maintenance(db, data.equipment_id)
+        _cache.invalidate("consumables", "equipment")
+        return new_item
+    except:
+        db.rollback()
+        raise
 
 @app.patch("/api/maintenance/{m_id}")
 def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
-    if not item: raise HTTPException(404, "Запись о ТО не найдена")
-    equipment_id = item.equipment_id
-    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
-    db.commit()
-    update_equipment_last_maintenance(db, equipment_id)
-    db.refresh(item)
-    return item
+    try:
+        m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
+        if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
+
+        # Restore old quantities
+        for old_item in m_record.consumables_used:
+            consumable = db.query(Consumable).filter(Consumable.id == old_item.consumable_id).with_for_update().first()
+            if consumable: consumable.stock_quantity += old_item.quantity
+        
+        db.query(MaintenanceConsumable).filter(MaintenanceConsumable.maintenance_id == m_id).delete(synchronize_session=False)
+        db.flush()
+
+        # Deduct new quantities and calculate cost
+        total_cost = 0
+        for item_data in data.consumables:
+            consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).with_for_update().first()
+            if not consumable or consumable.stock_quantity < item_data.quantity:
+                raise HTTPException(400, f"Недостаточно '{consumable.name if consumable else 'ID:'+str(item_data.consumable_id)}' на складе.")
+            consumable.stock_quantity -= item_data.quantity
+            total_cost += (consumable.price or 0) * item_data.quantity
+            db.add(MaintenanceConsumable(maintenance_id=m_id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
+
+        # Update maintenance record itself
+        m_record.cost = total_cost
+        if data.date: m_record.date = data.date
+        if data.work_description: m_record.work_description = data.work_description
+        if data.notes: m_record.notes = data.notes
+        
+        db.commit()
+        update_equipment_last_maintenance(db, m_record.equipment_id)
+        _cache.invalidate("consumables", "equipment")
+        return m_record
+    except:
+        db.rollback()
+        raise
 
 @app.delete("/api/maintenance/{m_id}", status_code=204)
 def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
-    if item:
-        equipment_id = item.equipment_id
-        db.delete(item)
-        db.commit()
-        update_equipment_last_maintenance(db, equipment_id)
+    try:
+        item = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
+        if item:
+            equipment_id = item.equipment_id
+            # Restore quantities
+            for used in item.consumables_used:
+                consumable = db.query(Consumable).filter(Consumable.id == used.consumable_id).with_for_update().first()
+                if consumable: consumable.stock_quantity += used.quantity
+            
+            db.delete(item)
+            db.commit()
+            update_equipment_last_maintenance(db, equipment_id)
+            _cache.invalidate("consumables", "equipment")
+    except:
+        db.rollback()
+        raise
     return None
+
+# --- CONSUMABLES ---
+@app.get("/api/consumables")
+def get_consumables(db:DBSession=Depends(get_db), _=Depends(get_current_user)): 
+    return db.query(Consumable).order_by(Consumable.name).all()
+
+@app.post("/api/consumables", status_code=201)
+def create_consumable(data: ConsumableCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    new_item = Consumable(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    _cache.invalidate("consumables"); return new_item
+
+@app.patch("/api/consumables/{c_id}")
+def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Consumable).filter(Consumable.id == c_id).first()
+    if not item: raise HTTPException(404, "Расходник не найден")
+    update_data = data.dict(exclude_unset=True)
+    for key, value in update_data.items(): setattr(item, key, value)
+    db.commit(); db.refresh(item)
+    _cache.invalidate("consumables"); return item
+
+@app.delete("/api/consumables/{c_id}", status_code=204)
+def delete_consumable(c_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    if db.query(MaintenanceConsumable).filter(MaintenanceConsumable.consumable_id == c_id).count() > 0:
+        raise HTTPException(400, "Нельзя удалить расходник, который используется в записях о ТО.")
+    item = db.query(Consumable).filter(Consumable.id == c_id).first()
+    if item: db.delete(item); db.commit(); _cache.invalidate("consumables")
+
 
 # --- OTHER ---
 @app.get("/api/years")
@@ -401,12 +482,9 @@ def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_curre
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
     return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
 
-@app.get("/api/consumables")
-def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Consumable).order_by(Consumable.name).all()
-
 @app.get("/{full_path:path}", response_class=FileResponse)
 async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v9.1) loaded.", flush=True)
+print(f"main.py (v10.0) loaded.", flush=True)
