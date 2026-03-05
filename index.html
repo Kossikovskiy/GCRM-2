@@ -461,17 +461,22 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <div class="modal-grid">
       <div class="field">
         <label>КЛИЕНТ</label>
-        <select id="d-contact"></select>
+        <input list="d-contact-list" id="d-contact-input" placeholder="Начните вводить имя...">
+        <datalist id="d-contact-list"></datalist>
       </div>
       <div class="field">
         <label>СУММА</label>
         <input type="number" id="d-total" placeholder="15000" />
       </div>
-    </div>
-     <div class="field full">
+      <div class="field">
         <label>ЭТАП</label>
         <select id="d-stage"></select>
       </div>
+      <div class="field">
+        <label>ОТВЕТСТВЕННЫЙ</label>
+        <select id="d-assignee"></select>
+      </div>
+    </div>
     <div class="modal-row">
       <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
       <button class="btn-pri" onclick="saveDeal()">СОЗДАТЬ СДЕЛКУ</button>
@@ -484,7 +489,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 <script>
 const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
+let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[];
 
 function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
 function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
@@ -565,63 +570,83 @@ function initDrag(){
       col.classList.remove('drag-over');
       col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
       const id=e.dataTransfer.getData('text/plain');
-      const newStage=col.dataset.stage;
-      if(!id||_dragSrcStage===newStage)return;
+      const newStageName=col.dataset.stage;
+      if(!id||_dragSrcStage===newStageName)return;
+      
       const deal=_deals.find(d=>String(d.id)===String(id));
       if(!deal)return;
-      const oldStage=deal.stage;
-      deal.stage=newStage;
+      
+      const stage = STAGES.find(s => s.name === newStageName);
+      if (!stage) return;
+
+      const oldStageName = deal.stage;
+      deal.stage = newStageName;
       renderKanban(_deals);
-      api(`/deals/${id}/stage`,{method:'PATCH',body:JSON.stringify({stage_name:newStage})})
-        .then(()=>showToast('✅ → '+newStage))
-        .catch(()=>{deal.stage=oldStage;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+
+      api(`/deals/${id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
+        .then(()=>showToast('✅ → '+newStageName))
+        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
   });
 }
 
 // ── DEAL MODAL ──
-async function populateDealModalDropdowns() {
-  const contactSel = document.getElementById('d-contact');
+async function prepareDealModal() {
+  const contactList = document.getElementById('d-contact-list');
   const stageSel = document.getElementById('d-stage');
-  try {
-    const contacts = await api('/contacts');
-    contactSel.innerHTML = '<option value="">Новый клиент</option>' + contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  } catch(e) {
-    contactSel.innerHTML = `<option value="">Ошибка загрузки</option>`;
-  }
+  const assigneeSel = document.getElementById('d-assignee');
+
+  contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
   stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  try {
+    const users = await api('/users');
+    assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+  } catch(e) {
+    assigneeSel.innerHTML = `<option value="">Ошибка загрузки</option>`;
+  }
 }
 
 async function openDealModal() {
   document.getElementById('d-title').value = '';
   document.getElementById('d-total').value = '';
+  document.getElementById('d-contact-input').value = '';
   document.getElementById('d-title').classList.remove('err');
-  await populateDealModalDropdowns();
+  await prepareDealModal();
   document.getElementById('deal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('d-title').focus(), 100);
 }
 
-function closeDealModal() {
-  document.getElementById('deal-overlay').classList.remove('open');
-}
+function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
+
+function getContactIdByName(name) {
+    const el = document.querySelector(`#d-contact-list option[value="${escH(name)}"]`);
+    return el ? parseInt(el.dataset.id, 10) : null;
+}
 
 async function saveDeal() {
   const title = document.getElementById('d-title').value.trim();
   const total = parseFloat(document.getElementById('d-total').value) || 0;
-  const contact_id = parseInt(document.getElementById('d-contact').value, 10) || null;
+  const contactName = document.getElementById('d-contact-input').value.trim();
   const stage_id = parseInt(document.getElementById('d-stage').value, 10);
+  const manager = document.getElementById('d-assignee').value;
   const deal_date = new Date().toISOString();
 
-  if (!title) {
-    document.getElementById('d-title').classList.add('err');
-    return;
+  if (!title) { document.getElementById('d-title').classList.add('err'); return; }
+
+  const contact_id = getContactIdByName(contactName);
+  const dealData = { title, total, stage_id, manager, deal_date };
+
+  if (contact_id) {
+    dealData.contact_id = contact_id;
+  } else if (contactName) {
+    dealData.new_contact_name = contactName;
   }
+
   try {
-    await api('/deals', {
-      method: 'POST',
-      body: JSON.stringify({ title, total, contact_id, stage_id, deal_date })
-    });
+    await api('/deals', { method: 'POST', body: JSON.stringify(dealData) });
     closeDealModal();
     showToast('✅ Сделка добавлена');
     await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
@@ -789,7 +814,8 @@ async function loadData(year){
   const data={};let err=false;
   res.forEach((r,i)=>{if(r.status==='fulfilled')data[keys[i]]=r.value;else err=true});
   STAGES=data.stages||[];
-  const deals=data.deals?.deals||[],expenses=data.expenses||[],equipment=data.equipment||[];
+  _contacts=data.contacts||[];
+  const deals=data.deals?.deals||[],expenses=data.expenses?.expenses||[],equipment=data.equipment||[];
   renderKanban(deals);renderTasks(data.tasks?.tasks||[]);renderExpenses(expenses);
   renderEquipment(equipment);renderServices(data.services||[]);renderConsumables(data.consumables||[]);renderContacts(data.contacts||[]);
   buildDash(deals,expenses,equipment);

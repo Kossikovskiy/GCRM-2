@@ -19,7 +19,7 @@ from sqlalchemy import (
     DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import httpx
 from jose import jwt, JWTError
 
@@ -147,9 +147,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.5-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.6-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.5.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.6.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -198,6 +198,18 @@ def logout(request: Request):
     return RedirectResponse(f"https://{AUTH0_DOMAIN}/v2/logout?client_id={CLIENT_ID}&returnTo={APP_BASE_URL}")
 
 # ── 7. DATA ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
+class DealCreate(BaseModel):
+    title: str
+    total: float
+    stage_id: int
+    deal_date: datetime
+    contact_id: Optional[int] = None
+    new_contact_name: Optional[str] = None
+    manager: Optional[str] = None
+
+class DealUpdate(BaseModel):
+    stage_id: Optional[int] = None
+
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
 
@@ -223,6 +235,35 @@ def get_deals(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Dep
     if year: q = q.filter(extract("year", Deal.deal_date) == year)
     deals_list = [{"id": d.id, "title": d.title or "", "total": d.total or 0.0, "client": d.contact.name if d.contact else "", "stage": d.stage.name if d.stage else "", "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
     return {"deals": deals_list}
+
+@app.post("/api/deals", status_code=201)
+def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    contact_id = deal_data.contact_id
+    if deal_data.new_contact_name:
+        new_contact = Contact(name=deal_data.new_contact_name)
+        db.add(new_contact)
+        db.commit()
+        db.refresh(new_contact)
+        contact_id = new_contact.id
+
+    new_deal = Deal(
+        title=deal_data.title, 
+        total=deal_data.total, 
+        stage_id=deal_data.stage_id, 
+        contact_id=contact_id,
+        deal_date=deal_data.deal_date, 
+        manager=deal_data.manager
+    )
+    db.add(new_deal)
+    db.commit()
+    _cache.invalidate("deals", "years"); return {"status": "ok"}
+
+@app.patch("/api/deals/{deal_id}")
+def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal: raise HTTPException(404, "Deal not found")
+    for key, value in deal_data.dict(exclude_unset=True).items(): setattr(deal, key, value)
+    db.commit(); _cache.invalidate("deals"); return {"status": "ok"}
 
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -285,4 +326,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.5-stable) loaded.", flush=True)
+print(f"main.py (v4.6-stable) loaded.", flush=True)
