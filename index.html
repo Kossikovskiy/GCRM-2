@@ -235,11 +235,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 #btn-task-delete:hover{background:var(--red);color:#fff}
 
 #d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
-#d-services-add{display:grid;grid-template-columns:1fr 80px 100px;gap:10px;align-items:center;margin-bottom:12px}
-#d-services-add button{padding:10px;font-size:11px;text-transform:uppercase;letter-spacing:1px;height:100%}
 #d-services-table th{font-size:8px;padding:8px 10px}
 #d-services-table td{font-size:11px;padding:8px 10px}
 #d-services-table .btn-del{cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
+
+#service-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column;}
+#service-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px;}
+#service-search-results{overflow-y:auto;padding:8px;}
+.service-result-item{display:flex;justify-content:space-between;padding:12px 16px;cursor:pointer;border-radius:8px;}
+.service-result-item:hover{background:var(--surface2);}
+.service-result-name{font-weight:500;}
+.service-result-price{color:var(--fern);}
 
 /* TOAST */
 .toast{
@@ -479,17 +485,13 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
     <div id="d-services-block">
         <label>УСЛУГИ</label>
-        <div id="d-services-add">
-            <select id="d-service-select"></select>
-            <input type="number" id="d-service-qty" value="1" min="0.1" step="0.1">
-            <button class="btn-pri" onclick="addDealService()">ДОБАВИТЬ</button>
-        </div>
-        <div class="tcard" style="margin-top:1rem">
+        <div class="tcard" style="margin-bottom: 12px;">
             <table id="d-services-table">
                 <thead><tr><th>Услуга</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
+        <button class="btn-sec" style="width:100%" onclick="openServiceSelectorModal()">＋ Добавить услугу</button>
     </div>
     
     <div class="modal-grid" style="margin-top: 20px;">
@@ -508,6 +510,16 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       <button class="btn-pri" onclick="saveDeal()">СОЗДАТЬ СДЕЛКУ</button>
     </div>
   </div>
+</div>
+
+<!-- MODAL: выбор услуг -->
+<div class="overlay" id="service-selector-modal" onclick="if(event.target===this)closeServiceSelectorModal()">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-content">
+            <input type="text" id="service-search-input" placeholder="🔍 Поиск по названию или категории..." onkeyup="renderServiceSelectorResults()">
+            <div id="service-search-results"></div>
+        </div>
+    </div>
 </div>
 
 </div>
@@ -624,20 +636,16 @@ function prepareDealModal() {
   const contactList = document.getElementById('d-contact-list');
   const stageSel = document.getElementById('d-stage');
   const assigneeSel = document.getElementById('d-assignee');
-  const serviceSel = document.getElementById('d-service-select');
 
   contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
   stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  serviceSel.innerHTML = _services.map(s => `<option value="${s.id}">${s.name} (${fmt(s.price)})</option>`).join('');
-
-  try {
-    api('/users').then(users => {
-        assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-        if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
-    });
-  } catch(e) {
+  
+  api('/users').then(users => {
+      assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+      if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+  }).catch(e => {
     assigneeSel.innerHTML = `<option value="">Ошибка загрузки</option>`;
-  }
+  });
 }
 
 function openDealModal() {
@@ -654,19 +662,16 @@ function openDealModal() {
 function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
 
-function addDealService() {
-    const serviceId = parseInt(document.getElementById('d-service-select').value, 10);
-    const quantity = parseFloat(document.getElementById('d-service-qty').value);
-    if (!serviceId || !quantity || quantity <= 0) return;
-
+function addDealService(serviceId) {
+    if (!serviceId) return;
     const service = _services.find(s => s.id === serviceId);
     if (!service) return;
 
     const existingItem = _dealItems.find(item => item.id === serviceId);
     if (existingItem) {
-        existingItem.quantity += quantity;
+        existingItem.quantity += 1;
     } else {
-        _dealItems.push({ ...service, quantity });
+        _dealItems.push({ ...service, quantity: 1 });
     }
     renderDealServices();
 }
@@ -678,7 +683,10 @@ function removeDealService(serviceId) {
 
 function updateDealServiceQty(serviceId, newQuantity) {
     const item = _dealItems.find(item => item.id === serviceId);
-    if (item) item.quantity = newQuantity;
+    if (item) {
+        const qty = parseFloat(newQuantity);
+        if (qty > 0) item.quantity = qty; else removeDealService(serviceId);
+    }
     renderDealServices();
 }
 
@@ -738,6 +746,47 @@ async function saveDeal() {
     await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
     loadData(SELECTED_YEAR);
   } catch (e) {}
+}
+
+// --- SERVICE SELECTOR MODAL ---
+function openServiceSelectorModal() {
+    document.getElementById('service-search-input').value = '';
+    renderServiceSelectorResults();
+    document.getElementById('service-selector-modal').classList.add('open');
+    setTimeout(() => document.getElementById('service-search-input').focus(), 50);
+}
+
+function closeServiceSelectorModal() {
+    document.getElementById('service-selector-modal').classList.remove('open');
+}
+
+function renderServiceSelectorResults() {
+    const searchTerm = document.getElementById('service-search-input').value.toLowerCase();
+    const resultsContainer = document.getElementById('service-search-results');
+    const filteredServices = _services.filter(s => 
+        s.name.toLowerCase().includes(searchTerm) || 
+        (s.category && s.category.toLowerCase().includes(searchTerm))
+    );
+
+    if (filteredServices.length === 0) {
+        resultsContainer.innerHTML = `<div class="empty-txt" style="padding: 24px;">Ничего не найдено</div>`;
+        return;
+    }
+
+    resultsContainer.innerHTML = filteredServices.map(s => `
+        <div class="service-result-item" onclick="selectService(${s.id})">
+            <div>
+                <div class="service-result-name">${s.name}</div>
+                <div class="cat-tag" style="margin-top: 4px;">${s.category || 'Без категории'}</div>
+            </div>
+            <div class="service-result-price">${fmt(s.price)}</div>
+        </div>
+    `).join('');
+}
+
+function selectService(serviceId) {
+    addDealService(serviceId);
+    closeServiceSelectorModal();
 }
 
 // ── TASK MODAL ──
