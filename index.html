@@ -717,7 +717,7 @@ async function api(ep,opts={}){
     if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
     if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||'err')}
     return r.status===204?null:r.json()
-  }catch(e){showToast('❌ '+e.message);throw e}
+  }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
 }
 
 // ── KANBAN STATE ──
@@ -1309,20 +1309,23 @@ async function saveMaintenance() {
         return;
     }
     const data = {
-        equipment_id: _selectedEquipmentId,
         date: document.getElementById('m-date').value || toISODate(new Date()),
         work_description: work,
         cost: parseFloat(document.getElementById('m-cost').value) || null,
         notes: document.getElementById('m-notes').value.trim() || null,
     };
 
+    const method = _currentMaintenanceId ? 'PATCH' : 'POST';
+    const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
+    if (method === 'POST') {
+        data.equipment_id = _selectedEquipmentId;
+    }
+
     try {
-        const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
-        const method = _currentMaintenanceId ? 'PATCH' : 'POST';
         await api(endpoint, { method, body: JSON.stringify(data) });
         showToast(_currentMaintenanceId ? '✅ Запись о ТО обновлена' : '✅ Запись о ТО добавлена');
         closeMaintenanceModal();
-        renderMaintenanceHistory(_selectedEquipmentId);
+        loadData(SELECTED_YEAR, true); // Force full reload
     } catch (e) {}
 }
 
@@ -1332,7 +1335,7 @@ async function deleteMaintenance(mId) {
         await api(`/maintenance/${mId}`, { method: 'DELETE' });
         showToast('🗑️ Запись удалена');
         closeMaintenanceModal();
-        renderMaintenanceHistory(_selectedEquipmentId);
+        loadData(SELECTED_YEAR, true); // Force full reload
     } catch (e) {}
 }
 
@@ -1579,6 +1582,9 @@ async function loadData(year, force = false){
   
   if(_selectedEquipmentId && !data.equipment?.find(e => e.id === _selectedEquipmentId)) {
       selectEquipment(null);
+  } else {
+      // Reselect to update history view if needed
+      renderMaintenanceHistory(_selectedEquipmentId)
   }
 
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
