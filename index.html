@@ -181,7 +181,7 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
 .k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
 .k-cards::-webkit-scrollbar{width:3px}
-.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:grab;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
+.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
 .k-card:hover{box-shadow:var(--sh-m);transform:translateY(-2px);background:var(--surface)}
 .k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
 .k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
@@ -226,16 +226,16 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .field textarea{resize:vertical;min-height:80px}
 .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--fern)}
 .field input.err{border-color:var(--red)}
-.modal-row{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;flex-wrap:wrap}
-.modal-row-left {margin-right: auto;}
+.modal-row{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:24px}
 .btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
 .btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-pri:hover{background:var(--moss)}
-#btn-task-delete{border-color:var(--red);color:var(--red)}
-#btn-task-delete:hover{background:var(--red);color:#fff}
-#btn-deal-delete{border-color:var(--red);color:var(--red)}
+#btn-deal-delete{margin-right:auto;border-color:var(--red);color:var(--red)}
 #btn-deal-delete:hover{background:var(--red);color:#fff}
+#btn-task-delete{margin-right:auto;border-color:var(--red);color:var(--red)}
+#btn-task-delete:hover{background:var(--red);color:#fff}
+
 
 #d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
 #d-services-table th{font-size:8px;padding:8px 10px}
@@ -469,7 +469,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <!-- MODAL: новая/редактирование сделки -->
 <div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
   <div class="modal" style="max-width: 680px;">
-    <div class="modal-title" id="deal-modal-title">Новая <em>сделка</em></div>
+    <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
     <div class="field full">
       <label>НАЗВАНИЕ СДЕЛКИ</label>
       <input type="text" id="d-title" placeholder="Покос участка 10 соток" />
@@ -509,11 +509,9 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 
     <div class="modal-row">
-      <div class="modal-row-left">
-        <button class="btn-sec" id="btn-deal-delete" style="display:none" onclick="deleteDeal()">УДАЛИТЬ</button>
-      </div>
-      <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
-      <button class="btn-pri" id="btn-deal-save" onclick="saveDeal()">СОЗДАТЬ</button>
+        <button class="btn-sec" id="btn-deal-delete" style="display:none;">Удалить</button>
+        <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
+        <button class="btn-pri" id="btn-deal-save">СОЗДАТЬ</button>
     </div>
   </div>
 </div>
@@ -561,7 +559,7 @@ function renderKanban(deals=[]){
     const cards=deals.filter(d=>d.stage===st.name);
     const total=cards.reduce((s,d)=>s+d.total,0);
     const cardsHtml=cards.length
-      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" data-stage="${escH(st.name)}" style="--c:${c}" onclick="openDealModal(${d.id})">
+      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" onclick="openDealModal(${d.id})" data-stage="${escH(st.name)}" style="--c:${c}">
           <div class="k-sum">${fmt(d.total)}</div>
           <div class="k-title">${d.title}</div>
           <div class="k-client">${d.client}</div>
@@ -584,7 +582,7 @@ function initDrag(){
   const board=document.getElementById('kanban-board');
   board.querySelectorAll('.k-card[draggable]').forEach(el=>{
     el.addEventListener('dragstart',e=>{
-      e.stopPropagation(); // prevent onclick from firing
+      e.stopPropagation();
       _dragEl=el; _dragSrcStage=el.dataset.stage;
       requestAnimationFrame(()=>el.classList.add('dragging'));
       e.dataTransfer.effectAllowed='move';
@@ -639,66 +637,68 @@ function initDrag(){
 // ── DEAL MODAL ──
 let _dealItems = [];
 let _currentDealId = null;
-let _users = [];
 
-async function prepareDealModal() {
-  const contactList = document.getElementById('d-contact-list');
-  const stageSel = document.getElementById('d-stage');
-  const assigneeSel = document.getElementById('d-assignee');
+async function setupDealModal(dealId = null) {
+    const titleEl = document.getElementById('d-modal-title');
+    const saveBtn = document.getElementById('btn-deal-save');
+    const deleteBtn = document.getElementById('btn-deal-delete');
+    const contactList = document.getElementById('d-contact-list');
+    const stageSel = document.getElementById('d-stage');
+    const assigneeSel = document.getElementById('d-assignee');
 
-  contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
-  stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  
-  if (_users.length === 0) {
-    try {
-        _users = await api('/users');
-    } catch(e) { /* ignore */ }
-  }
-  assigneeSel.innerHTML = _users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    // Reset
+    _currentDealId = dealId;
+    _dealItems = [];
+    document.getElementById('d-title').value = '';
+    document.getElementById('d-contact-input').value = '';
+    document.getElementById('d-title').classList.remove('err');
+
+    // Common setup
+    contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
+    const users = await api('/users').catch(() => []);
+    assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+
+    if (dealId) {
+        // Edit mode
+        titleEl.innerHTML = `Сделка <em>№${dealId}</em>`;
+        saveBtn.textContent = 'Сохранить';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteDeal(dealId);
+        saveBtn.onclick = () => saveDeal(dealId);
+
+        const deal = await api(`/deals/${dealId}`);
+        if (!deal) { closeDealModal(); return; }
+        
+        document.getElementById('d-title').value = deal.title || '';
+        if(deal.contact) document.getElementById('d-contact-input').value = deal.contact.name || '';
+        assigneeSel.value = deal.manager || '';
+        stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
+
+        _dealItems = deal.services.map(s => ({
+            id: s.service.id,
+            name: s.service.name,
+            price: s.price_at_moment, 
+            quantity: s.quantity,
+            unit: s.service.unit
+        }));
+
+    } else {
+        // Create mode
+        titleEl.innerHTML = 'Новая <em>сделка</em>';
+        saveBtn.textContent = 'Создать';
+        deleteBtn.style.display = 'none';
+        saveBtn.onclick = () => saveDeal();
+        stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+    }
+
+    renderDealServices();
 }
 
 async function openDealModal(dealId = null) {
-  await prepareDealModal();
-  const titleEl = document.getElementById('deal-modal-title');
-  const saveBtn = document.getElementById('btn-deal-save');
-  const delBtn = document.getElementById('btn-deal-delete');
-  document.getElementById('d-title').classList.remove('err');
-
-  _currentDealId = dealId;
-  _dealItems = [];
-  
-  if (dealId) {
-    // EDIT MODE
-    titleEl.innerHTML = `Редактирование <em>сделки</em>`;
-    saveBtn.textContent = "СОХРАНИТЬ";
-    delBtn.style.display = "block";
-
-    try {
-      const deal = await api(`/deals/${dealId}`);
-      document.getElementById('d-title').value = deal.title;
-      document.getElementById('d-contact-input').value = deal.contact_name || '';
-      document.getElementById('d-stage').value = deal.stage_id;
-      document.getElementById('d-assignee').value = deal.manager;
-      _dealItems = deal.services.map(s => ({ id: s.id, name: s.name, price: s.price_at_moment, quantity: s.quantity, unit: s.unit }));
-    } catch (e) {
-      closeDealModal();
-      return;
-    }
-  } else {
-    // CREATE MODE
-    titleEl.innerHTML = `Новая <em>сделка</em>`;
-    saveBtn.textContent = "СОЗДАТЬ";
-    delBtn.style.display = "none";
-    
-    document.getElementById('d-title').value = '';
-    document.getElementById('d-contact-input').value = '';
-    if (STAGES.length > 0) document.getElementById('d-stage').value = STAGES[0].id;
-    if (CURRENT_USER?.sub) document.getElementById('d-assignee').value = CURRENT_USER.sub;
-  }
-  
-  renderDealServices();
-  document.getElementById('deal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('d-title').focus(), 100);
+    await setupDealModal(dealId);
+    document.getElementById('deal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('d-title').focus(), 100);
 }
 
 function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
@@ -756,11 +756,12 @@ function getContactIdByName(name) {
     return el ? parseInt(el.dataset.id, 10) : null;
 }
 
-async function saveDeal() {
+async function saveDeal(dealId = null) {
   const title = document.getElementById('d-title').value.trim();
   const contactName = document.getElementById('d-contact-input').value.trim();
   const stage_id = parseInt(document.getElementById('d-stage').value, 10);
   const manager = document.getElementById('d-assignee').value;
+  const deal_date = new Date().toISOString();
 
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
@@ -770,40 +771,37 @@ async function saveDeal() {
       title, 
       stage_id, 
       manager, 
-      deal_date: new Date().toISOString(),
+      deal_date,
       services: _dealItems.map(item => ({ service_id: item.id, quantity: item.quantity }))
   };
-
+  
   if (contact_id) {
     dealData.contact_id = contact_id;
   } else if (contactName) {
     dealData.new_contact_name = contactName;
   }
 
-  const isEdit = _currentDealId !== null;
-  const method = isEdit ? 'PATCH' : 'POST';
-  const endpoint = isEdit ? `/deals/${_currentDealId}` : '/deals';
+  const method = dealId ? 'PATCH' : 'POST';
+  const endpoint = dealId ? `/deals/${dealId}` : '/deals';
 
   try {
     await api(endpoint, { method, body: JSON.stringify(dealData) });
     closeDealModal();
-    showToast(isEdit ? '✅ Сделка обновлена' : '✅ Сделка добавлена');
+    showToast(dealId ? '✅ Сделка обновлена' : '✅ Сделка создана');
     await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
     loadData(SELECTED_YEAR);
   } catch (e) {}
 }
 
-async function deleteDeal() {
-  if (!_currentDealId) return;
-  if (!confirm('Вы уверены, что хотите удалить эту сделку? Это действие необратимо.')) return;
-
-  try {
-    await api(`/deals/${_currentDealId}`, { method: 'DELETE' });
-    closeDealModal();
-    showToast('🗑️ Сделка удалена');
-    await api('/cache/invalidate', { method: 'POST' }).catch(() => {});
-    loadData(SELECTED_YEAR);
-  } catch (e) {}
+async function deleteDeal(dealId) {
+    if (!confirm(`Вы уверены, что хотите удалить сделку №${dealId}?`)) return;
+    try {
+        await api(`/deals/${dealId}`, { method: 'DELETE' });
+        closeDealModal();
+        showToast('🗑️ Сделка удалена');
+        await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
+        loadData(SELECTED_YEAR);
+    } catch (e) {}
 }
 
 // --- SERVICE SELECTOR MODAL ---
@@ -974,8 +972,8 @@ function renderContacts(contacts=[]){
 }
 
 function buildDash(deals,expenses,equipment){
-  const ws=STAGES.find(s=>s.is_final && s.name.toLowerCase().includes('успе'));
-  const won=ws?deals.filter(d=>d.stage===ws.name):[];
+  const ws=STAGES.find(s=>s.type==='success');
+  const won=ws?deals.filter(d=>d.stage===ws.name):deals;
   const rev=won.reduce((s,d)=>s+d.total,0);
   const exp=expenses.reduce((s,e)=>s+e.amount,0);
   const prof=rev-exp,marg=rev?Math.round(prof/rev*100):0;
