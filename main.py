@@ -16,7 +16,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Date, DateTime, 
-    Boolean, ForeignKey, Text, text, MetaData, extract, Double
+    Boolean, ForeignKey, Text, text, MetaData, extract, Double, func
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, joinedload
 from pydantic import BaseModel, Field
@@ -79,6 +79,19 @@ def seed_initial_data(s: DBSession):
     if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
     s.commit()
 
+# ── 4. HELPERS ────────────────────────────────────────────────────────────────
+def update_equipment_last_maintenance(db: DBSession, equipment_id: int):
+    equipment_item = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+    if not equipment_item: return
+
+    latest_maintenance_date = db.query(func.max(EquipmentMaintenance.date))\
+                                .filter(EquipmentMaintenance.equipment_id == equipment_id)\
+                                .scalar()
+    
+    equipment_item.last_maintenance_date = latest_maintenance_date
+    db.commit()
+    _cache.invalidate("equipment")
+
 # ── 5. МОДЕЛИ PYDANTIC ────────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
 class DealCreate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:List[DealServiceItem]=[]
@@ -97,14 +110,14 @@ class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v9.0)...",flush=True)
+    print("App starting (v9.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db:
         seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="9.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="9.1.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -317,22 +330,30 @@ def get_maintenance_history(eq_id: int, db:DBSession=Depends(get_db), _=Depends(
 
 @app.post("/api/maintenance", status_code=201)
 def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    new_item = EquipmentMaintenance(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
-    _cache.invalidate("equipment")
+    new_item = EquipmentMaintenance(**data.dict()); db.add(new_item); db.commit()
+    update_equipment_last_maintenance(db, data.equipment_id)
+    db.refresh(new_item)
     return new_item
 
 @app.patch("/api/maintenance/{m_id}")
 def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
     if not item: raise HTTPException(404, "Запись о ТО не найдена")
+    equipment_id = item.equipment_id
     for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
-    db.commit(); db.refresh(item)
-    _cache.invalidate("equipment"); return item
+    db.commit()
+    update_equipment_last_maintenance(db, equipment_id)
+    db.refresh(item)
+    return item
 
 @app.delete("/api/maintenance/{m_id}", status_code=204)
 def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
-    if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
+    if item:
+        equipment_id = item.equipment_id
+        db.delete(item)
+        db.commit()
+        update_equipment_last_maintenance(db, equipment_id)
     return None
 
 # --- OTHER ---
@@ -388,4 +409,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v9.0) loaded.", flush=True)
+print(f"main.py (v9.1) loaded.", flush=True)
