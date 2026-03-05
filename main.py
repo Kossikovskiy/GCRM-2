@@ -409,6 +409,32 @@ def update_deal_stage(deal_id: int, body: dict,
     return {"ok": True}
 
 
+class DealUpdate(BaseModel):
+    title: Optional[str] = None
+    total: Optional[float] = None
+    notes: Optional[str] = None
+    deal_date: Optional[date] = None
+    address: Optional[str] = None
+    manager: Optional[str] = None
+
+@app.put("/api/deals/{deal_id}")
+def update_deal(deal_id: int, body: DealUpdate,
+                db: DBSession = Depends(get_db),
+                _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(404, "Deal not found")
+    if body.title is not None:    deal.title     = body.title
+    if body.total is not None:    deal.total     = body.total
+    if body.notes is not None:    deal.notes     = body.notes
+    if body.deal_date is not None: deal.deal_date = datetime.combine(body.deal_date, datetime.min.time())
+    if body.address is not None:  deal.address   = body.address
+    if body.manager is not None:  deal.manager   = body.manager
+    db.commit()
+    _cache.invalidate()
+    return {"ok": True}
+
+
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None,
               db: DBSession = Depends(get_db),
@@ -449,6 +475,26 @@ def create_task(body: TaskCreate,
     return {"id": task.id, "title": task.title}
 
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    due_date: Optional[date] = None
+    is_done: Optional[bool] = None
+
+@app.put("/api/tasks/{task_id}")
+def update_task(task_id: int, body: TaskUpdate,
+                db: DBSession = Depends(get_db),
+                _=Depends(get_current_user)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    if body.title is not None:    task.title    = body.title
+    if body.due_date is not None: task.due_date = body.due_date
+    if body.is_done is not None:  task.is_done  = body.is_done
+    db.commit()
+    _cache.invalidate()
+    return {"ok": True}
+
+
 @app.get("/api/expenses")
 def get_expenses(year: Optional[int] = None,
                  db: DBSession = Depends(get_db),
@@ -474,6 +520,28 @@ def get_expenses(year: Optional[int] = None,
     return result
 
 
+class ExpenseUpdate(BaseModel):
+    name: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[date] = None
+    category_id: Optional[int] = None
+
+@app.put("/api/expenses/{expense_id}")
+def update_expense(expense_id: int, body: ExpenseUpdate,
+                   db: DBSession = Depends(get_db),
+                   _=Depends(get_current_user)):
+    exp = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not exp:
+        raise HTTPException(404, "Expense not found")
+    if body.name is not None:        exp.name        = body.name
+    if body.amount is not None:      exp.amount      = body.amount
+    if body.date is not None:        exp.date        = body.date
+    if body.category_id is not None: exp.category_id = body.category_id
+    db.commit()
+    _cache.invalidate()
+    return {"ok": True}
+
+
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("equipment")
@@ -484,6 +552,36 @@ def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
               for e in db.query(Equipment).order_by(Equipment.name).all()]
     _cache.set("equipment", result)
     return result
+
+
+class EquipmentUpdate(BaseModel):
+    name: Optional[str] = None
+    model: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    engine_hours: Optional[float] = None
+
+@app.put("/api/equipment/{eq_id}")
+def update_equipment(eq_id: int, body: EquipmentUpdate,
+                     db: DBSession = Depends(get_db),
+                     _=Depends(get_current_user)):
+    eq = db.query(Equipment).filter(Equipment.id == eq_id).first()
+    if not eq:
+        raise HTTPException(404, "Equipment not found")
+    if body.name is not None:         eq.name         = body.name
+    if body.model is not None:        eq.model        = body.model
+    if body.status is not None:       eq.status       = body.status
+    if body.notes is not None:        eq.notes        = body.notes
+    if body.engine_hours is not None: eq.engine_hours = body.engine_hours
+    db.commit()
+    _cache.invalidate()
+    return {"ok": True}
+
+# ── Список категорий расходов (для селектора в форме редактирования) ──────────
+@app.get("/api/expense-categories")
+def get_expense_categories(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    return [{"id": c.id, "name": c.name}
+            for c in db.query(ExpenseCategory).order_by(ExpenseCategory.name).all()]
 
 
 @app.get("/api/services")

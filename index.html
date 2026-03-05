@@ -233,6 +233,18 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s}
 .btn-pri:hover{background:var(--moss)}
 
+/* EDIT ROW */
+tbody tr.clickable{cursor:pointer}
+tbody tr.clickable:hover td{background:var(--leaf)!important}
+html[data-theme="dark"] tbody tr.clickable:hover td{background:var(--surface2)!important}
+.modal{max-width:480px}
+.modal-wide{max-width:560px}
+.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s;resize:vertical;min-height:72px}
+.field textarea:focus{border-color:var(--fern)}
+.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;cursor:pointer}
+.field select:focus{border-color:var(--fern)}
+.edit-hint{font-size:10px;color:var(--ink4);letter-spacing:.3px;margin-top:5px}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:22px;right:22px;z-index:400;
@@ -501,6 +513,85 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 
+<!-- MODAL: редактирование сделки -->
+<div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
+  <div class="modal modal-wide">
+    <div class="modal-title">Редактировать <em>сделку</em></div>
+    <input type="hidden" id="ed-id" />
+    <div class="field"><label>Название</label><input type="text" id="ed-title" /></div>
+    <div class="field"><label>Сумма (₽)</label><input type="number" id="ed-total" min="0" step="0.01" /></div>
+    <div class="field"><label>Дата сделки</label><input type="date" id="ed-date" /></div>
+    <div class="field"><label>Адрес объекта</label><input type="text" id="ed-address" /></div>
+    <div class="field"><label>Менеджер</label><input type="text" id="ed-manager" /></div>
+    <div class="field"><label>Заметки</label><textarea id="ed-notes"></textarea></div>
+    <div class="modal-row">
+      <button class="btn-sec" onclick="closeDealModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveDeal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: редактирование задачи -->
+<div class="overlay" id="edit-task-overlay" onclick="if(event.target===this)closeEditTaskModal()">
+  <div class="modal">
+    <div class="modal-title">Редактировать <em>задачу</em></div>
+    <input type="hidden" id="et-id" />
+    <div class="field"><label>Название</label><input type="text" id="et-title" /></div>
+    <div class="field"><label>Срок</label><input type="date" id="et-date" /></div>
+    <div class="field"><label>Статус</label>
+      <select id="et-done">
+        <option value="false">В работе</option>
+        <option value="true">Выполнено</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <button class="btn-sec" onclick="closeEditTaskModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveEditTask()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: редактирование расхода -->
+<div class="overlay" id="edit-expense-overlay" onclick="if(event.target===this)closeEditExpenseModal()">
+  <div class="modal">
+    <div class="modal-title">Редактировать <em>расход</em></div>
+    <input type="hidden" id="ee-id" />
+    <div class="field"><label>Наименование</label><input type="text" id="ee-name" /></div>
+    <div class="field"><label>Сумма (₽)</label><input type="number" id="ee-amount" min="0" step="0.01" /></div>
+    <div class="field"><label>Дата</label><input type="date" id="ee-date" /></div>
+    <div class="field"><label>Категория</label>
+      <select id="ee-category"></select>
+    </div>
+    <div class="modal-row">
+      <button class="btn-sec" onclick="closeEditExpenseModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveEditExpense()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: редактирование техники -->
+<div class="overlay" id="edit-equip-overlay" onclick="if(event.target===this)closeEditEquipModal()">
+  <div class="modal">
+    <div class="modal-title">Редактировать <em>технику</em></div>
+    <input type="hidden" id="eq-id" />
+    <div class="field"><label>Название</label><input type="text" id="eq-name" /></div>
+    <div class="field"><label>Модель</label><input type="text" id="eq-model" /></div>
+    <div class="field"><label>Статус</label>
+      <select id="eq-status">
+        <option value="active">Активна</option>
+        <option value="repair">В ремонте</option>
+        <option value="retired">Списана</option>
+      </select>
+    </div>
+    <div class="field"><label>Моточасы</label><input type="number" id="eq-hours" min="0" step="0.1" /></div>
+    <div class="field"><label>Заметки</label><textarea id="eq-notes"></textarea></div>
+    <div class="modal-row">
+      <button class="btn-sec" onclick="closeEditEquipModal()">Отмена</button>
+      <button class="btn-pri" onclick="saveEditEquip()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app -->
 <div class="toast" id="toast"></div>
 
@@ -533,7 +624,7 @@ function renderKanban(deals=[]){
     const cards=deals.filter(d=>d.stage===st.name);
     const total=cards.reduce((s,d)=>s+d.total,0);
     const cardsHtml=cards.length
-      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" data-stage="${escH(st.name)}" style="--c:${c}">
+      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" data-stage="${escH(st.name)}" style="--c:${c}" onclick="openDealFromKanban(event,${d.id})">
           <div class="k-sum">${fmt(d.total)}</div>
           <div class="k-title">${d.title}</div>
           <div class="k-client">${d.client}</div>
@@ -548,6 +639,14 @@ function renderKanban(deals=[]){
     </div>`;
   }).join('');
   initDrag();
+}
+
+async function openDealFromKanban(event, id){
+  // если начался drag — не открываем модалку
+  if(_dragEl)return;
+  const d=_deals.find(x=>x.id===id);
+  if(!d)return;
+  openDealModal(d);
 }
 
 function escH(s){return s.replace(/"/g,'&quot;')}
@@ -601,7 +700,133 @@ function initDrag(){
   });
 }
 
-// ── TASK MODAL ──────────────────────────────────────────────────────────────
+// ── DEAL EDIT MODAL ──────────────────────────────────────────────────────────
+let _expenseCategories = [];
+
+async function openDealModal(d){
+  document.getElementById('ed-id').value     = d.id;
+  document.getElementById('ed-title').value  = d.title||'';
+  document.getElementById('ed-total').value  = d.total||0;
+  document.getElementById('ed-date').value   = d.deal_date?d.deal_date.slice(0,10):'';
+  document.getElementById('ed-address').value= d.address||'';
+  document.getElementById('ed-manager').value= d.manager||'';
+  document.getElementById('ed-notes').value  = d.notes||'';
+  document.getElementById('deal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('ed-title').focus(),100);
+}
+function closeDealModal(){document.getElementById('deal-overlay').classList.remove('open')}
+
+async function saveDeal(){
+  const id=document.getElementById('ed-id').value;
+  const body={
+    title:   document.getElementById('ed-title').value.trim()||undefined,
+    total:   parseFloat(document.getElementById('ed-total').value)||undefined,
+    deal_date: document.getElementById('ed-date').value||undefined,
+    address: document.getElementById('ed-address').value.trim()||undefined,
+    manager: document.getElementById('ed-manager').value.trim()||undefined,
+    notes:   document.getElementById('ed-notes').value.trim()||undefined,
+  };
+  try{
+    await api(`/deals/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    closeDealModal();showToast('✅ Сделка обновлена');
+    const data=await api('/deals?year='+SELECTED_YEAR);
+    _deals=data?.deals||[];renderKanban(_deals);
+  }catch{}
+}
+
+// ── EDIT TASK MODAL ───────────────────────────────────────────────────────────
+function openEditTaskModal(t){
+  document.getElementById('et-id').value    = t.id;
+  document.getElementById('et-title').value = t.title||'';
+  document.getElementById('et-date').value  = t.due_date?t.due_date.slice(0,10):'';
+  document.getElementById('et-done').value  = t.status==='Выполнено'?'true':'false';
+  document.getElementById('edit-task-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('et-title').focus(),100);
+}
+function closeEditTaskModal(){document.getElementById('edit-task-overlay').classList.remove('open')}
+
+async function saveEditTask(){
+  const id=document.getElementById('et-id').value;
+  const body={
+    title:   document.getElementById('et-title').value.trim()||undefined,
+    due_date:document.getElementById('et-date').value||undefined,
+    is_done: document.getElementById('et-done').value==='true',
+  };
+  try{
+    await api(`/tasks/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    closeEditTaskModal();showToast('✅ Задача обновлена');
+    const data=await api('/tasks?year='+SELECTED_YEAR);
+    renderTasks(data?.tasks||[]);
+  }catch{}
+}
+
+// ── EDIT EXPENSE MODAL ────────────────────────────────────────────────────────
+async function openEditExpenseModal(e){
+  // Загружаем категории если ещё не загружены
+  if(!_expenseCategories.length){
+    try{_expenseCategories=await api('/expense-categories')}catch{}
+  }
+  const sel=document.getElementById('ee-category');
+  sel.innerHTML=_expenseCategories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('ee-id').value     = e.id;
+  document.getElementById('ee-name').value   = e.name||'';
+  document.getElementById('ee-amount').value = e.amount||0;
+  document.getElementById('ee-date').value   = e.date?e.date.slice(0,10):'';
+  // найти id категории по имени
+  const catMatch=_expenseCategories.find(c=>c.name===e.category);
+  if(catMatch)sel.value=catMatch.id;
+  document.getElementById('edit-expense-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('ee-name').focus(),100);
+}
+function closeEditExpenseModal(){document.getElementById('edit-expense-overlay').classList.remove('open')}
+
+async function saveEditExpense(){
+  const id=document.getElementById('ee-id').value;
+  const body={
+    name:        document.getElementById('ee-name').value.trim()||undefined,
+    amount:      parseFloat(document.getElementById('ee-amount').value)||undefined,
+    date:        document.getElementById('ee-date').value||undefined,
+    category_id: parseInt(document.getElementById('ee-category').value)||undefined,
+  };
+  try{
+    await api(`/expenses/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    closeEditExpenseModal();showToast('✅ Расход обновлён');
+    const data=await api('/expenses?year='+SELECTED_YEAR);
+    renderExpenses(data?.expenses||[]);
+  }catch{}
+}
+
+// ── EDIT EQUIPMENT MODAL ──────────────────────────────────────────────────────
+function openEditEquipModal(e){
+  document.getElementById('eq-id').value    = e.id;
+  document.getElementById('eq-name').value  = e.name||'';
+  document.getElementById('eq-model').value = e.model||'';
+  document.getElementById('eq-status').value= e.status||'active';
+  document.getElementById('eq-hours').value = e.engine_hours||0;
+  document.getElementById('eq-notes').value = e.notes||'';
+  document.getElementById('edit-equip-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('eq-name').focus(),100);
+}
+function closeEditEquipModal(){document.getElementById('edit-equip-overlay').classList.remove('open')}
+
+async function saveEditEquip(){
+  const id=document.getElementById('eq-id').value;
+  const body={
+    name:        document.getElementById('eq-name').value.trim()||undefined,
+    model:       document.getElementById('eq-model').value.trim()||undefined,
+    status:      document.getElementById('eq-status').value,
+    engine_hours:parseFloat(document.getElementById('eq-hours').value)||undefined,
+    notes:       document.getElementById('eq-notes').value.trim()||undefined,
+  };
+  try{
+    await api(`/equipment/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    closeEditEquipModal();showToast('✅ Техника обновлена');
+    const data=await api('/equipment');
+    renderEquipment(data||[]);
+  }catch{}
+}
+
+// ── TASK MODAL (new) ──────────────────────────────────────────────────────────
 function openTaskModal(){
   document.getElementById('t-title').value='';
   document.getElementById('t-date').value='';
@@ -653,17 +878,33 @@ async function saveTaxPayment(){
 }
 
 // ── RENDER FUNCTIONS ─────────────────────────────────────────────────────────
+let _tasksList=[], _expensesList=[], _equipmentList=[];
+
 function renderTasks(tasks=[]){
+  _tasksList=[...tasks];
   const tb=document.getElementById('tasks-tbody'),cnt=document.getElementById('tasks-count');
   if(cnt)cnt.textContent=tasks.length?tasks.length+' задач':'';
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr><td>${t.id}</td><td style="color:var(--ink);font-weight:400">${t.title}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${t.status==='Выполнено'?'b-green':'b-blue'}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr class="clickable" data-id="${t.id}"><td>${t.id}</td><td style="color:var(--ink);font-weight:400">${t.title}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${t.status==='Выполнено'?'b-green':'b-blue'}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено');
+  tb.querySelectorAll('tr.clickable').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const t=_tasksList.find(x=>x.id==row.dataset.id);
+      if(t)openEditTaskModal(t);
+    });
+  });
 }
 
 function renderExpenses(expenses=[]){
+  _expensesList=[...expenses];
   const tb=document.getElementById('expenses-tbody'),cnt=document.getElementById('expenses-count');
   const total=expenses.reduce((s,e)=>s+e.amount,0);
   if(cnt)cnt.textContent=expenses.length?`${expenses.length} записей · ${fmt(total)}`:'';
-  tb.innerHTML=expenses.length?expenses.map(e=>`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
+  tb.innerHTML=expenses.length?expenses.map(e=>`<tr class="clickable" data-id="${e.id}"><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено');
+  tb.querySelectorAll('tr.clickable').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const e=_expensesList.find(x=>x.id==row.dataset.id);
+      if(e)openEditExpenseModal(e);
+    });
+  });
 }
 
 function renderTaxes(summary,payments=[]){
@@ -705,10 +946,17 @@ function renderTaxes(summary,payments=[]){
 }
 
 function renderEquipment(eq=[]){
+  _equipmentList=[...eq];
   const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
   if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
   const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
-  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td style="color:var(--ink3);font-size:11px">${e.model||'—'}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`}).join(''):empty(4,'Техники не найдено')
+  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr class="clickable" data-id="${e.id}"><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td style="color:var(--ink3);font-size:11px">${e.model||'—'}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`}).join(''):empty(4,'Техники не найдено');
+  tb.querySelectorAll('tr.clickable').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const e=_equipmentList.find(x=>x.id==row.dataset.id);
+      if(e)openEditEquipModal(e);
+    });
+  });
 }
 
 function renderServices(services=[]){
@@ -818,7 +1066,7 @@ function applyTheme(th){
 }
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTaskModal();closeTaxModal()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTaskModal();closeTaxModal();closeDealModal();closeEditTaskModal();closeEditExpenseModal();closeEditEquipModal()}});
 
 document.addEventListener('DOMContentLoaded',()=>{
   applyTheme(localStorage.getItem('crm_theme')||'light');checkAuth();
