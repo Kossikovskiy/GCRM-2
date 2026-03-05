@@ -149,6 +149,15 @@ def init_and_seed_db():
                     {"name": "Провалена", "order": 5, "color": "#EF4444", "is_final": True}]])
             if s.query(ExpenseCategory).count() == 0:
                 s.add_all([ExpenseCategory(name=n) for n in ["Техника", "Топливо", "Расходники", "Реклама", "Запчасти", "Прочее"]])
+            if s.query(Service).count() == 0:
+                s.add_all([Service(**d) for d in [
+                    {"name":"Покос бурьяна/высокой травы","category":"Покос","price":1500,"unit":"сотка"},
+                    {"name":"Покос газона","category":"Покос","price":800,"unit":"сотка"},
+                    {"name":"Стрижка кустарника","category":"Благоустройство","price":500,"unit":"м.п."},
+                    {"name":"Вспашка земли мотоблоком","category":"Благоустройство","price":2000,"unit":"сотка"},
+                    {"name":"Спил дерева","category":"Благоустройство","price":1500,"unit":"шт"},
+                    {"name":"Вывоз мусора","category":"Прочее","price":3000,"unit":"рейс"}
+                ]])
             s.commit()
     except Exception as e:
         print(f"---!! DB INIT ERROR: {e} !!---", flush=True)
@@ -157,9 +166,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.7-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.8-final)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.7.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.8.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -329,7 +338,8 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
 @app.get("/api/expenses")
 def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
-    return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
+    expenses = db.query(Expense).all()
+    return {"expenses": [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]}
 
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
@@ -352,4 +362,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.7-stable) loaded.", flush=True)
+print(f"main.py (v4.8-final) loaded.", flush=True)
