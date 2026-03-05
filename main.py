@@ -85,7 +85,8 @@ class _Cache:
                     # Clear partial matches like 'tasks:'
                     to_remove = [ek for ek in self._data.keys() if ek == k or ek.startswith(f"{k}:")]
                     for ek in to_remove:
-                        del self._data[ek], self._ts[ek]
+                        if ek in self._data: del self._data[ek]
+                        if ek in self._ts:   del self._ts[ek]
             else:
                 self._data.clear()
                 self._ts.clear()
@@ -98,12 +99,12 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL)
 SessionFactory = sessionmaker(bind=engine)
 
-
 class User(Base):
     __tablename__ = "users"
-    id    = Column(String, primary_key=True)
-    name  = Column(String)
-    email = Column(String)
+    id       = Column(String, primary_key=True)
+    username = Column(String) # Legacy, maybe remove later
+    name     = Column(String)
+    email    = Column(String)
 
 class Stage(Base):
     __tablename__ = "stages"
@@ -147,7 +148,7 @@ class Task(Base):
     description = Column(Text, nullable=True)
     is_done     = Column(Boolean, default=False)
     due_date    = Column(Date, nullable=True)
-    assignee    = Column(String, nullable=True) # Will store user.id (sub)
+    assignee    = Column(String, nullable=True)
     priority    = Column(String, default="Обычный")
     status      = Column(String, default="Открыта")
 
@@ -179,7 +180,7 @@ class Expense(Base):
     category_id  = Column(Integer, ForeignKey("expense_categories.id"), nullable=True)
     equipment_id = Column(Integer, ForeignKey("equipment.id"),          nullable=True)
     category     = relationship("ExpenseCategory", back_populates="expenses")
-    equipment    = relationship("Equipment",        back_populates="expenses")
+    equipment    = relationship("Equipment",       back_populates="expenses")
 
 class Consumable(Base):
     __tablename__ = "consumables"
@@ -241,12 +242,12 @@ def get_current_user(request: Request) -> dict:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.9)...", flush=True)
+    print("App starting (v4.0)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.9.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.0.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
@@ -306,7 +307,8 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
         raise HTTPException(400, "Invalid OAuth state")
 
     with httpx.Client() as client:
-        resp = client.post(
+        # 1. Обменять код авторизации на access token
+        token_resp = client.post(
             f"https://{AUTH0_DOMAIN}/oauth/token",
             json={
                 "grant_type":    "authorization_code",
@@ -317,23 +319,32 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
             },
             timeout=15,
         )
-        if resp.status_code != 200:
-            raise HTTPException(500, f"Auth0 token exchange failed: {resp.text}")
-        tokens = resp.json()
+        if token_resp.status_code != 200:
+            raise HTTPException(500, f"Auth0 token exchange failed: {token_resp.text}")
+        tokens = token_resp.json()
 
-    access_token = tokens.get("access_token")
-    if not access_token:
-        raise HTTPException(500, "No access_token in Auth0 response")
+        access_token = tokens.get("access_token")
+        if not access_token:
+            raise HTTPException(500, "No access_token in Auth0 response")
 
-    try:
-        payload = decode_access_token(access_token)
-    except JWTError as e:
-        raise HTTPException(401, f"Token validation failed: {e}")
+        # 2. Использовать access token для получения профиля пользователя
+        profile_resp = client.get(
+            f"https://{AUTH0_DOMAIN}/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        if profile_resp.status_code != 200:
+            raise HTTPException(500, f"Failed to get user profile from Auth0: {profile_resp.text}")
+        
+        user_profile = profile_resp.json()
 
-    # Upsert user in DB
-    user_id = payload.get("sub", "")
-    user_name = payload.get("nickname") or payload.get("name") or payload.get("email") or user_id
-    user_email = payload.get("email")
+    # 3. Извлечь данные и обновить/создать пользователя в БД
+    user_id = user_profile.get("sub")
+    if not user_id:
+        raise HTTPException(500, "User ID (sub) not found in user profile")
+
+    # Использовать реальное имя, с запасными вариантами
+    user_name = user_profile.get("name") or user_profile.get("nickname") or user_profile.get("email") or user_id
+    user_email = user_profile.get("email")
 
     with SessionFactory() as db:
         user = db.query(User).filter(User.id == user_id).first()
@@ -341,14 +352,22 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
             user = User(id=user_id, name=user_name, email=user_email)
             db.add(user)
         else:
+            # Обновлять имя и email при каждом входе
             user.name = user_name
             user.email = user_email
         db.commit()
 
+    # 4. Получить роль из JWT и сохранить всё в сессию
+    try:
+        payload = decode_access_token(access_token)
+        user_role = payload.get(ROLE_CLAIM, "user")
+    except JWTError:
+        user_role = "user" # Запасная роль
+
     request.session["user"] = {
         "sub":  user_id,
         "name": user_name,
-        "role": payload.get(ROLE_CLAIM, "user"),
+        "role": user_role,
     }
     return RedirectResponse("/")
 
@@ -375,25 +394,15 @@ def get_users(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 
 @app.get("/api/years")
 def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    """Список лет в которых есть сделки или расходы — для селектора."""
     cached = _cache.get("years")
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
+    
+    deal_years = db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM deal_date)::int FROM deals WHERE deal_date IS NOT NULL")).fetchall()
+    exp_years = db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM date)::int FROM expenses WHERE date IS NOT NULL")).fetchall()
 
-    deal_years = db.execute(
-        text("SELECT DISTINCT EXTRACT(YEAR FROM deal_date)::int FROM deals WHERE deal_date IS NOT NULL")
-    ).fetchall()
-    exp_years = db.execute(
-        text("SELECT DISTINCT EXTRACT(YEAR FROM date)::int FROM expenses WHERE date IS NOT NULL")
-    ).fetchall()
-
-    years = sorted(
-        {r[0] for r in deal_years if r[0]} | {r[0] for r in exp_years if r[0]},
-        reverse=True
-    )
-    if not years:
-        years = [datetime.utcnow().year]
-
+    years = sorted({r[0] for r in deal_years if r[0]} | {r[0] for r in exp_years if r[0]}, reverse=True)
+    if not years: years = [datetime.utcnow().year]
+    
     _cache.set("years", years)
     return years
 
@@ -401,60 +410,35 @@ def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 @app.get("/api/stages")
 def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("stages")
-    if cached is not None:
-        return cached
-
-    result = [{"id": s.id, "name": s.name, "order": s.order,
-               "type": s.type, "is_final": s.is_final, "color": s.color}
+    if cached is not None: return cached
+    result = [{"id": s.id, "name": s.name, "order": s.order, "type": s.type, "is_final": s.is_final, "color": s.color}
               for s in db.query(Stage).order_by(Stage.order).all()]
     _cache.set("stages", result)
     return result
 
 
 @app.get("/api/deals")
-def get_deals(year: Optional[int] = None,
-              db: DBSession = Depends(get_db),
-              _=Depends(get_current_user)):
+def get_deals(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cache_key = f"deals:{year}"
     cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
 
-    q = (db.query(Deal)
-           .outerjoin(Deal.contact)
-           .outerjoin(Deal.stage)
-           .order_by(Deal.created_at.desc()))
-    if year:
-        q = q.filter(extract("year", Deal.deal_date) == year)
+    q = db.query(Deal).outerjoin(Deal.contact).outerjoin(Deal.stage).order_by(Deal.created_at.desc())
+    if year: q = q.filter(extract("year", Deal.deal_date) == year)
 
-    result = {"deals": [{
-        "id":         d.id,
-        "title":      d.title or "Без названия",
-        "total":      d.total or 0.0,
-        "client":     d.contact.name if d.contact else "Нет клиента",
-        "stage":      d.stage.name   if d.stage   else "Без статуса",
-        "created_at": (d.created_at or datetime.utcnow()).isoformat(),
-    } for d in q.all()]}
-
+    result = {"deals": [{"id": d.id, "title": d.title or "Без названия", "total": d.total or 0.0,
+                         "client": d.contact.name if d.contact else "Нет клиента",
+                         "stage": d.stage.name if d.stage else "Без статуса",
+                         "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]}
     _cache.set(cache_key, result)
     return result
 
 
 @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
-def create_task(task: TaskCreate,
-                db: DBSession = Depends(get_db),
-                user: dict = Depends(get_current_user)):
-    # По умолчанию дата +1 день если не указана
+def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
     due = task.due_date or (date.today() + timedelta(days=1))
-    
-    new_task = Task(
-        title=task.title,
-        description=task.description,
-        due_date=due,
-        priority=task.priority,
-        status=task.status,
-        assignee=task.assignee or user["sub"]
-    )
+    new_task = Task(title=task.title, description=task.description, due_date=due,
+                    priority=task.priority, status=task.status, assignee=task.assignee or user["sub"])
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
@@ -463,63 +447,44 @@ def create_task(task: TaskCreate,
 
 
 @app.get("/api/tasks")
-def get_tasks(year: Optional[int] = None,
-              is_done: Optional[bool] = None,
-              db: DBSession = Depends(get_db),
-              _=Depends(get_current_user)):
+def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cache_key = f"tasks:{year}:{is_done}"
     cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
 
     q = db.query(Task).order_by(Task.due_date.asc())
-    if year:
-        q = q.filter(extract("year", Task.due_date) == year)
-    if is_done is not None:
-        q = q.filter(Task.is_done == is_done)
+    if year: q = q.filter(extract("year", Task.due_date) == year)
+    if is_done is not None: q = q.filter(Task.is_done == is_done)
 
     tasks_list = []
     for t in q.all():
         assignee_name = "Не назначен"
         if t.assignee:
             user_obj = db.query(User).filter(User.id == t.assignee).first()
-            if user_obj:
-                assignee_name = user_obj.name
+            if user_obj: assignee_name = user_obj.name
                 
         tasks_list.append({
-            "id":          t.id,
-            "title":       t.title,
-            "description": t.description,
-            "status":      t.status,
-            "is_done":     t.is_done,
-            "due_date":    t.due_date.isoformat() if t.due_date else None,
-            "assignee":    t.assignee,
-            "assignee_name": assignee_name,
-            "priority":    t.priority,
+            "id": t.id, "title": t.title, "description": t.description, "status": t.status, "is_done": t.is_done,
+            "due_date": t.due_date.isoformat() if t.due_date else None, "assignee": t.assignee,
+            "assignee_name": assignee_name, "priority": t.priority,
         })
-
     result = {"tasks": tasks_list}
     _cache.set(cache_key, result)
     return result
 
 
 @app.patch("/api/tasks/{task_id}")
-def update_task(task_id: int, 
-                task_data: TaskUpdate,
-                db: DBSession = Depends(get_db),
-                _=Depends(get_current_user)):
+def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(404, "Task not found")
+    if not task: raise HTTPException(404, "Task not found")
     
     update_dict = task_data.dict(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(task, key, value)
     
-    # Sync status and is_done if necessary
-    if task.status == "Выполнена":
+    if task.status == "Выполнена" and task.is_done is not True:
         task.is_done = True
-    elif task_data.is_done is True:
+    elif task_data.is_done is True and task.status != "Выполнена":
         task.status = "Выполнена"
         
     db.commit()
@@ -527,40 +492,27 @@ def update_task(task_id: int,
     return {"status": "ok"}
 
 
-@app.delete("/api/tasks/{task_id}")
-def delete_task(task_id: int, 
-                db: DBSession = Depends(get_db),
-                _=Depends(get_current_user)):
+@app.delete("/api/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(404, "Task not found")
+    if not task: raise HTTPException(404, "Task not found")
     db.delete(task)
     db.commit()
     _cache.invalidate("tasks")
-    return {"status": "ok"}
 
 
 @app.get("/api/expenses")
-def get_expenses(year: Optional[int] = None,
-                 db: DBSession = Depends(get_db),
-                 _=Depends(get_current_user)):
+def get_expenses(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cache_key = f"expenses:{year}"
     cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
 
     q = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc())
-    if year:
-        q = q.filter(extract("year", Expense.date) == year)
+    if year: q = q.filter(extract("year", Expense.date) == year)
 
-    result = {"expenses": [{
-        "id":       e.id,
-        "name":     e.name,
-        "amount":   e.amount,
-        "category": e.category.name if e.category else "Без категории",
-        "date":     e.date.isoformat() if e.date else None,
-    } for e in q.all()]}
-
+    result = {"expenses": [{"id": e.id, "name": e.name, "amount": e.amount,
+                           "category": e.category.name if e.category else "Без категории",
+                           "date": e.date.isoformat() if e.date else None} for e in q.all()]}
     _cache.set(cache_key, result)
     return result
 
@@ -568,9 +520,7 @@ def get_expenses(year: Optional[int] = None,
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("equipment")
-    if cached is not None:
-        return cached
-
+    if cached is not None: return cached
     result = [{"id": e.id, "name": e.name, "model": e.model or "", "status": e.status or "active"}
               for e in db.query(Equipment).order_by(Equipment.name).all()]
     _cache.set("equipment", result)
@@ -580,32 +530,26 @@ def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 @app.get("/api/services")
 def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("services")
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
 
     try:
         db.execute(text("SELECT 1 FROM services LIMIT 1"))
-    except Exception:
-        return []
+    except Exception: return []
 
     meta = MetaData()
     meta.reflect(bind=engine, only=["services", "service_categories"])
-    if "services" not in meta.tables:
-        return []
+    if "services" not in meta.tables: return []
 
-    svc = meta.tables["services"]
-    cat = meta.tables.get("service_categories")
+    svc, cat = meta.tables["services"], meta.tables.get("service_categories")
     result = []
     for r in db.execute(svc.select()).fetchall():
         row = dict(r._mapping)
         category = ""
         if cat is not None and row.get("category_id"):
             crow = db.execute(cat.select().where(cat.c.id == row["category_id"])).fetchone()
-            if crow:
-                category = dict(crow._mapping).get("name", "")
-        result.append({"id": row.get("id"), "name": row.get("name", ""),
-                        "category": category, "price": row.get("price", 0),
-                        "unit": row.get("unit", "")})
+            if crow: category = dict(crow._mapping).get("name", "")
+        result.append({"id": row.get("id"), "name": row.get("name", ""), "category": category, 
+                       "price": row.get("price", 0), "unit": row.get("unit", "")})
     _cache.set("services", result)
     return result
 
@@ -613,9 +557,7 @@ def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 @app.get("/api/consumables")
 def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("consumables")
-    if cached is not None:
-        return cached
-
+    if cached is not None: return cached
     result = [{"id": c.id, "name": c.name, "stock_quantity": c.stock_quantity, "unit": c.unit}
               for c in db.query(Consumable).order_by(Consumable.name).all()]
     _cache.set("consumables", result)
@@ -625,11 +567,8 @@ def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)
 @app.get("/api/contacts")
 def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("contacts")
-    if cached is not None:
-        return cached
-
-    result = [{"id": c.id, "name": c.name, "phone": c.phone}
-              for c in db.query(Contact).order_by(Contact.name).all()]
+    if cached is not None: return cached
+    result = [{"id": c.id, "name": c.name, "phone": c.phone} for c in db.query(Contact).order_by(Contact.name).all()]
     _cache.set("contacts", result)
     return result
 
@@ -637,14 +576,11 @@ def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 # ── 9. СБРОС КЭША ─────────────────────────────────────────────────────────────
 
 @app.post("/api/cache/invalidate")
-def invalidate_cache(request: Request, _=Depends(get_current_user)):
-    """
-    Сбросить весь кэш — вызывать после добавления данных через MCP или вручную.
-    Следующий запрос к любому эндпоинту заново обратится к Supabase.
-    """
+def invalidate_cache(_=Depends(get_current_user)):
+    """Сбросить весь кэш."""
     _cache.invalidate()
     print("Cache invalidated manually.", flush=True)
-    return {"status": "ok", "message": "Кэш сброшен. Следующий запрос обновит данные из БД."}
+    return {"status": "ok", "message": "Кэш сброшен."}
 
 
 # ── 10. ФРОНТЕНД ──────────────────────────────────────────────────────────────
@@ -655,5 +591,4 @@ async def serve_frontend(full_path: str):
         return FileResponse(path)
     return FileResponse("./index.html")
 
-
-print("main.py (v3.9) loaded.", flush=True)
+print("main.py (v4.0) loaded.", flush=True)
