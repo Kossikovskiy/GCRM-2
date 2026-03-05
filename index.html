@@ -468,7 +468,8 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <div class="field full">
         <label>КАТЕГОРИЯ</label>
-        <input type="text" id="ex-category" placeholder="Например, ГСМ, ремонт, запчасти" />
+        <input type="text" id="ex-category" list="expense-categories-list" placeholder="Например, ГСМ, ремонт, запчасти" />
+        <datalist id="expense-categories-list"></datalist>
     </div>
     <div class="modal-row">
       <button class="btn-sec btn-del-modal" id="btn-expense-delete" style="display:none">УДАЛИТЬ</button>
@@ -783,7 +784,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <script>
 const API_BASE='/api';
 let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
-let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[];
+let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[], _expenseCategories=[];
 let _selectedEquipmentId = null;
 
 function fmt(n, z = '—'){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : z}
@@ -1563,15 +1564,18 @@ async function deleteConsumable(cId) {
 // ── EXPENSE MODAL ──
 let _currentExpenseId = null;
 
-function openExpenseModal(expense = null) {
+async function openExpenseModal(expense = null) {
     const overlay = document.getElementById('expense-overlay');
     const title = document.getElementById('expense-modal-title');
     const nameInput = document.getElementById('ex-name');
     const amountInput = document.getElementById('ex-amount');
     const dateInput = document.getElementById('ex-date');
     const categoryInput = document.getElementById('ex-category');
+    const categoryList = document.getElementById('expense-categories-list');
     const saveBtn = overlay.querySelector('.btn-pri');
     const deleteBtn = document.getElementById('btn-expense-delete');
+    
+    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}">`).join('');
 
     nameInput.classList.remove('err');
     amountInput.classList.remove('err');
@@ -1863,7 +1867,8 @@ async function loadData(year, force = false){
   const endpoints = {
       deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
       equipment: '/equipment', services: '/services', consumables: '/consumables',
-      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp
+      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp,
+      expense_categories: '/expense-categories'
   };
   const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
   const data = {};
@@ -1877,6 +1882,7 @@ async function loadData(year, force = false){
   });
 
   STAGES=data.stages||[];
+  _expenseCategories = data.expense_categories || [];
   
   renderKanban(data.deals?.deals || data.deals || []);
   renderTasks((data.tasks?.tasks || data.tasks) || []);
