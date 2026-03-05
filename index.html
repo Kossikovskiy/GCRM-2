@@ -623,20 +623,18 @@ function initDrag(){
       const stage = STAGES.find(s => s.name === newStageName);
       if (!stage) return;
 
-      const oldStageName = deal.stage;
       deal.stage = newStageName;
       renderKanban(_deals);
 
-      api(`/deals/${id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
+      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id, title:deal.title, services: []})})
         .then(()=>showToast('✅ → '+newStageName))
-        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+        .catch(()=>{deal.stage=_dragSrcStage;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
   });
 }
 
 // ── DEAL MODAL ──
 let _dealItems = [];
-let _currentDealId = null;
 
 async function setupDealModal(dealId = null) {
     const titleEl = document.getElementById('d-modal-title');
@@ -646,20 +644,15 @@ async function setupDealModal(dealId = null) {
     const stageSel = document.getElementById('d-stage');
     const assigneeSel = document.getElementById('d-assignee');
 
-    // Reset
-    _currentDealId = dealId;
-    _dealItems = [];
     document.getElementById('d-title').value = '';
     document.getElementById('d-contact-input').value = '';
     document.getElementById('d-title').classList.remove('err');
 
-    // Common setup
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
     assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
 
     if (dealId) {
-        // Edit mode
         titleEl.innerHTML = `Сделка <em>№${dealId}</em>`;
         saveBtn.textContent = 'Сохранить';
         deleteBtn.style.display = 'block';
@@ -683,22 +676,27 @@ async function setupDealModal(dealId = null) {
         }));
 
     } else {
-        // Create mode
         titleEl.innerHTML = 'Новая <em>сделка</em>';
         saveBtn.textContent = 'Создать';
         deleteBtn.style.display = 'none';
         saveBtn.onclick = () => saveDeal();
         stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+        _dealItems = [];
     }
 
     renderDealServices();
 }
 
 async function openDealModal(dealId = null) {
-    await setupDealModal(dealId);
-    document.getElementById('deal-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('d-title').focus(), 100);
+    try {
+        await setupDealModal(dealId);
+        document.getElementById('deal-overlay').classList.add('open');
+        setTimeout(() => document.getElementById('d-title').focus(), 100);
+    } catch(e) {
+        showToast('❌ Не удалось загрузить данные сделки');
+        console.error(e);
+    }
 }
 
 function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
@@ -707,11 +705,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealMod
 function addDealService(serviceId) {
     if (!serviceId) return;
     const service = _services.find(s => s.id === serviceId);
-    if (!service) return;
+    if (!service) { showToast('Эта услуга была удалена'); return; }
 
     const existingItem = _dealItems.find(item => item.id === serviceId);
     if (existingItem) {
-        existingItem.quantity += 1;
+        existingItem.quantity = parseFloat(existingItem.quantity) + 1;
     } else {
         _dealItems.push({ ...service, quantity: 1 });
     }
@@ -739,7 +737,7 @@ function renderDealServices() {
     } else {
         tbody.innerHTML = _dealItems.map(item => `
             <tr>
-                <td>${item.name}</td>
+                <td>${item.name} ${item.id === -1 ? '<small style="color:var(--red)">[удалена]</small>' : ''}</td>
                 <td>${fmt(item.price)}</td>
                 <td><input type="number" value="${item.quantity}" onchange="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
                 <td>${fmt(item.price * item.quantity)}</td>
@@ -761,7 +759,6 @@ async function saveDeal(dealId = null) {
   const contactName = document.getElementById('d-contact-input').value.trim();
   const stage_id = parseInt(document.getElementById('d-stage').value, 10);
   const manager = document.getElementById('d-assignee').value;
-  const deal_date = new Date().toISOString();
 
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
@@ -771,7 +768,6 @@ async function saveDeal(dealId = null) {
       title, 
       stage_id, 
       manager, 
-      deal_date,
       services: _dealItems.map(item => ({ service_id: item.id, quantity: item.quantity }))
   };
   
@@ -788,8 +784,7 @@ async function saveDeal(dealId = null) {
     await api(endpoint, { method, body: JSON.stringify(dealData) });
     closeDealModal();
     showToast(dealId ? '✅ Сделка обновлена' : '✅ Сделка создана');
-    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
-    loadData(SELECTED_YEAR);
+    loadData(SELECTED_YEAR, true);
   } catch (e) {}
 }
 
@@ -799,8 +794,7 @@ async function deleteDeal(dealId) {
         await api(`/deals/${dealId}`, { method: 'DELETE' });
         closeDealModal();
         showToast('🗑️ Сделка удалена');
-        await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
-        loadData(SELECTED_YEAR);
+        loadData(SELECTED_YEAR, true);
     } catch (e) {}
 }
 
@@ -846,42 +840,39 @@ async function populateAssignees(selectedId){
   const sel = document.getElementById('t-assignee');
   try {
     const users = await api('/users');
-    sel.innerHTML = users.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name}</option>`).join('');
+    sel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name}</option>`).join('');
   } catch(e) {
     sel.innerHTML = `<option value="">Ошибка загрузки</option>`;
   }
 }
 
-async function openTaskModal(){
-  _currentTaskId = null;
+async function openTaskModal(taskId = null){
+  _currentTaskId = taskId;
   document.getElementById('t-title').value='';
   document.getElementById('t-desc').value='';
   document.getElementById('t-date').valueAsDate = new Date(Date.now() + 864e5);
   document.getElementById('t-priority').value='Обычный';
   document.getElementById('t-status').value='Открыта';
   document.getElementById('t-title').classList.remove('err');
-  document.getElementById('btn-task-delete').style.display = 'none';
-  
-  await populateAssignees(CURRENT_USER?.sub);
+  document.getElementById('btn-task-delete').style.display = taskId ? 'block' : 'none';
+  document.getElementById('btn-task-delete').onclick = () => deleteTask(taskId);
+
+  if (taskId) {
+    const task = (await api(`/tasks?year=${SELECTED_YEAR}`)).find(t => t.id === taskId);
+    if (task) {
+        document.getElementById('t-title').value = task.title || '';
+        document.getElementById('t-desc').value = task.description || '';
+        if(task.due_date) document.getElementById('t-date').value = task.due_date.split('T')[0];
+        document.getElementById('t-priority').value = task.priority || 'Обычный';
+        document.getElementById('t-status').value = task.status || 'Открыта';
+        await populateAssignees(task.assignee);
+    }
+  } else {
+    await populateAssignees(CURRENT_USER?.sub);
+  }
   
   document.getElementById('task-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('t-title').focus(),100);
-}
-
-async function openTaskModalWithData(t){
-  _currentTaskId = t.id;
-  document.getElementById('t-title').value = t.title || '';
-  document.getElementById('t-desc').value = t.description || '';
-  if(t.due_date) document.getElementById('t-date').value = t.due_date.split('T')[0];
-  document.getElementById('t-priority').value = t.priority || 'Обычный';
-  document.getElementById('t-status').value = t.status || 'Открыта';
-  document.getElementById('t-title').classList.remove('err');
-  document.getElementById('btn-task-delete').style.display = 'block';
-  document.getElementById('btn-task-delete').onclick = () => deleteTask(t.id);
-  
-  await populateAssignees(t.assignee);
-  
-  document.getElementById('task-overlay').classList.add('open');
 }
 
 async function deleteTask(id){
@@ -890,7 +881,6 @@ async function deleteTask(id){
     await api(`/tasks/${id}`, {method:'DELETE'});
     closeTaskModal();
     showToast('🗑️ Задача удалена');
-    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
     loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
   }catch{}
 }
@@ -915,7 +905,6 @@ async function saveTask(){
     await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
     closeTaskModal();
     showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
-    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
     loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
   }catch{}
 }
@@ -923,8 +912,8 @@ async function saveTask(){
 async function loadTasks(isDone){
   document.getElementById('btn-tasks-active').classList.toggle('active', !isDone);
   document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
-  const data = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
-  renderTasks(data?.tasks || []);
+  const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
+  renderTasks(tasks || []);
 }
 
 function renderTasks(tasks=[]){
@@ -936,7 +925,7 @@ function renderTasks(tasks=[]){
     if(s==='В работе')return'b-blue';
     return 'b-slate';
   };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModalWithData(${JSON.stringify(t).replace(/"/g, '&quot;')})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){
@@ -972,11 +961,11 @@ function renderContacts(contacts=[]){
 }
 
 function buildDash(deals,expenses,equipment){
-  const ws=STAGES.find(s=>s.type==='success');
-  const won=ws?deals.filter(d=>d.stage===ws.name):deals;
+  const successfulStages = STAGES.filter(s => s.is_final && s.name.toLowerCase().includes('успешно')).map(s => s.name);
+  const won = deals.filter(d => successfulStages.includes(d.stage));
   const rev=won.reduce((s,d)=>s+d.total,0);
   const exp=expenses.reduce((s,e)=>s+e.amount,0);
-  const prof=rev-exp,marg=rev?Math.round(prof/rev*100):0;
+  const prof=rev-exp; const marg=rev?Math.round(prof/rev*100):0;
   document.getElementById('kpi-revenue').textContent=fmt(rev);
   document.getElementById('kpi-deals-count').textContent=won.length+' успешных сделок';
   document.getElementById('kpi-expenses').textContent=fmt(exp);
@@ -988,24 +977,42 @@ function buildDash(deals,expenses,equipment){
   document.getElementById('kpi-repair').textContent=equipment.filter(e=>e.status==='repair').length+' в ремонте';
 }
 
-async function loadData(year){
+async function loadData(year, force = false){
   if(!year)return;
+  if (force) {
+      await api('/cache/invalidate', { method: 'POST' }).catch(()=>{});
+  }
   showToast('⏳ Загрузка за '+year+'…');
   document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
   const yp='?year='+year;
-  const ep={stages:'/stages',deals:'/deals'+yp,tasks:'/tasks'+yp+'&is_done=false',expenses:'/expenses'+yp,equipment:'/equipment',services:'/services',consumables:'/consumables',contacts:'/contacts'};
-  const keys=Object.keys(ep);
-  const res=await Promise.allSettled(keys.map(k=>api(ep[k])));
-  const data={};let err=false;
-  res.forEach((r,i)=>{if(r.status==='fulfilled')data[keys[i]]=r.value;else err=true});
-  STAGES=data.stages||[];
-  _contacts=data.contacts||[];
-  _services=data.services||[];
-  const deals=data.deals?.deals||[],expenses=data.expenses?.expenses||[],equipment=data.equipment||[];
-  renderKanban(deals);renderTasks(data.tasks?.tasks||[]);renderExpenses(expenses);
-  renderEquipment(equipment);renderServices(data.services||[]);renderConsumables(data.consumables||[]);renderContacts(data.contacts||[]);
-  buildDash(deals,expenses,equipment);
-  showToast(err?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
+  const endpoints = {
+      deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
+      equipment: '/equipment', services: '/services', consumables: '/consumables',
+      contacts: '/contacts', stages: '/stages'
+  };
+  const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
+  const data = {};
+  let hasError = false;
+  Object.keys(endpoints).forEach((key, i) => {
+      if (results[i].status === 'fulfilled') {
+          data[key] = results[i].value;
+      } else {
+          hasError = true;
+      }
+  });
+
+  STAGES=data.stages||[]; _contacts=data.contacts||[]; _services=data.services||[];
+  
+  renderKanban(data.deals?.deals || data.deals || []);
+  renderTasks(data.tasks || []);
+  renderExpenses(data.expenses || []);
+  renderEquipment(data.equipment || []);
+  renderServices(data.services || []);
+  renderConsumables(data.consumables || []);
+  renderContacts(data.contacts || []);
+  buildDash(data.deals?.deals || data.deals || [], data.expenses || [], data.equipment || []);
+
+  showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
 
 async function populateYearSelector(){
@@ -1028,7 +1035,7 @@ async function checkAuth(){
       const y=parseInt(document.getElementById('year-selector').value,10);
       if(y&&y!==SELECTED_YEAR){SELECTED_YEAR=y;loadData(y)}
     });
-    document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR));
+    document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR, true));
   }catch{document.getElementById('login-screen').style.display='flex'}
 }
 
