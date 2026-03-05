@@ -103,18 +103,42 @@ class ConsumableCreate(BaseModel): name: str; unit: Optional[str] = 'шт'; stoc
 class ConsumableUpdate(BaseModel): name: Optional[str] = None; unit: Optional[str] = None; stock_quantity: Optional[float] = None; price: Optional[float] = None; notes: Optional[str] = None
 class MaintenanceConsumableItem(BaseModel): consumable_id: int; quantity: float
 class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_description: str; notes: Optional[str]=None; consumables: List[MaintenanceConsumableItem] = []
-class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: List[MaintenanceConsumableItem] = []
+class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
+
+# --- Response Models to prevent serialization cycles ---
+class EquipmentForMaintResponse(BaseModel):
+    id: int; name: str
+    class Config: orm_mode = True
+
+class MaintenanceForListResponse(BaseModel):
+    id: int; date: date; work_description: str; cost: Optional[float]; equipment_id: int
+    equipment: EquipmentForMaintResponse
+    class Config: orm_mode = True
+
+class ConsumableForMaintResponse(BaseModel):
+    id: int; name: str; unit: Optional[str]
+    class Config: orm_mode = True
+
+class MaintConsumableForDetailResponse(BaseModel):
+    quantity: float; price_at_moment: float
+    consumable: ConsumableForMaintResponse
+    class Config: orm_mode = True
+
+class MaintenanceDetailResponse(BaseModel):
+    id: int; equipment_id: int; date: date; work_description: str; notes: Optional[str]; cost: Optional[float]
+    consumables_used: List[MaintConsumableForDetailResponse]
+    class Config: orm_mode = True
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v11.0)...",flush=True)
+    print("App starting (v11.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.1.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -319,13 +343,13 @@ def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_cur
     if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
     return None
 
-@app.get("/api/maintenance")
+@app.get("/api/maintenance", response_model=List[MaintenanceForListResponse])
 def get_all_maintenance(year: Optional[int] = None, db: DBSession=Depends(get_db), _=Depends(get_current_user)):
     q = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.equipment)).order_by(EquipmentMaintenance.date.desc())
     if year: q = q.filter(extract("year", EquipmentMaintenance.date) == year)
     return q.all()
 
-@app.get("/api/maintenance/{m_id}")
+@app.get("/api/maintenance/{m_id}", response_model=MaintenanceDetailResponse)
 def get_maintenance_details(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used).joinedload(MaintenanceConsumable.consumable), joinedload(EquipmentMaintenance.equipment)).filter(EquipmentMaintenance.id == m_id).first()
     if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
@@ -364,26 +388,28 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
         m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
         if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
 
-        for old_item in m_record.consumables_used:
-            consumable = db.query(Consumable).filter(Consumable.id == old_item.consumable_id).with_for_update().first()
-            if consumable: consumable.stock_quantity += old_item.quantity
-        
-        db.query(MaintenanceConsumable).filter(MaintenanceConsumable.maintenance_id == m_id).delete(synchronize_session=False)
-        db.flush()
+        if data.consumables is not None:
+            for old_item in m_record.consumables_used:
+                consumable = db.query(Consumable).filter(Consumable.id == old_item.consumable_id).with_for_update().first()
+                if consumable: consumable.stock_quantity += old_item.quantity
+            
+            db.query(MaintenanceConsumable).filter(MaintenanceConsumable.maintenance_id == m_id).delete(synchronize_session=False)
+            db.flush()
 
-        total_cost = 0
-        for item_data in data.consumables:
-            consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).with_for_update().first()
-            if not consumable or consumable.stock_quantity < item_data.quantity:
-                raise HTTPException(400, f"Недостаточно '{consumable.name if consumable else 'ID:'+str(item_data.consumable_id)}' на складе.")
-            consumable.stock_quantity -= item_data.quantity
-            total_cost += (consumable.price or 0) * item_data.quantity
-            db.add(MaintenanceConsumable(maintenance_id=m_id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
+            total_cost = 0
+            for item_data in data.consumables:
+                consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).with_for_update().first()
+                if not consumable or consumable.stock_quantity < item_data.quantity:
+                    raise HTTPException(400, f"Недостаточно '{consumable.name if consumable else 'ID:'+str(item_data.consumable_id)}' на складе.")
+                consumable.stock_quantity -= item_data.quantity
+                total_cost += (consumable.price or 0) * item_data.quantity
+                db.add(MaintenanceConsumable(maintenance_id=m_id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
+            m_record.cost = total_cost
 
-        m_record.cost = total_cost
         update_data = data.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            if key != "consumables": setattr(m_record, key, value)
+        if 'date' in update_data: m_record.date = update_data['date']
+        if 'work_description' in update_data: m_record.work_description = update_data['work_description']
+        if 'notes' in update_data: m_record.notes = update_data['notes']
         
         db.commit()
         update_equipment_last_maintenance(db, m_record.equipment_id)
@@ -489,4 +515,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.0) loaded.", flush=True)
+print(f"main.py (v11.1) loaded.", flush=True)
