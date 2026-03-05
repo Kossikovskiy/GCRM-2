@@ -7,7 +7,7 @@ import threading
 import time as _time
 from datetime import datetime, date
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, List
 from functools import lru_cache
 
 from fastapi import FastAPI, Depends, HTTPException, status, Request
@@ -170,7 +170,6 @@ class Consumable(Base):
     stock_quantity = Column(Float, default=0.0)
     notes          = Column(Text, nullable=True)
 
-# ── НОВАЯ МОДЕЛЬ: Налоговые платежи ──────────────────────────────────────────
 class TaxPayment(Base):
     __tablename__ = "tax_payments"
     id      = Column(Integer, primary_key=True)
@@ -322,6 +321,18 @@ def logout(request: Request):
 
 # ── 8. DATA ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
 
+class User(BaseModel):
+    id: str
+    name: str
+
+@app.get("/api/users", response_model=List[User])
+def get_users(_=Depends(get_current_user)):
+    # This is a placeholder. In a real app, you'd fetch users from your DB
+    # or a user management service.
+    return [
+        {"id": "google-oauth2|111132204803657388744", "name": "Сергей"},
+    ]
+
 @app.get("/api/me")
 def get_me(user: dict = Depends(get_current_user)):
     return {"username": user["sub"], "role": user["role"]}
@@ -392,129 +403,242 @@ def get_deals(year: Optional[int] = None,
     _cache.set(cache_key, result)
     return result
 
+# --- DEAL CRUD ---
+class DealCreate(BaseModel):
+    title: str
+    contact_id: Optional[int] = None
+    new_contact_name: Optional[str] = None
+    stage_id: int
+    total: float
+    manager: Optional[str] = None
 
-@app.patch("/api/deals/{deal_id}/stage")
-def update_deal_stage(deal_id: int, body: dict,
-                      db: DBSession = Depends(get_db),
-                      _=Depends(get_current_user)):
+@app.post("/api/deals", status_code=201)
+def create_deal(body: DealCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    contact_id = body.contact_id
+    if not contact_id and body.new_contact_name:
+        new_contact = Contact(name=body.new_contact_name)
+        db.add(new_contact)
+        db.commit()
+        db.refresh(new_contact)
+        contact_id = new_contact.id
+
+    deal = Deal(
+        title=body.title,
+        contact_id=contact_id,
+        stage_id=body.stage_id,
+        total=body.total,
+        manager=body.manager,
+        deal_date=datetime.utcnow()
+    )
+    db.add(deal)
+    db.commit()
+    db.refresh(deal)
+    _cache.invalidate()
+    return {"id": deal.id}
+
+
+class DealUpdate(BaseModel):
+    title: Optional[str] = None
+    contact_id: Optional[int] = None
+    stage_id: Optional[int] = None
+    total: Optional[float] = None
+    manager: Optional[str] = None
+
+@app.patch("/api/deals/{deal_id}")
+def update_deal(deal_id: int, body: DealUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if not deal:
         raise HTTPException(404, "Deal not found")
-    stage = db.query(Stage).filter(Stage.name == body.get("stage_name")).first()
-    if not stage:
-        raise HTTPException(404, "Stage not found")
-    deal.stage_id = stage.id
+
+    update_data = body.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(deal, key, value)
+
     db.commit()
     _cache.invalidate()
     return {"ok": True}
 
+@app.get("/api/deals/{deal_id}")
+def get_deal_details(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    return {
+        "id": deal.id,
+        "title": deal.title,
+        "total": deal.total,
+        "stage_id": deal.stage_id,
+        "contact": {"id": deal.contact.id, "name": deal.contact.name} if deal.contact else None,
+        "manager": deal.manager,
+        # Placeholder, as services are not linked yet
+        "services": [] 
+    }
+
+@app.delete("/api/deals/{deal_id}", status_code=204)
+def delete_deal(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(404, "Deal not found")
+    db.delete(deal)
+    db.commit()
+    _cache.invalidate()
+    return
+
+@app.patch("/api/deals/{deal_id}/stage")
+def update_deal_stage(deal_id: int, body: dict, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(404, "Deal not found")
+    
+    new_stage_id = body.get("stage_id")
+    if new_stage_id is None:
+        raise HTTPException(400, "stage_id is required")
+
+    stage = db.query(Stage).filter(Stage.id == new_stage_id).first()
+    if not stage:
+        raise HTTPException(404, f"Stage with id {new_stage_id} not found")
+
+    deal.stage_id = new_stage_id
+    db.commit()
+    _cache.invalidate(f"deals:{deal.deal_date.year if deal.deal_date else 'all'}")
+    return {"ok": True}
+
+# --- END DEAL CRUD ---
+
 
 @app.get("/api/tasks")
-def get_tasks(year: Optional[int] = None,
-              db: DBSession = Depends(get_db),
-              _=Depends(get_current_user)):
-    cache_key = f"tasks:{year}"
-    cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
-
+def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     q = db.query(Task).order_by(Task.due_date.asc())
     if year:
         q = q.filter(extract("year", Task.due_date) == year)
-
-    result = {"tasks": [{
-        "id":       t.id,
-        "title":    t.title,
-        "status":   "Выполнено" if t.is_done else "В работе",
+    if is_done is not None:
+        q = q.filter(Task.is_done == is_done)
+    tasks = q.all()
+    # In a real app, you'd join with a users table
+    users = {u['id']: u['name'] for u in get_users()}
+    return [{
+        "id": t.id,
+        "title": t.title,
+        "description": getattr(t, 'description', ''),
+        "status": "Выполнено" if t.is_done else "В работе",
         "due_date": t.due_date.isoformat() if t.due_date else None,
-    } for t in q.all()]}
-
-    _cache.set(cache_key, result)
-    return result
-
+        "priority": getattr(t, 'priority', 'Обычный'),
+        "assignee": getattr(t, 'assignee', None),
+        "assignee_name": users.get(getattr(t, 'assignee', None), 'Не назначен')
+    } for t in tasks]
 
 class TaskCreate(BaseModel):
     title: str
+    description: Optional[str] = None
     due_date: Optional[date] = None
+    is_done: bool = False
+    priority: str = 'Обычный'
+    assignee: Optional[str] = None
+
 
 @app.post("/api/tasks", status_code=201)
-def create_task(body: TaskCreate,
-                db: DBSession = Depends(get_db),
-                _=Depends(get_current_user)):
-    task = Task(title=body.title, due_date=body.due_date)
+def create_task(body: TaskCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    task = Task(**body.dict())
     db.add(task)
     db.commit()
     db.refresh(task)
-    _cache.invalidate()
+    _cache.invalidate('tasks')
     return {"id": task.id, "title": task.title}
+
+@app.patch("/api/tasks/{task_id}")
+def update_task(task_id: int, body: TaskCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    task = db.query(Task).get(task_id)
+    if not task: raise HTTPException(404)
+    for k, v in body.dict(exclude_unset=True).items():
+        setattr(task, k, v)
+    db.commit()
+    _cache.invalidate('tasks')
+    return {"ok": True}
+
+@app.delete("/api/tasks/{task_id}", status_code=204)
+def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    task = db.query(Task).get(task_id)
+    if task: db.delete(task); db.commit(); _cache.invalidate('tasks')
+    return
 
 
 @app.get("/api/expenses")
-def get_expenses(year: Optional[int] = None,
-                 db: DBSession = Depends(get_db),
-                 _=Depends(get_current_user)):
-    cache_key = f"expenses:{year}"
-    cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
-
+def get_expenses(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     q = db.query(Expense).outerjoin(Expense.category).order_by(Expense.date.desc())
     if year:
         q = q.filter(extract("year", Expense.date) == year)
-
-    result = {"expenses": [{
-        "id":       e.id,
-        "name":     e.name,
-        "amount":   e.amount,
+    return [{
+        "id": e.id,
+        "name": e.name,
+        "amount": e.amount,
         "category": e.category.name if e.category else "Без категории",
-        "date":     e.date.isoformat() if e.date else None,
-    } for e in q.all()]}
+        "date": e.date.isoformat() if e.date else None,
+    } for e in q.all()]
 
-    _cache.set(cache_key, result)
-    return result
+class ExpenseCreate(BaseModel):
+    name: str
+    amount: float
+    date: date
+    category: Optional[str] = None
+
+@app.post("/api/expenses", status_code=201)
+def create_expense(body: ExpenseCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    cat_id = None
+    if body.category:
+        cat = db.query(ExpenseCategory).filter(ExpenseCategory.name == body.category).first()
+        if not cat: cat = ExpenseCategory(name=body.category); db.add(cat); db.commit(); db.refresh(cat)
+        cat_id = cat.id
+    exp = Expense(name=body.name, amount=body.amount, date=body.date, category_id=cat_id)
+    db.add(exp); db.commit(); db.refresh(exp)
+    _cache.invalidate()
+    return {"id": exp.id}
+
+@app.patch("/api/expenses/{expense_id}")
+def update_expense(expense_id: int, body: ExpenseCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    exp = db.query(Expense).get(expense_id)
+    if not exp: raise HTTPException(404)
+    cat_id = None
+    if body.category:
+        cat = db.query(ExpenseCategory).filter(ExpenseCategory.name == body.category).first()
+        if not cat: cat = ExpenseCategory(name=body.category); db.add(cat); db.commit(); db.refresh(cat)
+        cat_id = cat.id
+    exp.name=body.name; exp.amount=body.amount; exp.date=body.date; exp.category_id=cat_id
+    db.commit()
+    _cache.invalidate()
+    return {"ok": True}
+
+@app.delete("/api/expenses/{expense_id}", status_code=204)
+def delete_expense(expense_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    exp = db.query(Expense).get(expense_id)
+    if exp: db.delete(exp); db.commit(); _cache.invalidate()
+    return
+
+@app.get("/api/expense-categories")
+def get_expense_categories(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    return db.query(ExpenseCategory).all()
 
 
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("equipment")
-    if cached is not None:
-        return cached
-
-    result = [{"id": e.id, "name": e.name, "model": e.model or "", "status": e.status or "active"}
-              for e in db.query(Equipment).order_by(Equipment.name).all()]
+    if cached is not None: return cached
+    result = db.query(Equipment).order_by(Equipment.name).all()
     _cache.set("equipment", result)
     return result
-
 
 @app.get("/api/services")
 def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("services")
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
+    
+    # This is a simplified version. A real app might have a dedicated Service model.
+    try: db.execute(text("SELECT 1 FROM services LIMIT 1"))
+    except Exception: return []
 
-    try:
-        db.execute(text("SELECT 1 FROM services LIMIT 1"))
-    except Exception:
-        return []
-
-    meta = MetaData()
-    meta.reflect(bind=engine, only=["services", "service_categories"])
-    if "services" not in meta.tables:
-        return []
-
-    svc = meta.tables["services"]
-    cat = meta.tables.get("service_categories")
-    result = []
-    for r in db.execute(svc.select()).fetchall():
-        row = dict(r._mapping)
-        category = ""
-        if cat is not None and row.get("category_id"):
-            crow = db.execute(cat.select().where(cat.c.id == row["category_id"])).fetchone()
-            if crow:
-                category = dict(crow._mapping).get("name", "")
-        result.append({"id": row.get("id"), "name": row.get("name", ""),
-                        "category": category, "price": row.get("price", 0),
-                        "unit": row.get("unit", "")})
+    meta = MetaData(); meta.reflect(bind=engine, only=["services"])
+    if "services" not in meta.tables: return []
+    svc_table = meta.tables["services"]
+    result = [dict(r._mapping) for r in db.execute(svc_table.select()).fetchall()]
     _cache.set("services", result)
     return result
 
@@ -522,117 +646,95 @@ def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
 @app.get("/api/consumables")
 def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cached = _cache.get("consumables")
-    if cached is not None:
-        return cached
-
-    result = [{"id": c.id, "name": c.name, "stock_quantity": c.stock_quantity, "unit": c.unit}
-              for c in db.query(Consumable).order_by(Consumable.name).all()]
+    if cached is not None: return cached
+    result = db.query(Consumable).order_by(Consumable.name).all()
     _cache.set("consumables", result)
     return result
 
-
 @app.get("/api/contacts")
 def get_contacts(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    cached = _cache.get("contacts")
-    if cached is not None:
-        return cached
+    return db.query(Contact).order_by(Contact.name).all()
 
-    result = [{"id": c.id, "name": c.name, "phone": c.phone}
-              for c in db.query(Contact).order_by(Contact.name).all()]
-    _cache.set("contacts", result)
-    return result
+@app.post("/api/contacts", status_code=201)
+def create_contact(body: dict, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    c = Contact(name=body['name'], phone=body.get('phone'), source=body.get('source'))
+    db.add(c); db.commit(); db.refresh(c); _cache.invalidate()
+    return c
+
+@app.patch("/api/contacts/{contact_id}")
+def update_contact(contact_id: int, body: dict, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    c = db.query(Contact).get(contact_id)
+    if not c: raise HTTPException(404)
+    c.name=body['name']; c.phone=body.get('phone'); c.source=body.get('source')
+    db.commit(); _cache.invalidate()
+    return {"ok": True}
+
+@app.delete("/api/contacts/{contact_id}", status_code=204)
+def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    c = db.query(Contact).get(contact_id)
+    if c: db.delete(c); db.commit(); _cache.invalidate()
+    return
+
+
+@app.get("/api/maintenance")
+def get_maintenance_history(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    # This part is complex and depends on how Maintenance is stored. 
+    # Assuming a simple placeholder for now as the model isn't defined.
+    return []
 
 
 # ── 9. НАЛОГИ ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/taxes/summary")
-def get_tax_summary(year: Optional[int] = None,
-                    db: DBSession = Depends(get_db),
-                    _=Depends(get_current_user)):
-    """
-    Рассчитывает налог по УСН (доходы):
-    - Берёт сумму всех сделок в статусе 'success' за год
-    - Умножает на TAX_RATE (по умолчанию 6%)
-    - Вычитает уже уплаченные платежи за тот же год
-    - Возвращает: налоговая база, начислено, уплачено, остаток к уплате
-    """
+def get_tax_summary(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cache_key = f"taxes_summary:{year}"
     cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
+    if cached is not None: return cached
 
-    # Успешные сделки
     success_stage = db.query(Stage).filter(Stage.type == "success").first()
-    q = db.query(Deal).filter(Deal.stage_id == success_stage.id) if success_stage else db.query(Deal).filter(False)
-    if year:
-        q = q.filter(extract("year", Deal.deal_date) == year)
-    revenue = sum(d.total or 0 for d in q.all())
+    if not success_stage: raise HTTPException(500, "Success stage not configured")
+    
+    revenue_q = db.query(Deal).filter(Deal.stage_id == success_stage.id, extract("year", Deal.deal_date) == year)
+    revenue = sum(d.total or 0 for d in revenue_q.all())
     tax_accrued = round(revenue * TAX_RATE, 2)
 
-    # Уже уплаченные платежи
-    pq = db.query(TaxPayment)
-    if year:
-        pq = pq.filter(TaxPayment.year == year)
-    paid = round(sum(p.amount for p in pq.all()), 2)
+    paid_q = db.query(TaxPayment).filter(TaxPayment.year == year)
+    paid = sum(p.amount for p in paid_q.all())
 
     result = {
-        "year":        year,
-        "tax_rate":    TAX_RATE,
-        "revenue":     round(revenue, 2),
-        "tax_accrued": tax_accrued,
-        "paid":        paid,
-        "balance":     round(tax_accrued - paid, 2),
+        "year": year, "tax_rate": TAX_RATE, "revenue": round(revenue, 2),
+        "tax_accrued": tax_accrued, "paid": round(paid, 2),
+        "balance": round(tax_accrued - paid, 2),
     }
     _cache.set(cache_key, result)
     return result
 
 
 @app.get("/api/taxes/payments")
-def get_tax_payments(year: Optional[int] = None,
-                     db: DBSession = Depends(get_db),
-                     _=Depends(get_current_user)):
+def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     cache_key = f"taxes_payments:{year}"
     cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    q = db.query(TaxPayment).order_by(TaxPayment.date.desc())
-    if year:
-        q = q.filter(TaxPayment.year == year)
-
+    if cached is not None: return cached
+    
+    q = db.query(TaxPayment).filter(TaxPayment.year == year).order_by(TaxPayment.date.desc())
     result = {"payments": [{
-        "id":     p.id,
-        "amount": p.amount,
-        "date":   p.date.isoformat() if p.date else None,
-        "note":   p.note or "",
-        "year":   p.year,
+        "id": p.id, "amount": p.amount, "date": p.date.isoformat(),
+        "note": p.note or "", "year": p.year
     } for p in q.all()]}
-
     _cache.set(cache_key, result)
     return result
 
-
 class TaxPaymentCreate(BaseModel):
     amount: float
-    date: Optional[date] = None
+    date: date
     note: Optional[str] = None
     year: int
 
 @app.post("/api/taxes/payments", status_code=201)
-def create_tax_payment(body: TaxPaymentCreate,
-                       db: DBSession = Depends(get_db),
-                       _=Depends(get_current_user)):
-    if body.amount <= 0:
-        raise HTTPException(400, "Сумма должна быть положительной")
-    payment = TaxPayment(
-        amount=body.amount,
-        date=body.date or date.today(),
-        note=body.note,
-        year=body.year,
-    )
-    db.add(payment)
-    db.commit()
-    db.refresh(payment)
+def create_tax_payment(body: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    if body.amount <= 0: raise HTTPException(400, "Сумма должна быть положительной")
+    payment = TaxPayment(**body.dict())
+    db.add(payment); db.commit(); db.refresh(payment)
     _cache.invalidate(f"taxes_summary:{body.year}", f"taxes_payments:{body.year}")
     return {"id": payment.id, "amount": payment.amount}
 
@@ -640,10 +742,10 @@ def create_tax_payment(body: TaxPaymentCreate,
 # ── 10. СБРОС КЭША ────────────────────────────────────────────────────────────
 
 @app.post("/api/cache/invalidate")
-def invalidate_cache(request: Request, _=Depends(get_current_user)):
+def invalidate_cache(_=Depends(get_current_user)):
     _cache.invalidate()
     print("Cache invalidated manually.", flush=True)
-    return {"status": "ok", "message": "Кэш сброшен. Следующий запрос обновит данные из БД."}
+    return {"status": "ok", "message": "Кэш сброшен."}
 
 
 # ── 11. ФРОНТЕНД ──────────────────────────────────────────────────────────────
