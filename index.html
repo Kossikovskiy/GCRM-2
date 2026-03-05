@@ -242,7 +242,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 #service-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column;}
 #service-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px;}
 #service-search-results{overflow-y:auto;padding:8px;}
-.service-result-item{display:flex;justify-content:space-between;padding:12px 16px;cursor:pointer;border-radius:8px;}
+.service-result-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;border-radius:8px;}
 .service-result-item:hover{background:var(--surface2);}
 .service-result-name{font-weight:500;}
 .service-result-price{color:var(--fern);}
@@ -389,7 +389,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
-    <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
+    <table><thead><tr><th>#</th><th>Наименование</th><th>Цена</th><th>Ед. изм.</th></tr></thead><tbody id="services-tbody"></tbody></table>
   </div>
 </div>
 
@@ -516,7 +516,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <div class="overlay" id="service-selector-modal" onclick="if(event.target===this)closeServiceSelectorModal()">
     <div class="modal" style="max-width: 600px;">
         <div class="modal-content">
-            <input type="text" id="service-search-input" placeholder="🔍 Поиск по названию или категории..." onkeyup="renderServiceSelectorResults()">
+            <input type="text" id="service-search-input" placeholder="🔍 Поиск по названию..." onkeyup="renderServiceSelectorResults()">
             <div id="service-search-results"></div>
         </div>
     </div>
@@ -763,10 +763,7 @@ function closeServiceSelectorModal() {
 function renderServiceSelectorResults() {
     const searchTerm = document.getElementById('service-search-input').value.toLowerCase();
     const resultsContainer = document.getElementById('service-search-results');
-    const filteredServices = _services.filter(s => 
-        s.name.toLowerCase().includes(searchTerm) || 
-        (s.category && s.category.toLowerCase().includes(searchTerm))
-    );
+    const filteredServices = _services.filter(s => s.name.toLowerCase().includes(searchTerm));
 
     if (filteredServices.length === 0) {
         resultsContainer.innerHTML = `<div class="empty-txt" style="padding: 24px;">Ничего не найдено</div>`;
@@ -775,10 +772,7 @@ function renderServiceSelectorResults() {
 
     resultsContainer.innerHTML = filteredServices.map(s => `
         <div class="service-result-item" onclick="selectService(${s.id})">
-            <div>
-                <div class="service-result-name">${s.name}</div>
-                <div class="cat-tag" style="margin-top: 4px;">${s.category || 'Без категории'}</div>
-            </div>
+            <div class="service-result-name">${s.name}</div>
             <div class="service-result-price">${fmt(s.price)}</div>
         </div>
     `).join('');
@@ -906,7 +900,7 @@ function renderEquipment(eq=[]){
 function renderServices(services=[]){
   const tb=document.getElementById('services-tbody'),cnt=document.getElementById('services-count');
   if(cnt)cnt.textContent=services.length?services.length+' услуг':'';
-  tb.innerHTML=services.length?services.map(s=>`<tr><td>${s.id}</td><td style="color:var(--ink);font-weight:400">${s.name}</td><td><span class="cat-tag">${s.category||'—'}</span></td><td><span class="money">${fmt(s.price)}</span></td><td style="color:var(--ink4);font-size:11px">${s.unit}</td></tr>`).join(''):empty(5,'Услуг не найдено')
+  tb.innerHTML=services.length?services.map(s=>`<tr><td>${s.id}</td><td style="color:var(--ink);font-weight:400">${s.name}</td><td><span class="money">${fmt(s.price)}</span></td><td style="color:var(--ink4);font-size:11px">${s.unit}</td></tr>`).join(''):empty(4,'Услуг не найдено')
 }
 
 function renderConsumables(items=[]){
@@ -951,7 +945,7 @@ async function loadData(year){
   STAGES=data.stages||[];
   _contacts=data.contacts||[];
   _services=data.services||[];
-  const deals=data.deals?.deals||[],expenses=data.expenses||[],equipment=data.equipment||[];
+  const deals=data.deals?.deals||[],expenses=data.expenses?.expenses||[],equipment=data.equipment||[];
   renderKanban(deals);renderTasks(data.tasks?.tasks||[]);renderExpenses(expenses);
   renderEquipment(equipment);renderServices(data.services||[]);renderConsumables(data.consumables||[]);renderContacts(data.contacts||[]);
   buildDash(deals,expenses,equipment);

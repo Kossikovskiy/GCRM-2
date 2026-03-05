@@ -84,7 +84,7 @@ class User(Base):
 
 class Service(Base):
     __tablename__ = "services"
-    id, name, category, price, unit = Column(Integer, primary_key=True), Column(String(200), nullable=False), Column(String(100)), Column(Float, default=0.0), Column(String(50), default="шт")
+    id, name, price, unit = Column(Integer, primary_key=True), Column(String(200), nullable=False), Column(Float, default=0.0), Column(String(50), default="шт")
 
 class DealService(Base):
     __tablename__ = "deal_services"
@@ -151,12 +151,12 @@ def init_and_seed_db():
                 s.add_all([ExpenseCategory(name=n) for n in ["Техника", "Топливо", "Расходники", "Реклама", "Запчасти", "Прочее"]])
             if s.query(Service).count() == 0:
                 s.add_all([Service(**d) for d in [
-                    {"name":"Покос бурьяна/высокой травы","category":"Покос","price":1500,"unit":"сотка"},
-                    {"name":"Покос газона","category":"Покос","price":800,"unit":"сотка"},
-                    {"name":"Стрижка кустарника","category":"Благоустройство","price":500,"unit":"м.п."},
-                    {"name":"Вспашка земли мотоблоком","category":"Благоустройство","price":2000,"unit":"сотка"},
-                    {"name":"Спил дерева","category":"Благоустройство","price":1500,"unit":"шт"},
-                    {"name":"Вывоз мусора","category":"Прочее","price":3000,"unit":"рейс"}
+                    {"name":"Покос бурьяна/высокой травы","price":1500,"unit":"сотка"},
+                    {"name":"Покос газона","price":800,"unit":"сотка"},
+                    {"name":"Стрижка кустарника","price":500,"unit":"м.п."},
+                    {"name":"Вспашка земли мотоблоком","price":2000,"unit":"сотка"},
+                    {"name":"Спил дерева","price":1500,"unit":"шт"},
+                    {"name":"Вывоз мусора","price":3000,"unit":"рейс"}
                 ]])
             s.commit()
     except Exception as e:
@@ -166,9 +166,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.8-final)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.9-fix)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.8.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.9.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -362,4 +362,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.8-final) loaded.", flush=True)
+print(f"main.py (v4.9-fix) loaded.", flush=True)
