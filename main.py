@@ -94,6 +94,7 @@ class MaintenanceConsumable(Base): __tablename__="maintenance_consumables"; id=C
 class EquipmentMaintenance(Base): __tablename__ = "equipment_maintenance"; id=Column(Integer,primary_key=True); equipment_id=Column(Integer,ForeignKey("equipment.id",ondelete="CASCADE"),nullable=False); date=Column(Date,nullable=False); work_description=Column(Text,nullable=False); cost=Column(Float); notes=Column(Text); equipment = relationship("Equipment", back_populates="maintenance_records"); consumables_used = relationship("MaintenanceConsumable", back_populates="maintenance_record", cascade="all, delete-orphan")
 class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost=Column(Date),Column(Double,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); engine_hours=Column(Double,default=0.0); fuel_norm=Column(Double,default=0.0); last_maintenance_date=Column(Date); next_maintenance_date=Column(Date); expenses=relationship("Expense",back_populates="equipment"); maintenance_records = relationship("EquipmentMaintenance", back_populates="equipment", cascade="all, delete-orphan")
 class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Integer,primary_key=True),Column(Date,nullable=False,default=date.today),Column(String(300),nullable=False),Column(Float,nullable=False); category_id,equipment_id=Column(Integer,ForeignKey("expense_categories.id")),Column(Integer,ForeignKey("equipment.id")); category=relationship("ExpenseCategory",back_populates="expenses"); equipment=relationship("Equipment",back_populates="expenses")
+class TaxPayment(Base): __tablename__ = "tax_payments"; id=Column(Integer,primary_key=True); amount=Column(Double,nullable=False); payment_date=Column(Date,nullable=False); created_at=Column(DateTime,default=datetime.utcnow)
 
 def init_db_structure(): Base.metadata.create_all(engine)
 def seed_initial_data(s: DBSession):
@@ -148,9 +149,11 @@ class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_descript
 class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
 class ExpenseCreate(BaseModel): name: str; amount: float; date: date; category: str
 class ExpenseUpdate(BaseModel): name: Optional[str] = None; amount: Optional[float] = None; date: Optional[date] = None; category: Optional[str] = None
+class TaxPaymentCreate(BaseModel): amount: float; payment_date: date
 
 
 # --- Response Models to prevent serialization cycles ---
+class TaxPaymentResponse(BaseModel): id: int; amount: float; payment_date: date; created_at: datetime; model_config = ConfigDict(from_attributes=True)
 class EquipmentForMaintResponse(BaseModel):
     id: int; name: str
     model_config = ConfigDict(from_attributes=True)
@@ -181,13 +184,13 @@ class EquipmentResponse(BaseModel):
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v11.6)...",flush=True)
+    print("App starting (v11.7)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.6.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.7.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -246,13 +249,13 @@ def update_service(service_id: int, data: ServiceUpdate, db: DBSession = Depends
     if not item: raise HTTPException(404, "Услуга не найдена")
     for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
-    _cache.invalidate("services", "deals"); return item
+    _cache.invalidate(); return item
 @app.delete("/api/services/{service_id}", status_code=204)
 def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     if db.query(DealService).filter(DealService.service_id == service_id).count() > 0:
         raise HTTPException(400, "Нельзя удалить услугу, которая используется в сделках.")
     item = db.query(Service).filter(Service.id == service_id).first()
-    if item: db.delete(item); db.commit(); _cache.invalidate("services")
+    if item: db.delete(item); db.commit(); _cache.invalidate()
     return None
 
 # --- DEALS ---
@@ -310,7 +313,7 @@ def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depend
     )
     db.add(new_deal)
     db.commit()
-    _cache.invalidate("deals", "years")
+    _cache.invalidate()
     return {"status": "ok"}
 
 @app.get("/api/deals/{deal_id}")
@@ -396,13 +399,13 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     if "manager" in update_data: deal.manager = update_data["manager"]
 
     db.commit()
-    _cache.invalidate("deals", "years")
+    _cache.invalidate()
     return {"status": "ok"}
 
 @app.delete("/api/deals/{deal_id}", status_code=204)
 def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     deal=db.query(Deal).filter(Deal.id==deal_id).first()
-    if deal: db.delete(deal); db.commit(); _cache.invalidate("deals","years")
+    if deal: db.delete(deal); db.commit(); _cache.invalidate()
     return None
 
 # --- CONTACTS ---
@@ -431,7 +434,7 @@ def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession =
     for key, value in update_data.items(): setattr(contact, key, value)
     
     db.commit(); db.refresh(contact)
-    _cache.invalidate("contacts", "deals"); return contact
+    _cache.invalidate(); return contact
 
 @app.delete("/api/contacts/{contact_id}", status_code=204)
 def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -440,7 +443,7 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
     if db.query(Deal).filter(Deal.contact_id == contact_id).count() > 0:
         raise HTTPException(status_code=400, detail="Нельзя удалить контакт, к которому привязаны сделки.")
     db.delete(contact); db.commit()
-    _cache.invalidate("contacts"); return None
+    _cache.invalidate(); return None
 
 # --- EXPENSES ---
 @app.get("/api/expense-categories")
@@ -461,8 +464,7 @@ def create_expense(data: ExpenseCreate, db: DBSession = Depends(get_db), _=Depen
 
     new_expense = Expense(name=data.name, amount=data.amount, date=data.date, category_id=category.id if category else None)
     db.add(new_expense); db.commit(); db.refresh(new_expense)
-    _cache.invalidate("expenses", "years")
-    return new_expense
+    _cache.invalidate(); return new_expense
 
 @app.patch("/api/expenses/{expense_id}")
 def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -484,13 +486,12 @@ def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends
     for key, value in update_data.items(): setattr(expense, key, value)
     
     db.commit(); db.refresh(expense)
-    _cache.invalidate("expenses", "years")
-    return expense
+    _cache.invalidate(); return expense
 
 @app.delete("/api/expenses/{expense_id}", status_code=204)
 def delete_expense(expense_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    if expense: db.delete(expense); db.commit(); _cache.invalidate("expenses", "years")
+    if expense: db.delete(expense); db.commit(); _cache.invalidate()
     return None
 
 @app.get("/api/expenses")
@@ -498,6 +499,55 @@ def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_curre
     q = db.query(Expense).options(joinedload(Expense.category)).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
     return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
 
+# --- TAXES ---
+@app.get("/api/taxes/summary")
+def get_tax_summary(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    successful_stage = db.query(Stage).filter(func.lower(Stage.name).like('%успешно%'), Stage.is_final == True).first()
+    if not successful_stage:
+        raise HTTPException(status_code=404, detail="Не найден успешный этап воронки. Проверьте настройки.")
+
+    successful_deals = db.query(Deal).options(joinedload(Deal.services)).filter(Deal.stage_id == successful_stage.id).all()
+    
+    total_tax_from_deals = 0
+    for deal in successful_deals:
+        subtotal = sum(ds.price_at_moment * ds.quantity for ds in deal.services)
+        discount_percent = deal.discount or 0
+        tax_rate_percent = deal.tax_rate or 0
+
+        discount_amount = subtotal * (discount_percent / 100.0)
+        subtotal_after_discount = subtotal - discount_amount
+
+        tax_amount = 0
+        if deal.tax_included:
+            tax_base = subtotal_after_discount / (1 + tax_rate_percent / 100.0)
+            tax_amount = subtotal_after_discount - tax_base
+        else:
+            tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
+        
+        total_tax_from_deals += tax_amount
+
+    total_payments = db.query(func.sum(TaxPayment.amount)).scalar() or 0.0
+    
+    tax_due = total_tax_from_deals - total_payments
+    
+    return {
+        "total_tax_from_deals": round(total_tax_from_deals, 2),
+        "total_payments": round(total_payments, 2),
+        "tax_due": round(tax_due, 2)
+    }
+
+@app.get("/api/taxes/payments", response_model=List[TaxPaymentResponse])
+def get_tax_payments(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    return db.query(TaxPayment).order_by(TaxPayment.payment_date.desc()).all()
+
+@app.post("/api/taxes/payments", status_code=201, response_model=TaxPaymentResponse)
+def create_tax_payment(payment_data: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    new_payment = TaxPayment(**payment_data.model_dump())
+    db.add(new_payment)
+    db.commit()
+    db.refresh(new_payment)
+    _cache.invalidate()
+    return new_payment
 
 # --- EQUIPMENT & MAINTENANCE ---
 @app.get("/api/equipment", response_model=List[EquipmentResponse])
@@ -515,12 +565,12 @@ def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get
     if not item: raise HTTPException(404, "Техника не найдена")
     for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
-    _cache.invalidate("equipment"); return item
+    _cache.invalidate(); return item
 
 @app.delete("/api/equipment/{eq_id}", status_code=204)
 def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
-    if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
+    if item: db.delete(item); db.commit(); _cache.invalidate()
     return None
 
 @app.get("/api/maintenance", response_model=List[MaintenanceForListResponse])
@@ -557,7 +607,7 @@ def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_
         db.commit()
         db.refresh(new_item)
         update_equipment_last_maintenance(db, data.equipment_id)
-        _cache.invalidate("consumables", "equipment", "maintenance")
+        _cache.invalidate()
         return new_item
     except:
         db.rollback()
@@ -595,7 +645,7 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
         db.commit()
         db.refresh(m_record)
         update_equipment_last_maintenance(db, m_record.equipment_id)
-        _cache.invalidate("consumables", "equipment", "maintenance")
+        _cache.invalidate()
         return m_record
     except:
         db.rollback()
@@ -614,7 +664,7 @@ def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends
             db.delete(item)
             db.commit()
             update_equipment_last_maintenance(db, equipment_id)
-            _cache.invalidate("consumables", "equipment", "maintenance")
+            _cache.invalidate()
     except:
         db.rollback()
         raise
@@ -637,14 +687,14 @@ def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(ge
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
-    _cache.invalidate("consumables"); return item
+    _cache.invalidate(); return item
 
 @app.delete("/api/consumables/{c_id}", status_code=204)
 def delete_consumable(c_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     if db.query(MaintenanceConsumable).filter(MaintenanceConsumable.consumable_id == c_id).count() > 0:
         raise HTTPException(400, "Нельзя удалить расходник, который используется в записях о ТО.")
     item = db.query(Consumable).filter(Consumable.id == c_id).first()
-    if item: db.delete(item); db.commit(); _cache.invalidate("consumables")
+    if item: db.delete(item); db.commit(); _cache.invalidate()
 
 # --- OTHER ---
 @app.get("/api/years")
@@ -691,4 +741,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.6) loaded.", flush=True)
+print(f"main.py (v11.7) loaded.", flush=True)
