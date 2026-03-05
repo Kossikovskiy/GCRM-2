@@ -5,16 +5,9 @@ After=network.target
 [Service]
 User=root
 Group=www-data
-
-# Указываем рабочую директорию, где лежит проект
 WorkingDirectory=/var/www/crm/GCRM-2
-
-# Указываем systemd на файл с переменными окружения
 EnvironmentFile=/var/www/crm/GCRM-2/.env
-
-# Команда для запуска
 ExecStart=/var/www/crm/GCRM-2/start.sh
-
 Restart=always
 
 [Install]
