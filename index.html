@@ -739,7 +739,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <div class="modal-row">
             <button class="btn-sec btn-del-modal" id="btn-consumable-delete" style="display:none;">УДАЛИТЬ</button>
             <button class="btn-sec" onclick="closeConsumableModal()">ОТМЕНА</button>
-            <button class="btn-pri" id="btn-consumable-save">СОХРАНИТЬ</button>
+            <button class="btn-pri" id="btn-consumable-save">СОЗДАТЬ</button>
         </div>
     </div>
 </div>
@@ -766,7 +766,9 @@ async function api(ep,opts={}){
     const r=await fetch(`${API_BASE}${ep}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
     if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
     if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP Error ${r.status}`)}
-    return r.status===204?null:r.json()
+    if (r.status === 204) return null;
+    const text = await r.text();
+    return text ? JSON.parse(text) : null;
   }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
 }
 
