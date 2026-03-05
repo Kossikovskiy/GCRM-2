@@ -104,6 +104,9 @@ class ConsumableUpdate(BaseModel): name: Optional[str] = None; unit: Optional[st
 class MaintenanceConsumableItem(BaseModel): consumable_id: int; quantity: float
 class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_description: str; notes: Optional[str]=None; consumables: List[MaintenanceConsumableItem] = []
 class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
+class ExpenseCreate(BaseModel): name: str; amount: float; date: date; category: str
+class ExpenseUpdate(BaseModel): name: Optional[str] = None; amount: Optional[float] = None; date: Optional[date] = None; category: Optional[str] = None
+
 
 # --- Response Models to prevent serialization cycles ---
 class EquipmentForMaintResponse(BaseModel):
@@ -136,13 +139,13 @@ class EquipmentResponse(BaseModel):
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v11.3)...",flush=True)
+    print("App starting (v11.4)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.3.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.4.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -325,6 +328,63 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
         raise HTTPException(status_code=400, detail="Нельзя удалить контакт, к которому привязаны сделки.")
     db.delete(contact); db.commit()
     _cache.invalidate("contacts"); return None
+
+# --- EXPENSES ---
+@app.get("/api/expense-categories")
+def get_expense_categories(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    return db.query(ExpenseCategory).order_by(ExpenseCategory.name).all()
+
+@app.post("/api/expenses", status_code=201)
+def create_expense(data: ExpenseCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    category_name = data.category.strip()
+    category = None
+    if category_name:
+        category = db.query(ExpenseCategory).filter(func.lower(ExpenseCategory.name) == func.lower(category_name)).first()
+        if not category:
+            category = ExpenseCategory(name=category_name)
+            db.add(category)
+            db.flush()
+            _cache.invalidate("expense_categories")
+
+    new_expense = Expense(name=data.name, amount=data.amount, date=data.date, category_id=category.id if category else None)
+    db.add(new_expense); db.commit(); db.refresh(new_expense)
+    _cache.invalidate("expenses", "years")
+    return new_expense
+
+@app.patch("/api/expenses/{expense_id}")
+def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense: raise HTTPException(404, "Расход не найден")
+    
+    update_data = data.model_dump(exclude_unset=True)
+    if "category" in update_data:
+        category_name = update_data.pop("category").strip()
+        category = None
+        if category_name:
+            category = db.query(ExpenseCategory).filter(func.lower(ExpenseCategory.name) == func.lower(category_name)).first()
+            if not category:
+                category = ExpenseCategory(name=category_name)
+                db.add(category); db.flush()
+                _cache.invalidate("expense_categories")
+        expense.category_id = category.id if category else None
+
+    for key, value in update_data.items(): setattr(expense, key, value)
+    
+    db.commit(); db.refresh(expense)
+    _cache.invalidate("expenses", "years")
+    return expense
+
+@app.delete("/api/expenses/{expense_id}", status_code=204)
+def delete_expense(expense_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    if expense: db.delete(expense); db.commit(); _cache.invalidate("expenses", "years")
+    return None
+
+@app.get("/api/expenses")
+def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(Expense).options(joinedload(Expense.category)).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
+    return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
+
 
 # --- EQUIPMENT & MAINTENANCE ---
 @app.get("/api/equipment", response_model=List[EquipmentResponse])
@@ -513,14 +573,9 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
     task = db.query(Task).filter(Task.id == task_id).first()
     if task: db.delete(task); db.commit(); _cache.invalidate("tasks")
 
-@app.get("/api/expenses")
-def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
-    return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
-
 @app.get("/{full_path:path}", response_class=FileResponse)
 async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.3) loaded.", flush=True)
+print(f"main.py (v11.4) loaded.", flush=True)
