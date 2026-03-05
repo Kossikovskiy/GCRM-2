@@ -15,8 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Float, Date,
-    DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
+    create_engine, Column, Integer, String, Float, Date, DateTime, 
+    Boolean, ForeignKey, Text, text, MetaData, extract, Double
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, joinedload
 from pydantic import BaseModel, Field
@@ -40,9 +40,8 @@ class _Cache:
     def __init__(self, ttl: int):
         self._ttl, self._data, self._ts, self._lock = ttl, {}, {}, threading.Lock()
     def get(self, key: str):
-        with self._lock:
-            if key not in self._data or _time.monotonic() - self._ts[key] > self._ttl: return None
-            return self._data[key]
+        if key not in self._data or _time.monotonic() - self._ts[key] > self._ttl: return None
+        return self._data[key]
     def set(self, key: str, value):
         with self._lock: self._data[key], self._ts[key] = value, _time.monotonic()
     def invalidate(self, *keys):
@@ -68,57 +67,17 @@ class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Int
 class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id"),nullable=False),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
 class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта")
 class ExpenseCategory(Base): __tablename__="expense_categories"; id,name=Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True); expenses=relationship("Expense",back_populates="category")
-class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost,engine_hours=Column(Date),Column(Float,default=0.0),Column(Float,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); expenses=relationship("Expense",back_populates="equipment")
+class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost=Column(Date),Column(Double,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); engine_hours=Column(Double,default=0.0); fuel_norm=Column(Double,default=0.0); last_maintenance_date=Column(Date); next_maintenance_date=Column(Date); expenses=relationship("Expense",back_populates="equipment"); maintenance_records = relationship("EquipmentMaintenance", back_populates="equipment", cascade="all, delete-orphan")
+class EquipmentMaintenance(Base): __tablename__ = "equipment_maintenance"; id=Column(Integer,primary_key=True); equipment_id=Column(Integer,ForeignKey("equipment.id",ondelete="CASCADE"),nullable=False); date=Column(Date,nullable=False); work_description=Column(Text,nullable=False); cost=Column(Double); notes=Column(Text); equipment = relationship("Equipment", back_populates="maintenance_records")
 class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Integer,primary_key=True),Column(Date,nullable=False,default=date.today),Column(String(300),nullable=False),Column(Float,nullable=False); category_id,equipment_id=Column(Integer,ForeignKey("expense_categories.id")),Column(Integer,ForeignKey("equipment.id")); category=relationship("ExpenseCategory",back_populates="expenses"); equipment=relationship("Equipment",back_populates="expenses")
 class Consumable(Base): __tablename__="consumables"; id,name,unit,stock_quantity,notes=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"),Column(Float,default=0.0),Column(Text)
 
-def init_and_seed_db():
-    Base.metadata.create_all(engine)
-    with SessionFactory() as s:
-        if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
-        if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
-        if s.query(Service).count()==0:
-            seed_services = [
-                {"name":"Стандартный покос","unit":"соток","price":790,"min_volume":1,"notes":"Трава до 30 см. Цена за 1 сотку"},
-                {"name":"Запущенный покос (30-60 см)","unit":"соток","price":950,"min_volume":1,"notes":"Высокая трава, доп. усилие"},
-                {"name":"Сильно запущенный (>60 см)","unit":"соток","price":1200,"min_volume":1,"notes":"Очень высокая или плотная трава"},
-                {"name":"Покос борщевика","unit":"соток","price":1300,"min_volume":3,"notes":"Спец. защита, доп. средства"},
-                {"name":"Покос вдоль забора / обочина","unit":"п.м.","price":50,"min_volume":20,"notes":"Погонный метр обочины/периметра"},
-                {"name":"Еженедельное обслуживание (абонемент)","unit":"соток/мес","price":2800,"min_volume":5,"notes":"Скидка ~15% от разового тарифа"},
-                {"name":"Сбор скошенной травы","unit":"соток","price":790,"min_volume":1,"notes":"Ручной сбор в мешки после покоса"},
-                {"name":"Вывоз травы / мусора","unit":"соток","price":350,"min_volume":3,"notes":"Погрузка + вывоз. Объём до 1 прицепа на 10 соток"},
-                {"name":"Сбор листьев (осень)","unit":"соток","price":480,"min_volume":2,"notes":"Сбор в мешки, вывоз опционально"},
-                {"name":"Уборка участка (генеральная)","unit":"соток","price":1500,"min_volume":2,"notes":"Комплекс: трава+ветки+деревья"},
-                {"name":"Скарификация газона","unit":"соток","price":1000,"min_volume":1,"notes":"Прочёсывание дёрна, улучшение аэрации"},
-                {"name":"Аэрация газона","unit":"соток","price":1400,"min_volume":1,"notes":"Прокалывание почвы"},
-                {"name":"Прополка сорняков (ручная)","unit":"соток","price":1850,"min_volume":1,"notes":"Тщательная ручная прополка"},
-                {"name":"Культивация / рыхление","unit":"соток","price":1200,"min_volume":2,"notes":"Механическое рыхление почвы"},
-                {"name":"Посев газона","unit":"соток","price":2200,"min_volume":1,"notes":"Посев + полив (семена не включены)"},
-                {"name":"Засеивание (без семян)","unit":"соток","price":1500,"min_volume":1,"notes":"Только работа, семена заказчика"},
-                {"name":"Разравнивание участка","unit":"соток","price":1300,"min_volume":2,"notes":"Грубое выравнивание рельефа"},
-                {"name":"Обработка гербицидом (сорняки)","unit":"соток","price":550,"min_volume":5,"notes":"Химическая обработка от сорняков"},
-                {"name":"Обработка от клещей","unit":"соток","price":350,"min_volume":10,"notes":"Акарицид, сезонная защита"},
-                {"name":"Обработка парковки/твёрдых покрытий","unit":"м²","price":120,"min_volume":20,"notes":"Гербицид/мойка твёрдых поверхностей"},
-                {"name":"Спил дерева (до 5 м)","unit":"шт","price":2500,"min_volume":1,"notes":"Ствол до 30 см. Ветки укладываем на месте"},
-                {"name":"Спил дерева (5-10 м)","unit":"шт","price":4500,"min_volume":1,"notes":"Средние деревья, сложная разборка"},
-                {"name":"Выкорчёвывание пня / туй","unit":"шт","price":3500,"min_volume":1,"notes":"Включая засыпку ямы"},
-                {"name":"Обрезка кустарников","unit":"шт","price":400,"min_volume":5,"notes":"Формирующая обрезка"},
-                {"name":"Посадка однолетних цветов (клумба)","unit":"шт","price":250,"min_volume":10,"notes":"Петунии, бегонии, бархатцы и др. Без стоимости растений"},
-                {"name":"Посадка многолетних цветов","unit":"шт","price":380,"min_volume":5,"notes":"Розы, хосты, пионы и др. Без стоимости растений"},
-                {"name":"Посадка кустарника (малый, до 0.5 м)","unit":"шт","price":900,"min_volume":1,"notes":"Посадка с подготовкой ямы и удобрением"},
-                {"name":"Посадка кустарника (средний, 0.5-1.5 м)","unit":"шт","price":1800,"min_volume":1,"notes":"Включая яму, дренаж, полив после посадки"},
-                {"name":"Посадка крупного кустарника / живая изгородь","unit":"шт","price":3200,"min_volume":3,"notes":"Туи, сирень, боярышник. Включая разметку ряда"},
-                {"name":"Прополка клумбы (ручная)","unit":"м²","price":450,"min_volume":2,"notes":"Тщательная прополка, рыхление между растениями"},
-                {"name":"Прополка клумбы + мульчирование","unit":"м²","price":750,"min_volume":2,"notes":"Прополка + укладка мульчи 5-7 см (мульча включена)"},
-                {"name":"Подготовка клумбы под посадку","unit":"м²","price":600,"min_volume":2,"notes":"Перекопка, удаление сорняков, внесение удобрений"},
-                {"name":"Комплексный уход за клумбой (сезон)","unit":"м²/мес","price":1200,"min_volume":3,"notes":"Полив, прополка, подкормка — ежемесячно"},
-                {"name":"Удобрение газона (весна/осень, комплекс)","unit":"соток","price":1800,"min_volume":1,"notes":"~1100 Р минер. удобрение + 700 Р работа. NPK + микроэлементы"},
-                {"name":"Летняя азотная подкормка","unit":"соток","price":1400,"min_volume":1,"notes":"~700 Р удобрение + 700 Р работа. Стимуляция роста и цвета"},
-                {"name":"Аэрация + удобрение (комплекс)","unit":"соток","price":2800,"min_volume":1,"notes":"Сначала аэрация, затем внесение — максимальное усвоение"},
-                {"name":"Известкование (раскисление почвы)","unit":"соток","price":1600,"min_volume":1,"notes":"~900 Р доломитовая мука + 700 Р работа. Рекомендуется раз в 3 года"}
-            ]
-            s.add_all([Service(**d) for d in seed_services])
-        s.commit()
+def init_db_structure(): Base.metadata.create_all(engine)
+
+def seed_initial_data(s: DBSession):
+    if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
+    if s.query(ExpenseCategory).count()==0: s.add_all([ExpenseCategory(name=n) for n in ["Техника","Топливо","Расходники","Реклама","Запчасти","Прочее"]])
+    s.commit()
 
 # ── 5. МОДЕЛИ PYDANTIC ────────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
@@ -130,13 +89,22 @@ class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Opt
 class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None
 class ServiceCreate(BaseModel): name: str = Field(...,min_length=1); price: float; unit: str; min_volume: Optional[float]=1.0; notes: Optional[str]=None
 class ServiceUpdate(BaseModel): name: Optional[str]=Field(None,min_length=1); price: Optional[float]=None; unit: Optional[str]=None; min_volume: Optional[float]=None; notes: Optional[str]=None
-
+class EquipmentCreate(BaseModel): name: str; model: Optional[str]=None; serial: Optional[str]=None; purchase_date: Optional[date]=None; purchase_cost: Optional[float]=None; status: Optional[str]='active'; notes: Optional[str]=None; engine_hours: Optional[float]=None; fuel_norm: Optional[float]=None; last_maintenance_date: Optional[date]=None; next_maintenance_date: Optional[date]=None
+class EquipmentUpdate(BaseModel): name: Optional[str]=None; model: Optional[str]=None; serial: Optional[str]=None; purchase_date: Optional[date]=None; purchase_cost: Optional[float]=None; status: Optional[str]=None; notes: Optional[str]=None; engine_hours: Optional[float]=None; fuel_norm: Optional[float]=None; last_maintenance_date: Optional[date]=None; next_maintenance_date: Optional[date]=None
+class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_description: str; cost: Optional[float]=None; notes: Optional[str]=None
+class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; cost: Optional[float]=None; notes: Optional[str]=None
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(app: FastAPI): print("App starting (v8.0)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
+async def lifespan(app: FastAPI): 
+    print("App starting (v9.0)...",flush=True)
+    init_db_structure()
+    with SessionFactory() as db:
+        seed_initial_data(db)
+    yield
+    print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="8.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="9.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -179,7 +147,6 @@ def get_me(user:dict=Depends(get_current_user)): return user
 def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(User).all()
 @app.get("/api/stages")
 def get_stages(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
-
 @app.post("/api/cache/invalidate")
 def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate(); return {"status":"ok"}
 
@@ -291,15 +258,11 @@ def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)):
 
 @app.post("/api/contacts", status_code=201)
 def create_contact(contact_data: ContactCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    if contact_data.phone:
+    if contact_data.phone and contact_data.phone.strip():
         existing = db.query(Contact).filter(Contact.phone == contact_data.phone).first()
-        if existing:
-            raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
-    new_contact = Contact(**contact_data.dict())
-    db.add(new_contact)
-    db.commit(); db.refresh(new_contact)
-    _cache.invalidate("contacts")
-    return new_contact
+        if existing: raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
+    new_contact = Contact(**contact_data.dict()); db.add(new_contact); db.commit(); db.refresh(new_contact)
+    _cache.invalidate("contacts"); return new_contact
 
 @app.patch("/api/contacts/{contact_id}")
 def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -307,28 +270,69 @@ def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession =
     if not contact: raise HTTPException(status_code=404, detail="Контакт не найден")
     
     update_data = contact_data.dict(exclude_unset=True)
-    if "phone" in update_data and update_data["phone"]:
+    if "phone" in update_data and update_data["phone"] and update_data["phone"].strip():
         existing = db.query(Contact).filter(Contact.phone == update_data["phone"], Contact.id != contact_id).first()
         if existing: raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
 
-    for key, value in update_data.items():
-        setattr(contact, key, value)
+    for key, value in update_data.items(): setattr(contact, key, value)
     
     db.commit(); db.refresh(contact)
-    _cache.invalidate("contacts", "deals")
-    return contact
+    _cache.invalidate("contacts", "deals"); return contact
 
 @app.delete("/api/contacts/{contact_id}", status_code=204)
 def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
     if not contact: return None
-
     if db.query(Deal).filter(Deal.contact_id == contact_id).count() > 0:
         raise HTTPException(status_code=400, detail="Нельзя удалить контакт, к которому привязаны сделки.")
+    db.delete(contact); db.commit()
+    _cache.invalidate("contacts"); return None
 
-    db.delete(contact)
-    db.commit()
-    _cache.invalidate("contacts")
+# --- EQUIPMENT & MAINTENANCE ---
+@app.get("/api/equipment")
+def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
+
+@app.post("/api/equipment", status_code=201)
+def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    new_item = Equipment(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    _cache.invalidate("equipment"); return new_item
+
+@app.patch("/api/equipment/{eq_id}")
+def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Equipment).filter(Equipment.id == eq_id).first()
+    if not item: raise HTTPException(404, "Техника не найдена")
+    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
+    db.commit(); db.refresh(item)
+    _cache.invalidate("equipment"); return item
+
+@app.delete("/api/equipment/{eq_id}", status_code=204)
+def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Equipment).filter(Equipment.id == eq_id).first()
+    if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
+    return None
+
+@app.get("/api/equipment/{eq_id}/maintenance")
+def get_maintenance_history(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    return db.query(EquipmentMaintenance).filter(EquipmentMaintenance.equipment_id == eq_id).order_by(EquipmentMaintenance.date.desc()).all()
+
+@app.post("/api/maintenance", status_code=201)
+def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    new_item = EquipmentMaintenance(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
+    _cache.invalidate("equipment")
+    return new_item
+
+@app.patch("/api/maintenance/{m_id}")
+def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
+    if not item: raise HTTPException(404, "Запись о ТО не найдена")
+    for key, value in data.dict(exclude_unset=True).items(): setattr(item, key, value)
+    db.commit(); db.refresh(item)
+    _cache.invalidate("equipment"); return item
+
+@app.delete("/api/maintenance/{m_id}", status_code=204)
+def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(EquipmentMaintenance).filter(EquipmentMaintenance.id == m_id).first()
+    if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
     return None
 
 # --- OTHER ---
@@ -375,8 +379,7 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
 def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
     return [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
-@app.get("/api/equipment")
-def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
+
 @app.get("/api/consumables")
 def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Consumable).order_by(Consumable.name).all()
 
@@ -385,4 +388,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v8.0) loaded.", flush=True)
+print(f"main.py (v9.0) loaded.", flush=True)

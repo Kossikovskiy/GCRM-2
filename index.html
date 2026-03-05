@@ -151,6 +151,8 @@ td:first-child{color:var(--ink4);font-size:11px;width:44px}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
 tbody tr{cursor:pointer}
+tbody tr.selected td{background:var(--leaf)}
+html[data-theme=dark] tbody tr.selected td{background:var(--moss)}
 
 /* BADGE */
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.3px}
@@ -247,6 +249,8 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .service-result-item:hover{background:var(--surface2);}
 .service-result-name{font-weight:500;}
 .service-result-price{color:var(--fern);}
+
+#page-equipment-layout{display:grid;grid-template-columns:2fr 1fr;gap:24px}
 
 /* TOAST */
 .toast{
@@ -373,14 +377,28 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-equipment">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Парк техники</span></div>
-    <div class="ph-title">Техника <em>и инвентарь</em></div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
-    <table><thead><tr><th>#</th><th>Название</th><th>Модель</th><th>Статус</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
-  </div>
+    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+        <div>
+            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Парк</span></div>
+            <div class="ph-title">Учёт <em>техники</em></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-sec" id="btn-add-maintenance" onclick="openMaintenanceModal()" disabled>＋ ТО</button>
+            <button class="add-btn" onclick="openEquipmentModal()">＋ Техника</button>
+        </div>
+    </div>
+    <div id="page-equipment-layout">
+        <div class="tcard">
+            <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
+            <div style="overflow-x: auto;">
+                <table><thead><tr><th>Техника</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
+            </div>
+        </div>
+        <div class="tcard">
+            <div class="tcard-head"><span class="tcard-title">История ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
+            <table><thead><tr><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
+        </div>
+    </div>
 </div>
 
 <div class="page" id="page-services">
@@ -586,16 +604,110 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
+<div class="overlay" id="equipment-modal" onclick="if(event.target===this)closeEquipmentModal()">
+    <div class="modal" style="max-width: 720px;">
+        <div class="modal-title" id="equipment-modal-title">Новая <em>техника</em></div>
+        <div class="modal-grid">
+            <div class="field">
+                <label>Название</label>
+                <input type="text" id="eq-name" placeholder="Газонокосилка #1">
+            </div>
+            <div class="field">
+                <label>Модель</label>
+                <input type="text" id="eq-model" placeholder="Husqvarna 525">
+            </div>
+             <div class="field full">
+                <label>Серийный номер</label>
+                <input type="text" id="eq-serial">
+            </div>
+            <div class="field">
+                <label>Дата покупки</label>
+                <input type="date" id="eq-purchase-date">
+            </div>
+            <div class="field">
+                <label>Стоимость</label>
+                <input type="number" id="eq-purchase-cost" placeholder="25000">
+            </div>
+            <div class="field">
+                <label>Статус</label>
+                <select id="eq-status">
+                    <option value="active">Активна</option>
+                    <option value="repair">В ремонте</option>
+                    <option value="retired">Списана</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Моточасы</label>
+                <input type="number" id="eq-engine-hours" placeholder="120.5">
+            </div>
+            <div class="field">
+                <label>Норма ГСМ (л/ч)</label>
+                <input type="number" id="eq-fuel-norm" placeholder="1.2">
+            </div>
+             <div class="field">
+                <label>Последнее ТО</label>
+                <input type="date" id="eq-last-maintenance">
+            </div>
+             <div class="field">
+                <label>Следующее ТО</label>
+                <input type="date" id="eq-next-maintenance">
+            </div>
+        </div>
+        <div class="field full">
+            <label>Примечание</label>
+            <textarea id="eq-notes"></textarea>
+        </div>
+        <div class="modal-row">
+            <button class="btn-sec btn-del-modal" id="btn-equipment-delete" style="display:none;">УДАЛИТЬ</button>
+            <button class="btn-sec" onclick="closeEquipmentModal()">ОТМЕНА</button>
+            <button class="btn-pri" id="btn-equipment-save">СОЗДАТЬ</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="maintenance-modal" onclick="if(event.target===this)closeMaintenanceModal()">
+    <div class="modal">
+        <div class="modal-title" id="maintenance-modal-title">Новая запись <em>о ТО</em></div>
+        <div class="field full">
+            <label>Проведенные работы</label>
+            <input type="text" id="m-work" placeholder="Замена масла, чистка фильтра">
+        </div>
+        <div class="modal-grid">
+            <div class="field">
+                <label>Дата</label>
+                <input type="date" id="m-date">
+            </div>
+            <div class="field">
+                <label>Стоимость</label>
+                <input type="number" id="m-cost" placeholder="1500">
+            </div>
+        </div>
+        <div class="field full">
+            <label>Примечание</label>
+            <textarea id="m-notes"></textarea>
+        </div>
+        <div class="modal-row">
+            <button class="btn-sec btn-del-modal" id="btn-maintenance-delete" style="display:none;">УДАЛИТЬ</button>
+            <button class="btn-sec" onclick="closeMaintenanceModal()">ОТМЕНА</button>
+            <button class="btn-pri" id="btn-maintenance-save">СОЗДАТЬ</button>
+        </div>
+    </div>
+</div>
+
+
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
 const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[],_services=[];
+let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[],_services=[],_equipment=[];
+let _selectedEquipmentId = null;
 
 function fmt(n){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : '—'}
 function fmtShort(n){return n != null ? n.toLocaleString('ru') : '—'}
-function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
+function fmtDate(s){ if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}) }
+function toISODate(d) { if (!d) return null; const date = new Date(d); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().split('T')[0]; }
+
 function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
 function esc(s){return s != null ? String(s).replace(/"/g,'&quot;').replace(/'/g,"&apos;") : ''}
 
@@ -1050,6 +1162,181 @@ async function deleteService(serviceId) {
     } catch (e) {}
 }
 
+// ── EQUIPMENT & MAINTENANCE ──
+let _currentEquipmentId = null;
+let _currentMaintenanceId = null;
+
+function selectEquipment(eqId, rowElement) {
+    _selectedEquipmentId = eqId;
+    document.querySelectorAll('#equipment-tbody tr').forEach(row => row.classList.remove('selected'));
+    if (rowElement) rowElement.classList.add('selected');
+    document.getElementById('btn-add-maintenance').disabled = !eqId;
+    renderMaintenanceHistory(eqId);
+}
+
+function openEquipmentModal(eq = null) {
+    const overlay = document.getElementById('equipment-modal');
+    const title = document.getElementById('equipment-modal-title');
+    const saveBtn = document.getElementById('btn-equipment-save');
+    const deleteBtn = document.getElementById('btn-equipment-delete');
+
+    _currentEquipmentId = null;
+    const fields = ['name', 'model', 'serial', 'purchase-date', 'purchase-cost', 'status', 'engine-hours', 'fuel-norm', 'last-maintenance', 'next-maintenance', 'notes'];
+    fields.forEach(f => document.getElementById(`eq-${f}`).value = '');
+    document.getElementById('eq-status').value = 'active';
+
+    if (eq) {
+        _currentEquipmentId = eq.id;
+        title.innerHTML = 'Редактировать <em>технику</em>';
+        document.getElementById('eq-name').value = eq.name || '';
+        document.getElementById('eq-model').value = eq.model || '';
+        document.getElementById('eq-serial').value = eq.serial || '';
+        document.getElementById('eq-purchase-date').value = toISODate(eq.purchase_date);
+        document.getElementById('eq-purchase-cost').value = eq.purchase_cost;
+        document.getElementById('eq-status').value = eq.status || 'active';
+        document.getElementById('eq-engine-hours').value = eq.engine_hours;
+        document.getElementById('eq-fuel-norm').value = eq.fuel_norm;
+        document.getElementById('eq-last-maintenance').value = toISODate(eq.last_maintenance_date);
+        document.getElementById('eq-next-maintenance').value = toISODate(eq.next_maintenance_date);
+        document.getElementById('eq-notes').value = eq.notes || '';
+
+        saveBtn.textContent = 'СОХРАНИТЬ';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteEquipment(_currentEquipmentId);
+    } else {
+        title.innerHTML = 'Новая <em>техника</em>';
+        saveBtn.textContent = 'СОЗДАТЬ';
+        deleteBtn.style.display = 'none';
+    }
+    saveBtn.onclick = saveEquipment;
+    overlay.classList.add('open');
+    setTimeout(() => document.getElementById('eq-name').focus(), 100);
+}
+
+function closeEquipmentModal() {
+    document.getElementById('equipment-modal').classList.remove('open');
+    _currentEquipmentId = null;
+}
+
+async function saveEquipment() {
+    const name = document.getElementById('eq-name').value.trim();
+    if (!name) {
+        document.getElementById('eq-name').classList.add('err');
+        return;
+    }
+    const data = {
+        name,
+        model: document.getElementById('eq-model').value.trim() || null,
+        serial: document.getElementById('eq-serial').value.trim() || null,
+        purchase_date: document.getElementById('eq-purchase-date').value || null,
+        purchase_cost: parseFloat(document.getElementById('eq-purchase-cost').value) || null,
+        status: document.getElementById('eq-status').value,
+        engine_hours: parseFloat(document.getElementById('eq-engine-hours').value) || null,
+        fuel_norm: parseFloat(document.getElementById('eq-fuel-norm').value) || null,
+        last_maintenance_date: document.getElementById('eq-last-maintenance').value || null,
+        next_maintenance_date: document.getElementById('eq-next-maintenance').value || null,
+        notes: document.getElementById('eq-notes').value.trim() || null,
+    };
+
+    try {
+        const endpoint = _currentEquipmentId ? `/equipment/${_currentEquipmentId}` : '/equipment';
+        const method = _currentEquipmentId ? 'PATCH' : 'POST';
+        await api(endpoint, { method, body: JSON.stringify(data) });
+        showToast(_currentEquipmentId ? '✅ Техника обновлена' : '✅ Техника добавлена');
+        closeEquipmentModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
+}
+
+async function deleteEquipment(eqId) {
+    if (!confirm('Вы уверены, что хотите удалить эту единицу техники? Все записи о ТО также будут удалены.')) return;
+    try {
+        await api(`/equipment/${eqId}`, { method: 'DELETE' });
+        showToast('🗑️ Техника удалена');
+        closeEquipmentModal();
+        _selectedEquipmentId = null;
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
+}
+
+function openMaintenanceModal(m = null) {
+    if (!_selectedEquipmentId) {
+        showToast('Сначала выберите технику');
+        return;
+    }
+    const overlay = document.getElementById('maintenance-modal');
+    const title = document.getElementById('maintenance-modal-title');
+    const saveBtn = document.getElementById('btn-maintenance-save');
+    const deleteBtn = document.getElementById('btn-maintenance-delete');
+    
+    _currentMaintenanceId = null;
+    document.getElementById('m-work').classList.remove('err');
+    document.getElementById('m-date').value = toISODate(new Date());
+    document.getElementById('m-work').value = '';
+    document.getElementById('m-cost').value = '';
+    document.getElementById('m-notes').value = '';
+
+    if (m) {
+        _currentMaintenanceId = m.id;
+        title.innerHTML = 'Запись <em>о ТО</em>';
+        document.getElementById('m-date').value = toISODate(m.date);
+        document.getElementById('m-work').value = m.work_description || '';
+        document.getElementById('m-cost').value = m.cost;
+        document.getElementById('m-notes').value = m.notes || '';
+        saveBtn.textContent = 'СОХРАНИТЬ';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteMaintenance(_currentMaintenanceId);
+    } else {
+        title.innerHTML = 'Новая запись <em>о ТО</em>';
+        saveBtn.textContent = 'СОЗДАТЬ';
+        deleteBtn.style.display = 'none';
+    }
+
+    saveBtn.onclick = saveMaintenance;
+    overlay.classList.add('open');
+    setTimeout(() => document.getElementById('m-work').focus(), 100);
+}
+
+function closeMaintenanceModal() {
+    document.getElementById('maintenance-modal').classList.remove('open');
+    _currentMaintenanceId = null;
+}
+
+async function saveMaintenance() {
+    const work = document.getElementById('m-work').value.trim();
+    if (!work) {
+        document.getElementById('m-work').classList.add('err');
+        return;
+    }
+    const data = {
+        equipment_id: _selectedEquipmentId,
+        date: document.getElementById('m-date').value || toISODate(new Date()),
+        work_description: work,
+        cost: parseFloat(document.getElementById('m-cost').value) || null,
+        notes: document.getElementById('m-notes').value.trim() || null,
+    };
+
+    try {
+        const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
+        const method = _currentMaintenanceId ? 'PATCH' : 'POST';
+        await api(endpoint, { method, body: JSON.stringify(data) });
+        showToast(_currentMaintenanceId ? '✅ Запись о ТО обновлена' : '✅ Запись о ТО добавлена');
+        closeMaintenanceModal();
+        renderMaintenanceHistory(_selectedEquipmentId);
+    } catch (e) {}
+}
+
+async function deleteMaintenance(mId) {
+    if (!confirm('Удалить эту запись о ТО?')) return;
+    try {
+        await api(`/maintenance/${mId}`, { method: 'DELETE' });
+        showToast('🗑️ Запись удалена');
+        closeMaintenanceModal();
+        renderMaintenanceHistory(_selectedEquipmentId);
+    } catch (e) {}
+}
+
+
 // ── TASK MODAL ──
 let _currentTaskId = null;
 
@@ -1081,12 +1368,12 @@ async function openTaskModal(taskId = null){
 
     if (taskId) {
         try {
-            const tasks = await api(`/tasks?year=${SELECTED_YEAR}`);
-            const task = (tasks.tasks || tasks).find(t => t.id === taskId);
+            const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=false`);
+            const task = (tasks).find(t => t.id === taskId);
             if (task) {
                 titleEl.value = task.title || '';
                 descEl.value = task.description || '';
-                if (task.due_date) dateEl.value = task.due_date.split('T')[0];
+                if (task.due_date) dateEl.value = toISODate(task.due_date);
                 priorityEl.value = task.priority || 'Обычный';
                 statusEl.value = task.status || 'Открыта';
                 await populateAssignees(task.assignee);
@@ -1163,13 +1450,46 @@ function renderExpenses(expenses=[]){
 }
 
 function renderEquipment(eq=[]){
+  _equipment = eq;
   const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
   if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
   const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
-  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td style="color:var(--ink3);font-size:11px">${e.model||'—'}</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`}).join(''):empty(4,'Техники не найдено')
+  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования"><td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td><td><span class="badge ${cls}">${lbl}</span></td><td>${fmtDate(e.purchase_date)}</td><td>${fmt(e.purchase_cost)}</td><td>${fmtShort(e.engine_hours)}</td><td>${e.fuel_norm!=null?e.fuel_norm+' л/ч':'—'}</td><td>${fmtDate(e.last_maintenance_date)}</td><td>${fmtDate(e.next_maintenance_date)}</td></tr>`}).join(''):empty(8,'Техники не найдено');
+  if(_selectedEquipmentId) {
+      const row = tb.querySelector(`tr[onclick^="selectEquipment(${_selectedEquipmentId}"]`);
+      if(row) row.classList.add('selected');
+      else selectEquipment(null);
+  } else {
+      selectEquipment(null);
+  }
+}
+
+async function renderMaintenanceHistory(eqId) {
+    const tbody = document.getElementById('maintenance-tbody');
+    const countEl = document.getElementById('maintenance-count');
+    if (!eqId) {
+        tbody.innerHTML = empty(3, 'Выберите технику');
+        countEl.textContent = '';
+        return;
+    }
+    try {
+        const history = await api(`/equipment/${eqId}/maintenance`);
+        tbody.innerHTML = history.length ? history.map(h => 
+            `<tr onclick='openMaintenanceModal(${JSON.stringify(h)})'>
+                <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
+                <td>${fmt(h.cost)}</td>
+                <td>${fmtDate(h.date)}</td>
+            </tr>`
+        ).join('') : empty(3, 'Записей о ТО нет');
+        countEl.textContent = history.length ? `${history.length} записей` : '';
+    } catch (e) {
+        tbody.innerHTML = empty(3, 'Ошибка загрузки');
+        countEl.textContent = 'Ошибка';
+    }
 }
 
 function renderServices(services=[]){
+    _services = services;
     const tb = document.getElementById('services-tbody');
     const cnt = document.getElementById('services-count');
     if (cnt) cnt.textContent = services.length ? services.length + ' услуг' : '';
@@ -1192,6 +1512,7 @@ function renderConsumables(items=[]){
 }
 
 function renderContacts(contacts=[]){
+  _contacts = contacts;
   const tb=document.getElementById('contacts-tbody'),cnt=document.getElementById('contacts-count');
   if(cnt)cnt.textContent=contacts.length?contacts.length+' контактов':'';
   tb.innerHTML = contacts.length ? contacts.map(c => 
@@ -1224,7 +1545,7 @@ function buildDash(deals,expenses,equipment){
 async function loadData(year, force = false){
   if(!year)return;
   if (force) {
-      await api('/cache/invalidate', { method: 'POST' }).catch(()=>{});
+      try { await api('/cache/invalidate', { method: 'POST' }); } catch(e){ console.warn('Cache invalidation failed', e) }
   }
   showToast('⏳ Загрузка за '+year+'…');
   document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
@@ -1245,7 +1566,7 @@ async function loadData(year, force = false){
       }
   });
 
-  STAGES=data.stages||[]; _contacts=data.contacts||[]; _services=data.services||[];
+  STAGES=data.stages||[];
   
   renderKanban(data.deals?.deals || data.deals || []);
   renderTasks((data.tasks?.tasks || data.tasks) || []);
@@ -1255,6 +1576,10 @@ async function loadData(year, force = false){
   renderConsumables(data.consumables || []);
   renderContacts(data.contacts || []);
   buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
+  
+  if(_selectedEquipmentId && !data.equipment?.find(e => e.id === _selectedEquipmentId)) {
+      selectEquipment(null);
+  }
 
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
