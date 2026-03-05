@@ -150,6 +150,7 @@ td{padding:12px 20px;border-bottom:1px solid var(--border2);font-size:12px;color
 td:first-child{color:var(--ink4);font-size:11px;width:44px}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
+tbody tr{cursor:pointer}
 
 /* BADGE */
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.3px}
@@ -196,10 +197,20 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
 .empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
 
+/* TABS */
+.tabs-row{display:flex;gap:10px;margin-bottom:18px}
+.tab-btn{
+  background:none;border:1px solid var(--border);border-radius:7px;padding:7px 16px;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--ink3);
+  cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px
+}
+.tab-btn.active{background:var(--fern);border-color:var(--fern);color:#fff}
+.tab-btn:hover:not(.active){border-color:var(--ink3);color:var(--ink)}
 
 /* ADD BUTTON */
 .add-btn{display:inline-flex;align-items:center;gap:7px;background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;box-shadow:var(--sh-s)}
 .add-btn:hover{background:var(--moss);transform:translateY(-1px);box-shadow:var(--sh-m)}
+
 /* MODAL */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
@@ -220,6 +231,8 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
 .btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-pri:hover{background:var(--moss)}
+#btn-task-delete{border-color:var(--red);color:var(--red)}
+#btn-task-delete:hover{background:var(--red);color:#fff}
 
 /* TOAST */
 .toast{
@@ -321,6 +334,10 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <button class="add-btn" onclick="openTaskModal()">＋&nbsp;Новая задача</button>
   </div>
+  <div class="tabs-row">
+    <button class="tab-btn active" id="btn-tasks-active" onclick="loadTasks(false)">Активные</button>
+    <button class="tab-btn" id="btn-tasks-done" onclick="loadTasks(true)">Завершенные</button>
+  </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
     <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
@@ -402,7 +419,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       <div class="field">
         <label>ОТВЕТСТВЕННЫЙ</label>
         <select id="t-assignee" disabled>
-          <option>— Авто: текущий пользователь —</option>
+          <option id="t-assignee-opt">— Авто: текущий пользователь —</option>
         </select>
       </div>
       <div class="field">
@@ -425,6 +442,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       </div>
     </div>
     <div class="modal-row">
+      <button class="btn-sec" id="btn-task-delete" style="display:none">УДАЛИТЬ</button>
       <button class="btn-sec" onclick="closeTaskModal()">ОТМЕНА</button>
       <button class="btn-pri" onclick="saveTask()">СОХРАНИТЬ</button>
     </div>
@@ -436,7 +454,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 <script>
 const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear();
+let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
 
 function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
 function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
@@ -532,16 +550,47 @@ function initDrag(){
 }
 
 // ── TASK MODAL ──
+let _currentTaskId = null;
+
 function openTaskModal(){
+  _currentTaskId = null;
   document.getElementById('t-title').value='';
   document.getElementById('t-desc').value='';
-  document.getElementById('t-date').value='';
+  document.getElementById('t-date').valueAsDate = new Date(Date.now() + 864e5);
   document.getElementById('t-priority').value='Обычный';
   document.getElementById('t-status').value='Открыта';
   document.getElementById('t-title').classList.remove('err');
+  document.getElementById('btn-task-delete').style.display = 'none';
+  if(CURRENT_USER) document.getElementById('t-assignee-opt').textContent = CURRENT_USER.username;
   document.getElementById('task-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('t-title').focus(),100);
 }
+
+function openTaskModalWithData(t){
+  _currentTaskId = t.id;
+  document.getElementById('t-title').value = t.title || '';
+  document.getElementById('t-desc').value = t.description || '';
+  if(t.due_date) document.getElementById('t-date').value = t.due_date.split('T')[0];
+  document.getElementById('t-priority').value = t.priority || 'Обычный';
+  document.getElementById('t-status').value = t.status || 'Открыта';
+  document.getElementById('t-title').classList.remove('err');
+  document.getElementById('btn-task-delete').style.display = 'block';
+  document.getElementById('btn-task-delete').onclick = () => deleteTask(t.id);
+  if(t.assignee) document.getElementById('t-assignee-opt').textContent = t.assignee;
+  document.getElementById('task-overlay').classList.add('open');
+}
+
+async function deleteTask(id){
+  if(!confirm('Удалить задачу?')) return;
+  try{
+    await api(`/tasks/${id}`, {method:'DELETE'});
+    closeTaskModal();
+    showToast('🗑️ Задача удалена');
+    await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
+    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
+  }catch{}
+}
+
 function closeTaskModal(){document.getElementById('task-overlay').classList.remove('open')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTaskModal()});
 
@@ -554,14 +603,23 @@ async function saveTask(){
 
   if(!title){document.getElementById('t-title').classList.add('err');return}
   try{
-    await api('/tasks',{method:'POST',body:JSON.stringify({title,description,due_date:due_date||null,priority,status})});
+    const method = _currentTaskId ? 'PATCH' : 'POST';
+    const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
+    const is_done = status === 'Выполнена';
+    
+    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, is_done})});
     closeTaskModal();
-    showToast('✅ Задача добавлена');
-    // invalidate cache then reload
+    showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
     await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
-    const data=await api('/tasks?year='+SELECTED_YEAR);
-    renderTasks(data?.tasks||[]);
+    loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
   }catch{}
+}
+
+async function loadTasks(isDone){
+  document.getElementById('btn-tasks-active').classList.toggle('active', !isDone);
+  document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
+  const data = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
+  renderTasks(data?.tasks || []);
 }
 
 function renderTasks(tasks=[]){
@@ -573,7 +631,7 @@ function renderTasks(tasks=[]){
     if(s==='В работе')return'b-blue';
     return 'b-slate';
   };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModalWithData(${JSON.stringify(t).replace(/"/g, '&quot;')})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){
@@ -630,7 +688,7 @@ async function loadData(year){
   showToast('⏳ Загрузка за '+year+'…');
   document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
   const yp='?year='+year;
-  const ep={stages:'/stages',deals:'/deals'+yp,tasks:'/tasks'+yp,expenses:'/expenses'+yp,equipment:'/equipment',services:'/services',consumables:'/consumables',contacts:'/contacts'};
+  const ep={stages:'/stages',deals:'/deals'+yp,tasks:'/tasks'+yp+'&is_done=false',expenses:'/expenses'+yp,equipment:'/equipment',services:'/services',consumables:'/consumables',contacts:'/contacts'};
   const keys=Object.keys(ep);
   const res=await Promise.allSettled(keys.map(k=>api(ep[k])));
   const data={};let err=false;
@@ -655,7 +713,7 @@ async function populateYearSelector(){
 
 async function checkAuth(){
   try{
-    await api('/me');
+    CURRENT_USER = await api('/me');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     await populateYearSelector();await loadData(SELECTED_YEAR);

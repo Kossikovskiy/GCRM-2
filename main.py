@@ -5,9 +5,9 @@ import os
 import secrets
 import threading
 import time as _time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, List
 from functools import lru_cache
 
 from fastapi import FastAPI, Depends, HTTPException, status, Request
@@ -82,8 +82,10 @@ class _Cache:
         with self._lock:
             if keys:
                 for k in keys:
-                    self._data.pop(k, None)
-                    self._ts.pop(k, None)
+                    # Clear partial matches like 'tasks:'
+                    to_remove = [ek for ek in self._data.keys() if ek == k or ek.startswith(f"{k}:")]
+                    for ek in to_remove:
+                        del self._data[ek], self._ts[ek]
             else:
                 self._data.clear()
                 self._ts.clear()
@@ -233,12 +235,12 @@ def get_current_user(request: Request) -> dict:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.7)...", flush=True)
+    print("App starting (v3.8)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.7.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.8.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
@@ -261,6 +263,16 @@ class TaskCreate(BaseModel):
     due_date: Optional[date] = None
     priority: Optional[str] = "Обычный"
     status: Optional[str] = "Открыта"
+    assignee: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[date] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assignee: Optional[str] = None
+    is_done: Optional[bool] = None
 
 # ── 7. AUTH ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
 
@@ -312,8 +324,12 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
     except JWTError as e:
         raise HTTPException(401, f"Token validation failed: {e}")
 
+    # Trying to get name/nickname for display
+    user_name = payload.get("nickname") or payload.get("name") or payload.get("email") or payload.get("sub", "")
+
     request.session["user"] = {
         "sub":  payload.get("sub", ""),
+        "name": user_name,
         "role": payload.get(ROLE_CLAIM, "user"),
     }
     return RedirectResponse("/")
@@ -332,7 +348,7 @@ def logout(request: Request):
 
 @app.get("/api/me")
 def get_me(user: dict = Depends(get_current_user)):
-    return {"username": user["sub"], "role": user["role"]}
+    return {"username": user["sub"], "name": user.get("name", user["sub"]), "role": user["role"]}
 
 
 @app.get("/api/years")
@@ -406,13 +422,16 @@ def get_deals(year: Optional[int] = None,
 def create_task(task: TaskCreate,
                 db: DBSession = Depends(get_db),
                 user: dict = Depends(get_current_user)):
+    # По умолчанию дата +1 день если не указана
+    due = task.due_date or (date.today() + timedelta(days=1))
+    
     new_task = Task(
         title=task.title,
         description=task.description,
-        due_date=task.due_date,
+        due_date=due,
         priority=task.priority,
         status=task.status,
-        assignee=user["sub"]
+        assignee=task.assignee or user.get("name", user["sub"])
     )
     db.add(new_task)
     db.commit()
@@ -423,9 +442,10 @@ def create_task(task: TaskCreate,
 
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None,
+              is_done: Optional[bool] = None,
               db: DBSession = Depends(get_db),
               _=Depends(get_current_user)):
-    cache_key = f"tasks:{year}"
+    cache_key = f"tasks:{year}:{is_done}"
     cached = _cache.get(cache_key)
     if cached is not None:
         return cached
@@ -433,12 +453,15 @@ def get_tasks(year: Optional[int] = None,
     q = db.query(Task).order_by(Task.due_date.asc())
     if year:
         q = q.filter(extract("year", Task.due_date) == year)
+    if is_done is not None:
+        q = q.filter(Task.is_done == is_done)
 
     result = {"tasks": [{
         "id":          t.id,
         "title":       t.title,
         "description": t.description,
         "status":      t.status,
+        "is_done":     t.is_done,
         "due_date":    t.due_date.isoformat() if t.due_date else None,
         "assignee":    t.assignee,
         "priority":    t.priority,
@@ -446,6 +469,43 @@ def get_tasks(year: Optional[int] = None,
 
     _cache.set(cache_key, result)
     return result
+
+
+@app.patch("/api/tasks/{task_id}")
+def update_task(task_id: int, 
+                task_data: TaskUpdate,
+                db: DBSession = Depends(get_db),
+                _=Depends(get_current_user)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    
+    update_dict = task_data.dict(exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(task, key, value)
+    
+    # Sync status and is_done if necessary
+    if task.status == "Выполнена":
+        task.is_done = True
+    elif task_data.is_done is True:
+        task.status = "Выполнена"
+        
+    db.commit()
+    _cache.invalidate("tasks")
+    return {"status": "ok"}
+
+
+@app.delete("/api/tasks/{task_id}")
+def delete_task(task_id: int, 
+                db: DBSession = Depends(get_db),
+                _=Depends(get_current_user)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    db.delete(task)
+    db.commit()
+    _cache.invalidate("tasks")
+    return {"status": "ok"}
 
 
 @app.get("/api/expenses")
@@ -564,4 +624,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.7) loaded.", flush=True)
+print("main.py (v3.8) loaded.", flush=True)
