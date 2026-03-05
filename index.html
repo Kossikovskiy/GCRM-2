@@ -231,10 +231,8 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
 .btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-pri:hover{background:var(--moss)}
-#btn-deal-delete{margin-right:auto;border-color:var(--red);color:var(--red)}
-#btn-deal-delete:hover{background:var(--red);color:#fff}
-#btn-task-delete{margin-right:auto;border-color:var(--red);color:var(--red)}
-#btn-task-delete:hover{background:var(--red);color:#fff}
+.btn-del-modal{margin-right:auto;border-color:var(--red);color:var(--red)}
+.btn-del-modal:hover{background:var(--red);color:#fff}
 
 
 #d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
@@ -408,17 +406,20 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-contacts">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">База клиентов</span></div>
-    <div class="ph-title">Контакты</div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
-    <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
-  </div>
+    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+        <div>
+            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">База клиентов</span></div>
+            <div class="ph-title">Контакты</div>
+        </div>
+        <button class="add-btn" onclick="openContactModal()">＋&nbsp;Новый контакт</button>
+    </div>
+    <div class="tcard">
+        <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
+        <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th>Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
+    </div>
 </div>
 
-<!-- MODAL: новая задача -->
+<!-- MODAL: задача -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
     <div class="modal-title">Новая <em>задача</em></div>
@@ -459,14 +460,14 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       </div>
     </div>
     <div class="modal-row">
-      <button class="btn-sec" id="btn-task-delete" style="display:none">УДАЛИТЬ</button>
+      <button class="btn-sec btn-del-modal" id="btn-task-delete" style="display:none">УДАЛИТЬ</button>
       <button class="btn-sec" onclick="closeTaskModal()">ОТМЕНА</button>
       <button class="btn-pri" onclick="saveTask()">СОХРАНИТЬ</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: новая/редактирование сделки -->
+<!-- MODAL: сделка -->
 <div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
   <div class="modal" style="max-width: 680px;">
     <div class="modal-title" id="d-modal-title">Новая <em>сделка</em></div>
@@ -509,7 +510,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 
     <div class="modal-row">
-        <button class="btn-sec" id="btn-deal-delete" style="display:none;">Удалить</button>
+        <button class="btn-sec btn-del-modal" id="btn-deal-delete" style="display:none;">Удалить</button>
         <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
         <button class="btn-pri" id="btn-deal-save">СОЗДАТЬ</button>
     </div>
@@ -526,6 +527,32 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
 </div>
 
+<!-- MODAL: контакт -->
+<div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
+  <div class="modal">
+    <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
+    <div class="field full">
+      <label>ИМЯ КЛИЕНТА</label>
+      <input type="text" id="c-name" placeholder="Иван Петров" />
+    </div>
+    <div class="modal-grid">
+      <div class="field">
+        <label>ТЕЛЕФОН</label>
+        <input type="tel" id="c-phone" placeholder="+7 (999) 123-45-67" />
+      </div>
+      <div class="field">
+        <label>ИСТОЧНИК</label>
+        <input type="text" id="c-source" placeholder="Рекомендация" />
+      </div>
+    </div>
+    <div class="modal-row">
+      <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;">УДАЛИТЬ</button>
+      <button class="btn-sec" onclick="closeContactModal()">ОТМЕНА</button>
+      <button class="btn-pri" id="btn-contact-save">СОЗДАТЬ</button>
+    </div>
+  </div>
+</div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -537,6 +564,7 @@ function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
 function fmtShort(n){return n.toLocaleString('ru')}
 function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
 function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
+function esc(s){return s.replace(/"/g,'&quot;').replace(/'/g,"&apos;")}
 
 async function api(ep,opts={}){
   try{
@@ -559,7 +587,7 @@ function renderKanban(deals=[]){
     const cards=deals.filter(d=>d.stage===st.name);
     const total=cards.reduce((s,d)=>s+d.total,0);
     const cardsHtml=cards.length
-      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" onclick="openDealModal(${d.id})" data-stage="${escH(st.name)}" style="--c:${c}">
+      ?cards.map(d=>`<div class="k-card" draggable="true" data-id="${d.id}" onclick="openDealModal(${d.id})" data-stage="${esc(st.name)}" style="--c:${c}">
           <div class="k-sum">${fmt(d.total)}</div>
           <div class="k-title">${d.title}</div>
           <div class="k-client">${d.client}</div>
@@ -567,7 +595,7 @@ function renderKanban(deals=[]){
           <div class="k-date">${fmtDate(d.created_at)}</div>
         </div>`).join('')
       :`<div class="empty"><div class="empty-ico" style="font-size:20px">🌿</div><div class="empty-txt">Пусто</div></div>`;
-    return`<div class="k-col" data-stage="${escH(st.name)}">
+    return`<div class="k-col" data-stage="${esc(st.name)}">
       <div class="k-head"><div class="k-dot" style="background:${c}"></div><span class="k-name" style="color:${c}">${st.name}</span><span class="k-count">${cards.length}</span></div>
       <div class="k-total" style="${cards.length?'':'visibility:hidden'}">${fmt(total)}</div>
       <div class="k-cards">${cardsHtml}</div>
@@ -575,8 +603,6 @@ function renderKanban(deals=[]){
   }).join('');
   initDrag();
 }
-
-function escH(s){return s.replace(/"/g,'&quot;')}
 
 function initDrag(){
   const board=document.getElementById('kanban-board');
@@ -649,7 +675,7 @@ async function setupDealModal(dealId = null) {
     document.getElementById('d-contact-input').value = '';
     document.getElementById('d-title').classList.remove('err');
 
-    contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
+    contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
     assigneeSel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
 
@@ -751,7 +777,7 @@ function renderDealServices() {
 }
 
 function getContactIdByName(name) {
-    const el = document.querySelector(`#d-contact-list option[value="${escH(name)}"]`);
+    const el = document.querySelector(`#d-contact-list option[value="${esc(name)}"]`);
     return el ? parseInt(el.dataset.id, 10) : null;
 }
 
@@ -834,6 +860,86 @@ function selectService(serviceId) {
     closeServiceSelectorModal();
 }
 
+
+// ── CONTACT MODAL ──
+let _currentContactId = null;
+function openContactModal(contact = null) {
+    const overlay = document.getElementById('contact-overlay');
+    const title = document.getElementById('contact-modal-title');
+    const nameInput = document.getElementById('c-name');
+    const phoneInput = document.getElementById('c-phone');
+    const sourceInput = document.getElementById('c-source');
+    const saveBtn = document.getElementById('btn-contact-save');
+    const deleteBtn = document.getElementById('btn-contact-delete');
+
+    nameInput.classList.remove('err');
+    _currentContactId = null;
+
+    if (contact) {
+        _currentContactId = contact.id;
+        title.innerHTML = 'Редактировать <em>контакт</em>';
+        nameInput.value = contact.name || '';
+        phoneInput.value = contact.phone || '';
+        sourceInput.value = contact.source || '';
+        saveBtn.textContent = 'СОХРАНИТЬ';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteContact(_currentContactId);
+    } else {
+        title.innerHTML = 'Новый <em>контакт</em>';
+        nameInput.value = '';
+        phoneInput.value = '';
+        sourceInput.value = '';
+        saveBtn.textContent = 'СОЗДАТЬ';
+        deleteBtn.style.display = 'none';
+    }
+    saveBtn.onclick = saveContact;
+    overlay.classList.add('open');
+    setTimeout(() => nameInput.focus(), 100);
+}
+
+function closeContactModal() {
+    document.getElementById('contact-overlay').classList.remove('open');
+    _currentContactId = null;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContactModal() });
+
+async function saveContact() {
+    const name = document.getElementById('c-name').value.trim();
+    if (!name) {
+        document.getElementById('c-name').classList.add('err');
+        return;
+    }
+    const data = {
+        name,
+        phone: document.getElementById('c-phone').value.trim() || null,
+        source: document.getElementById('c-source').value.trim() || null
+    };
+
+    try {
+        const endpoint = _currentContactId ? `/contacts/${_currentContactId}` : '/contacts';
+        const method = _currentContactId ? 'PATCH' : 'POST';
+        await api(endpoint, { method, body: JSON.stringify(data) });
+        showToast(_currentContactId ? '✅ Контакт обновлен' : '✅ Контакт создан');
+        closeContactModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {
+        // Error toast is shown by api() function
+    }
+}
+
+async function deleteContact(contactId) {
+    if (!confirm('Вы уверены, что хотите удалить этот контакт? Это действие нельзя отменить.')) return;
+    try {
+        await api(`/contacts/${contactId}`, { method: 'DELETE' });
+        showToast('🗑️ Контакт удален');
+        closeContactModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {
+        // Error toast is shown by api() function
+    }
+}
+
 // ── TASK MODAL ──
 let _currentTaskId = null;
 
@@ -866,7 +972,7 @@ async function openTaskModal(taskId = null){
     if (taskId) {
         try {
             const tasks = await api(`/tasks?year=${SELECTED_YEAR}`);
-            const task = tasks.find(t => t.id === taskId);
+            const task = (tasks.tasks || tasks).find(t => t.id === taskId);
             if (task) {
                 titleEl.value = task.title || '';
                 descEl.value = task.description || '';
@@ -936,7 +1042,7 @@ function renderTasks(tasks=[]){
     if(s==='В работе')return'b-blue';
     return 'b-slate';
   };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${esc(t.description||'')}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){
@@ -968,7 +1074,14 @@ function renderConsumables(items=[]){
 function renderContacts(contacts=[]){
   const tb=document.getElementById('contacts-tbody'),cnt=document.getElementById('contacts-count');
   if(cnt)cnt.textContent=contacts.length?contacts.length+' контактов':'';
-  tb.innerHTML=contacts.length?contacts.map(c=>`<tr><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td></tr>`).join(''):empty(3,'Контактов не найдено')
+  tb.innerHTML = contacts.length ? contacts.map(c => 
+    `<tr onclick='openContactModal(${JSON.stringify(c)})'>
+        <td>${c.id}</td>
+        <td style="color:var(--ink);font-weight:400">${c.name}</td>
+        <td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td>
+        <td style="color:var(--ink3);font-size:11px">${c.source||'—'}</td>
+    </tr>`
+  ).join('') : empty(4, 'Контактов не найдено');
 }
 
 function buildDash(deals,expenses,equipment){
@@ -1015,13 +1128,13 @@ async function loadData(year, force = false){
   STAGES=data.stages||[]; _contacts=data.contacts||[]; _services=data.services||[];
   
   renderKanban(data.deals?.deals || data.deals || []);
-  renderTasks(data.tasks || []);
-  renderExpenses(data.expenses || []);
+  renderTasks(data.tasks?.tasks || data.tasks || []);
+  renderExpenses(data.expenses?.expenses || data.expenses || []);
   renderEquipment(data.equipment || []);
   renderServices(data.services || []);
   renderConsumables(data.consumables || []);
   renderContacts(data.contacts || []);
-  buildDash(data.deals?.deals || data.deals || [], data.expenses || [], data.equipment || []);
+  buildDash(data.deals?.deals || data.deals || [], data.expenses?.expenses || data.expenses || [], data.equipment || []);
 
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }

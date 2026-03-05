@@ -19,7 +19,7 @@ from sqlalchemy import (
     DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, joinedload
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import httpx
 from jose import jwt, JWTError
 
@@ -88,12 +88,14 @@ class DealCreate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=N
 class DealUpdate(BaseModel): title:Optional[str]=None; stage_id:Optional[int]=None; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:Optional[List[DealServiceItem]]=None
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
+class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None
+class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(app: FastAPI): print("App starting (v6.0-final)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
+async def lifespan(app: FastAPI): print("App starting (v7.0)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="6.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="7.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -138,11 +140,10 @@ def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return 
 def get_stages(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
 @app.get("/api/services")
 def get_services(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Service).order_by(Service.name).all()
-@app.get("/api/contacts")
-def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Contact).order_by(Contact.name).all()
 @app.post("/api/cache/invalidate")
 def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate(); return {"status":"ok"}
 
+# --- DEALS ---
 @app.get("/api/deals")
 def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     q=db.query(Deal).options(joinedload(Deal.contact),joinedload(Deal.stage)).order_by(Deal.created_at.desc())
@@ -215,13 +216,60 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     _cache.invalidate("deals", "years")
     return {"status": "ok"}
 
-
 @app.delete("/api/deals/{deal_id}", status_code=204)
 def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     deal=db.query(Deal).filter(Deal.id==deal_id).first()
     if deal: db.delete(deal); db.commit(); _cache.invalidate("deals","years")
     return None
 
+# --- CONTACTS ---
+@app.get("/api/contacts")
+def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)): 
+    return db.query(Contact).order_by(Contact.name).all()
+
+@app.post("/api/contacts", status_code=201)
+def create_contact(contact_data: ContactCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    if contact_data.phone:
+        existing = db.query(Contact).filter(Contact.phone == contact_data.phone).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
+    new_contact = Contact(**contact_data.dict())
+    db.add(new_contact)
+    db.commit(); db.refresh(new_contact)
+    _cache.invalidate("contacts")
+    return new_contact
+
+@app.patch("/api/contacts/{contact_id}")
+def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact: raise HTTPException(status_code=404, detail="Контакт не найден")
+    
+    update_data = contact_data.dict(exclude_unset=True)
+    if "phone" in update_data and update_data["phone"]:
+        existing = db.query(Contact).filter(Contact.phone == update_data["phone"], Contact.id != contact_id).first()
+        if existing: raise HTTPException(status_code=409, detail="Контакт с таким телефоном уже существует")
+
+    for key, value in update_data.items():
+        setattr(contact, key, value)
+    
+    db.commit(); db.refresh(contact)
+    _cache.invalidate("contacts", "deals")
+    return contact
+
+@app.delete("/api/contacts/{contact_id}", status_code=204)
+def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact: return None
+
+    if db.query(Deal).filter(Deal.contact_id == contact_id).count() > 0:
+        raise HTTPException(status_code=400, detail="Нельзя удалить контакт, к которому привязаны сделки.")
+
+    db.delete(contact)
+    db.commit()
+    _cache.invalidate("contacts")
+    return None
+
+# --- OTHER ---
 @app.get("/api/years")
 def get_years(db: DBSession=Depends(get_db),_=Depends(get_current_user)):
     if (cached := _cache.get("years")) is not None: return cached
@@ -234,12 +282,19 @@ def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DB
     if year: q = q.filter(extract("year", Task.due_date) == year)
     if is_done is not None: q = q.filter(Task.is_done == is_done)
     users = {u.id: u.name for u in db.query(User).all()}
-    return [{"id": t.id, "title": t.title, "description": t.description, "status": t.status, "is_done": t.is_done, "due_date": t.due_date.isoformat() if t.due_date else None, "assignee": t.assignee, "assignee_name": users.get(t.assignee, "Не назначен"), "priority": t.priority} for t in q.all()]
+    tasks_with_names = []
+    for t in q.all():
+        task_dict = {c.name: getattr(t, c.name) for c in t.__table__.columns}
+        task_dict["assignee_name"] = users.get(t.assignee, "Не назначен")
+        tasks_with_names.append(task_dict)
+    return tasks_with_names
+
 @app.post("/api/tasks", status_code=201)
 def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
     new_task = Task(title=task.title, description=task.description, due_date=task.due_date or (date.today() + timedelta(days=1)), priority=task.priority, status=task.status, assignee=task.assignee or user["sub"])
     db.add(new_task); db.commit(); db.refresh(new_task)
     _cache.invalidate("tasks"); return new_task
+
 @app.patch("/api/tasks/{task_id}")
 def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -248,10 +303,12 @@ def update_task(task_id: int, task_data: TaskUpdate, db: DBSession = Depends(get
     if task_data.is_done: task.status = "Выполнена"
     elif task_data.status == "Выполнена": task.is_done = True
     db.commit(); _cache.invalidate("tasks"); return {"status": "ok"}
+
 @app.delete("/api/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if task: db.delete(task); db.commit(); _cache.invalidate("tasks")
+
 @app.get("/api/expenses")
 def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
@@ -266,4 +323,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v6.0-final) loaded.", flush=True)
+print(f"main.py (v7.0) loaded.", flush=True)
