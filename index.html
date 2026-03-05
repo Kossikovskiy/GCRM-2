@@ -234,6 +234,13 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 #btn-task-delete{border-color:var(--red);color:var(--red)}
 #btn-task-delete:hover{background:var(--red);color:#fff}
 
+#d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
+#d-services-add{display:grid;grid-template-columns:1fr 80px 100px;gap:10px;align-items:center;margin-bottom:12px}
+#d-services-add button{padding:10px;font-size:11px;text-transform:uppercase;letter-spacing:1px;height:100%}
+#d-services-table th{font-size:8px;padding:8px 10px}
+#d-services-table td{font-size:11px;padding:8px 10px}
+#d-services-table .btn-del{cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
+
 /* TOAST */
 .toast{
   position:fixed;bottom:22px;right:22px;z-index:400;
@@ -452,7 +459,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 <!-- MODAL: новая сделка -->
 <div class="overlay" id="deal-overlay" onclick="if(event.target===this)closeDealModal()">
-  <div class="modal">
+  <div class="modal" style="max-width: 680px;">
     <div class="modal-title">Новая <em>сделка</em></div>
     <div class="field full">
       <label>НАЗВАНИЕ СДЕЛКИ</label>
@@ -465,18 +472,37 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <datalist id="d-contact-list"></datalist>
       </div>
       <div class="field">
-        <label>СУММА</label>
-        <input type="number" id="d-total" placeholder="15000" />
+        <label>ОТВЕТСТВЕННЫЙ</label>
+        <select id="d-assignee"></select>
       </div>
+    </div>
+
+    <div id="d-services-block">
+        <label>УСЛУГИ</label>
+        <div id="d-services-add">
+            <select id="d-service-select"></select>
+            <input type="number" id="d-service-qty" value="1" min="0.1" step="0.1">
+            <button class="btn-pri" onclick="addDealService()">ДОБАВИТЬ</button>
+        </div>
+        <div class="tcard" style="margin-top:1rem">
+            <table id="d-services-table">
+                <thead><tr><th>Услуга</th><th>Цена</th><th>Кол-во</th><th>Итог</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="modal-grid" style="margin-top: 20px;">
       <div class="field">
         <label>ЭТАП</label>
         <select id="d-stage"></select>
       </div>
       <div class="field">
-        <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="d-assignee"></select>
+        <label>ИТОГОВАЯ СУММА</label>
+        <input type="text" id="d-total" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
       </div>
     </div>
+
     <div class="modal-row">
       <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
       <button class="btn-pri" onclick="saveDeal()">СОЗДАТЬ СДЕЛКУ</button>
@@ -489,9 +515,10 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 <script>
 const API_BASE='/api';
-let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[];
+let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null,_contacts=[],_services=[];
 
 function fmt(n){return Math.round(n).toLocaleString('ru')+'\u00a0₽'}
+function fmtShort(n){return n.toLocaleString('ru')}
 function fmtDate(s){return s?new Date(s).toLocaleDateString('ru',{day:'2-digit',month:'2-digit',year:'numeric'}):'—'}
 function empty(cols,msg){return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-ico">🌿</div><div class="empty-txt">${msg||'Нет данных'}</div></div></td></tr>`}
 
@@ -591,35 +618,88 @@ function initDrag(){
 }
 
 // ── DEAL MODAL ──
-async function prepareDealModal() {
+let _dealItems = [];
+
+function prepareDealModal() {
   const contactList = document.getElementById('d-contact-list');
   const stageSel = document.getElementById('d-stage');
   const assigneeSel = document.getElementById('d-assignee');
+  const serviceSel = document.getElementById('d-service-select');
 
   contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
   stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  serviceSel.innerHTML = _services.map(s => `<option value="${s.id}">${s.name} (${fmt(s.price)})</option>`).join('');
 
   try {
-    const users = await api('/users');
-    assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-    if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+    api('/users').then(users => {
+        assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+        if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
+    });
   } catch(e) {
     assigneeSel.innerHTML = `<option value="">Ошибка загрузки</option>`;
   }
 }
 
-async function openDealModal() {
+function openDealModal() {
+  _dealItems = [];
   document.getElementById('d-title').value = '';
-  document.getElementById('d-total').value = '';
   document.getElementById('d-contact-input').value = '';
   document.getElementById('d-title').classList.remove('err');
-  await prepareDealModal();
+  prepareDealModal();
+  renderDealServices();
   document.getElementById('deal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('d-title').focus(), 100);
 }
 
 function closeDealModal() { document.getElementById('deal-overlay').classList.remove('open'); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDealModal() });
+
+function addDealService() {
+    const serviceId = parseInt(document.getElementById('d-service-select').value, 10);
+    const quantity = parseFloat(document.getElementById('d-service-qty').value);
+    if (!serviceId || !quantity || quantity <= 0) return;
+
+    const service = _services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const existingItem = _dealItems.find(item => item.id === serviceId);
+    if (existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        _dealItems.push({ ...service, quantity });
+    }
+    renderDealServices();
+}
+
+function removeDealService(serviceId) {
+    _dealItems = _dealItems.filter(item => item.id !== serviceId);
+    renderDealServices();
+}
+
+function updateDealServiceQty(serviceId, newQuantity) {
+    const item = _dealItems.find(item => item.id === serviceId);
+    if (item) item.quantity = newQuantity;
+    renderDealServices();
+}
+
+function renderDealServices() {
+    const tbody = document.getElementById('d-services-table').querySelector('tbody');
+    if (_dealItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;font-size:11px;color:var(--ink4)">Услуги не добавлены</td></tr>`;
+    } else {
+        tbody.innerHTML = _dealItems.map(item => `
+            <tr>
+                <td>${item.name}</td>
+                <td>${fmt(item.price)}</td>
+                <td><input type="number" value="${item.quantity}" onchange="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
+                <td>${fmt(item.price * item.quantity)}</td>
+                <td><button class="btn-del" onclick="removeDealService(${item.id})" title="Удалить">⊗</button></td>
+            </tr>
+        `).join('');
+    }
+    const total = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    document.getElementById('d-total').value = fmt(total);
+}
 
 function getContactIdByName(name) {
     const el = document.querySelector(`#d-contact-list option[value="${escH(name)}"]`);
@@ -628,16 +708,22 @@ function getContactIdByName(name) {
 
 async function saveDeal() {
   const title = document.getElementById('d-title').value.trim();
-  const total = parseFloat(document.getElementById('d-total').value) || 0;
   const contactName = document.getElementById('d-contact-input').value.trim();
   const stage_id = parseInt(document.getElementById('d-stage').value, 10);
   const manager = document.getElementById('d-assignee').value;
   const deal_date = new Date().toISOString();
 
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
+  if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
 
   const contact_id = getContactIdByName(contactName);
-  const dealData = { title, total, stage_id, manager, deal_date };
+  const dealData = { 
+      title, 
+      stage_id, 
+      manager, 
+      deal_date, 
+      services: _dealItems.map(item => ({ service_id: item.id, quantity: item.quantity }))
+  };
 
   if (contact_id) {
     dealData.contact_id = contact_id;
@@ -815,7 +901,8 @@ async function loadData(year){
   res.forEach((r,i)=>{if(r.status==='fulfilled')data[keys[i]]=r.value;else err=true});
   STAGES=data.stages||[];
   _contacts=data.contacts||[];
-  const deals=data.deals?.deals||[],expenses=data.expenses?.expenses||[],equipment=data.equipment||[];
+  _services=data.services||[];
+  const deals=data.deals?.deals||[],expenses=data.expenses||[],equipment=data.equipment||[];
   renderKanban(deals);renderTasks(data.tasks?.tasks||[]);renderExpenses(expenses);
   renderEquipment(equipment);renderServices(data.services||[]);renderConsumables(data.consumables||[]);renderContacts(data.contacts||[]);
   buildDash(deals,expenses,equipment);

@@ -82,6 +82,15 @@ class User(Base):
     __tablename__ = "users"
     id, username, name, email = Column(String, primary_key=True), Column(String), Column(String), Column(String)
 
+class Service(Base):
+    __tablename__ = "services"
+    id, name, category, price, unit = Column(Integer, primary_key=True), Column(String(200), nullable=False), Column(String(100)), Column(Float, default=0.0), Column(String(50), default="шт")
+
+class DealService(Base):
+    __tablename__ = "deal_services"
+    id, deal_id, service_id = Column(Integer, primary_key=True), Column(Integer, ForeignKey("deals.id")), Column(Integer, ForeignKey("services.id"))
+    quantity, price = Column(Float, default=1.0), Column(Float, default=0.0)
+
 class Stage(Base):
     __tablename__ = "stages"
     id, name, order, type, is_final, color = Column(Integer, primary_key=True), Column(String(100), nullable=False, unique=True), Column(Integer, default=0), Column(String(50), default="regular"), Column(Boolean, default=False), Column(String(20), default="#6B7280")
@@ -98,6 +107,7 @@ class Deal(Base):
     total, notes, created_at, deal_date = Column(Float, default=0.0), Column(Text, default=""), Column(DateTime, default=datetime.utcnow), Column(DateTime)
     closed_at, is_repeat, manager, address = Column(DateTime), Column(Boolean, default=False), Column(String(200)), Column(Text)
     contact, stage = relationship("Contact", back_populates="deals"), relationship("Stage", back_populates="deals")
+    services = relationship("DealService", cascade="all, delete-orphan")
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -147,9 +157,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.6-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.7-stable)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.6.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.7.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -198,14 +208,18 @@ def logout(request: Request):
     return RedirectResponse(f"https://{AUTH0_DOMAIN}/v2/logout?client_id={CLIENT_ID}&returnTo={APP_BASE_URL}")
 
 # ── 7. DATA ЭНДПОИНТЫ ─────────────────────────────────────────────────────────
+class DealServiceItem(BaseModel):
+    service_id: int
+    quantity: float
+
 class DealCreate(BaseModel):
     title: str
-    total: float
     stage_id: int
     deal_date: datetime
     contact_id: Optional[int] = None
     new_contact_name: Optional[str] = None
     manager: Optional[str] = None
+    services: List[DealServiceItem] = []
 
 class DealUpdate(BaseModel):
     stage_id: Optional[int] = None
@@ -246,13 +260,22 @@ def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depend
         db.refresh(new_contact)
         contact_id = new_contact.id
 
+    total = 0
+    service_items = []
+    for item in deal_data.services:
+        service = db.query(Service).filter(Service.id == item.service_id).first()
+        if not service: continue
+        total += service.price * item.quantity
+        service_items.append(DealService(service_id=service.id, quantity=item.quantity, price=service.price))
+
     new_deal = Deal(
         title=deal_data.title, 
-        total=deal_data.total, 
+        total=total, 
         stage_id=deal_data.stage_id, 
         contact_id=contact_id,
         deal_date=deal_data.deal_date, 
-        manager=deal_data.manager
+        manager=deal_data.manager,
+        services=service_items
     )
     db.add(new_deal)
     db.commit()
@@ -311,6 +334,9 @@ def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_curre
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
 
+@app.get("/api/services")
+def get_services(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Service).order_by(Service.name).all()
+
 @app.get("/api/consumables")
 def get_consumables(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Consumable).order_by(Consumable.name).all()
 
@@ -326,4 +352,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.6-stable) loaded.", flush=True)
+print(f"main.py (v4.7-stable) loaded.", flush=True)
