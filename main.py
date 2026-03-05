@@ -1,3 +1,4 @@
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -64,7 +65,28 @@ class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Int
 class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id",ondelete="RESTRICT")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
 class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(50),unique=True,index=True),Column(String(100)); deals = relationship("Deal",back_populates="contact")
-class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id"),nullable=False),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
+class Deal(Base): 
+    __tablename__ = "deals"
+    id=Column(Integer,primary_key=True)
+    contact_id=Column(Integer,ForeignKey("contacts.id"),nullable=False)
+    stage_id=Column(Integer,ForeignKey("stages.id"))
+    title=Column(String(200),nullable=False)
+    total=Column(Float,default=0.0)
+    notes=Column(Text,default="")
+    created_at=Column(DateTime,default=datetime.utcnow)
+    deal_date=Column(DateTime)
+    closed_at=Column(DateTime)
+    is_repeat=Column(Boolean,default=False)
+    manager=Column(String(200))
+    address=Column(Text)
+    tax_rate = Column(Float, default=0.0, nullable=False)
+    tax_included = Column(Boolean, default=False, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)
+
+    contact=relationship("Contact",back_populates="deals")
+    stage=relationship("Stage",back_populates="deals")
+    services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
+
 class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта")
 class ExpenseCategory(Base): __tablename__="expense_categories"; id,name=Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True); expenses=relationship("Expense",back_populates="category")
 class Consumable(Base): __tablename__="consumables"; id,name,unit=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"); stock_quantity,notes,price=Column(Float,default=0.0),Column(Text),Column(Float,default=0.0)
@@ -89,8 +111,28 @@ def update_equipment_last_maintenance(db: DBSession, equipment_id: int):
 
 # ── 5. PYDANTIC MODELS ───────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
-class DealCreate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:List[DealServiceItem]=[]
-class DealUpdate(BaseModel): title:Optional[str]=None; stage_id:Optional[int]=None; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:Optional[List[DealServiceItem]]=None
+class DealCreate(BaseModel): 
+    title:str; 
+    stage_id:int; 
+    contact_id:Optional[int]=None; 
+    new_contact_name:Optional[str]=None; 
+    manager:Optional[str]=None; 
+    services:List[DealServiceItem]=[]
+    tax_rate: Optional[float] = 0.0
+    tax_included: Optional[bool] = False
+    discount: Optional[float] = 0.0
+
+class DealUpdate(BaseModel): 
+    title:Optional[str]=None; 
+    stage_id:Optional[int]=None; 
+    contact_id:Optional[int]=None; 
+    new_contact_name:Optional[str]=None; 
+    manager:Optional[str]=None; 
+    services:Optional[List[DealServiceItem]]=None
+    tax_rate: Optional[float] = None
+    tax_included: Optional[bool] = None
+    discount: Optional[float] = None
+
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
 class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None
@@ -139,13 +181,13 @@ class EquipmentResponse(BaseModel):
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v11.4)...",flush=True)
+    print("App starting (v11.5)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.4.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.5.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -222,27 +264,65 @@ def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),_=Depends(get
     return {"deals": deals_list}
 
 @app.post("/api/deals", status_code=201)
-def create_deal(deal_data:DealCreate,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
-    contact_id=deal_data.contact_id
+def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    contact_id = deal_data.contact_id
     if deal_data.new_contact_name:
-        new_contact=Contact(name=deal_data.new_contact_name); db.add(new_contact); db.flush(); db.refresh(new_contact)
-        contact_id=new_contact.id
-    if not contact_id: raise HTTPException(400, "Не указан клиент")
+        new_contact = Contact(name=deal_data.new_contact_name)
+        db.add(new_contact)
+        db.flush()
+        db.refresh(new_contact)
+        contact_id = new_contact.id
+    if not contact_id:
+        raise HTTPException(400, "Не указан клиент")
 
-    total=0; service_items=[]
+    subtotal = 0
+    service_items_for_db = []
     for item in deal_data.services:
-        service=db.query(Service).filter(Service.id==item.service_id).first()
+        service = db.query(Service).filter(Service.id == item.service_id).first()
         if not service: continue
-        price=service.price; total+=price*item.quantity
-        service_items.append(DealService(service_id=service.id,quantity=item.quantity,price_at_moment=price))
-    new_deal=Deal(title=deal_data.title,total=total,stage_id=deal_data.stage_id,contact_id=contact_id,deal_date=datetime.utcnow(),manager=deal_data.manager,services=service_items)
-    db.add(new_deal); db.commit(); _cache.invalidate("deals","years"); return {"status":"ok"}
+        price = service.price or 0
+        subtotal += price * item.quantity
+        service_items_for_db.append(DealService(service_id=service.id, quantity=item.quantity, price_at_moment=price))
+
+    discount_percent = deal_data.discount or 0
+    tax_rate_percent = deal_data.tax_rate or 0
+    
+    discount_amount = subtotal * (discount_percent / 100.0)
+    subtotal_after_discount = subtotal - discount_amount
+    
+    if deal_data.tax_included:
+        final_total = subtotal_after_discount
+    else:
+        tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
+        final_total = subtotal_after_discount + tax_amount
+
+    new_deal = Deal(
+        title=deal_data.title,
+        stage_id=deal_data.stage_id,
+        contact_id=contact_id,
+        deal_date=datetime.utcnow(),
+        manager=deal_data.manager,
+        services=service_items_for_db,
+        total=round(final_total, 2),
+        discount=discount_percent,
+        tax_rate=tax_rate_percent,
+        tax_included=deal_data.tax_included
+    )
+    db.add(new_deal)
+    db.commit()
+    _cache.invalidate("deals", "years")
+    return {"status": "ok"}
 
 @app.get("/api/deals/{deal_id}")
-def get_deal_details(deal_id:int,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
-    deal=db.query(Deal).options(joinedload(Deal.contact),joinedload(Deal.services).joinedload(DealService.service)).filter(Deal.id==deal_id).first()
-    if not deal: raise HTTPException(404, "Сделка не найдена")
-    
+def get_deal_details(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).options(
+        joinedload(Deal.contact), 
+        joinedload(Deal.services).joinedload(DealService.service)
+    ).filter(Deal.id == deal_id).first()
+
+    if not deal:
+        raise HTTPException(404, "Сделка не найдена")
+
     services_list = []
     for ds in deal.services:
         service_info = {"quantity": ds.quantity, "price_at_moment": ds.price_at_moment}
@@ -252,7 +332,18 @@ def get_deal_details(deal_id:int,db:DBSession=Depends(get_db),_=Depends(get_curr
             service_info["service"] = {"id": -1, "name": "[Удаленная услуга]", "price": ds.price_at_moment, "unit": "?"}
         services_list.append(service_info)
     
-    return {"id":deal.id, "title":deal.title, "total":deal.total, "stage_id":deal.stage_id, "manager":deal.manager, "contact": {"id":deal.contact.id, "name":deal.contact.name} if deal.contact else None, "services": services_list}
+    return {
+        "id": deal.id,
+        "title": deal.title,
+        "total": deal.total,
+        "stage_id": deal.stage_id,
+        "manager": deal.manager,
+        "contact": {"id": deal.contact.id, "name": deal.contact.name} if deal.contact else None,
+        "services": services_list,
+        "discount": deal.discount,
+        "tax_rate": deal.tax_rate,
+        "tax_included": deal.tax_included,
+    }
 
 @app.patch("/api/deals/{deal_id}")
 def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -262,21 +353,43 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     update_data = deal_data.model_dump(exclude_unset=True)
 
     if "new_contact_name" in update_data:
-        new_contact = Contact(name=update_data["new_contact_name"]); db.add(new_contact); db.flush(); db.refresh(new_contact)
+        new_contact = Contact(name=update_data["new_contact_name"])
+        db.add(new_contact)
+        db.flush()
+        db.refresh(new_contact)
         deal.contact_id = new_contact.id
     elif "contact_id" in update_data:
         deal.contact_id = update_data["contact_id"]
 
+    recalculate = "services" in update_data or "discount" in update_data or "tax_rate" in update_data or "tax_included" in update_data
+
     if "services" in update_data:
         db.query(DealService).filter(DealService.deal_id == deal_id).delete(synchronize_session=False)
-        total = 0
         for item_data in update_data["services"]:
             item = DealServiceItem(**item_data)
             service = db.query(Service).filter(Service.id == item.service_id).first()
             if service:
-                price = service.price; total += price * item.quantity
-                db.add(DealService(deal_id=deal_id, service_id=service.id, quantity=item.quantity, price_at_moment=price))
-        deal.total = total
+                db.add(DealService(deal_id=deal_id, service_id=service.id, quantity=item.quantity, price_at_moment=(service.price or 0)))
+        db.flush()
+    
+    if "discount" in update_data: deal.discount = update_data["discount"]
+    if "tax_rate" in update_data: deal.tax_rate = update_data["tax_rate"]
+    if "tax_included" in update_data: deal.tax_included = update_data["tax_included"]
+    
+    if recalculate:
+        subtotal = sum(ds.price_at_moment * ds.quantity for ds in deal.services)
+        discount_percent = deal.discount or 0
+        tax_rate_percent = deal.tax_rate or 0
+        discount_amount = subtotal * (discount_percent / 100.0)
+        subtotal_after_discount = subtotal - discount_amount
+        
+        if deal.tax_included:
+            final_total = subtotal_after_discount
+        else:
+            tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
+            final_total = subtotal_after_discount + tax_amount
+        
+        deal.total = round(final_total, 2)
 
     if "title" in update_data: deal.title = update_data["title"]
     if "stage_id" in update_data: deal.stage_id = update_data["stage_id"]
@@ -578,4 +691,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.4) loaded.", flush=True)
+print(f"main.py (v11.5) loaded.", flush=True)

@@ -557,6 +557,25 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <button class="btn-sec" style="width:100%" onclick="openItemSelectorModal('service')">＋ Добавить услугу</button>
     </div>
     
+    <div class="modal-grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr 1fr;">
+        <div class="field">
+            <label>Скидка (%)</label>
+            <input type="number" id="d-discount" value="0" onchange="calculateDealTotal()">
+        </div>
+        <div class="field">
+            <label>Налог (%)</label>
+            <select id="d-tax-rate" onchange="calculateDealTotal()">
+                <option value="0">Без налога</option>
+                <option value="4">4%</option>
+                <option value="6">6%</option>
+            </select>
+        </div>
+        <div class="field" style="display:flex; align-items:center; padding-top:14px;">
+            <input type="checkbox" id="d-tax-included" onchange="calculateDealTotal()" style="width:auto; margin-right: 8px;">
+            <label for="d-tax-included" style="margin:0; font-size: 12px;">Налог включен</label>
+        </div>
+    </div>
+
     <div class="modal-grid" style="margin-top: 20px;">
       <div class="field">
         <label>ЭТАП</label>
@@ -905,6 +924,9 @@ async function setupDealModal(dealId = null) {
     document.getElementById('d-title').value = '';
     document.getElementById('d-contact-input').value = '';
     document.getElementById('d-title').classList.remove('err');
+    document.getElementById('d-discount').value = 0;
+    document.getElementById('d-tax-rate').value = 0;
+    document.getElementById('d-tax-included').checked = false;
 
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
@@ -924,6 +946,9 @@ async function setupDealModal(dealId = null) {
         if(deal.contact) document.getElementById('d-contact-input').value = deal.contact.name || '';
         assigneeSel.value = deal.manager || '';
         stageSel.innerHTML = STAGES.map(s => `<option value="${s.id}" ${s.id === deal.stage_id ? 'selected' : ''}>${s.name}</option>`).join('');
+        document.getElementById('d-discount').value = deal.discount || 0;
+        document.getElementById('d-tax-rate').value = deal.tax_rate || 0;
+        document.getElementById('d-tax-included').checked = deal.tax_included || false;
 
         _dealItems = deal.services.map(s => ({
             id: s.service.id,
@@ -946,6 +971,32 @@ async function setupDealModal(dealId = null) {
     renderDealServices();
 }
 
+function calculateDealTotal() {
+    const subtotal = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discount = parseFloat(document.getElementById('d-discount').value) || 0;
+    const taxRate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
+    const taxIncluded = document.getElementById('d-tax-included').checked;
+
+    if (subtotal > 10000 && document.getElementById('d-discount').value === "0") {
+        document.getElementById('d-discount').value = 5;
+        calculateDealTotal();
+        return;
+    }
+
+    const discountAmount = subtotal * (discount / 100);
+    const discountedTotal = subtotal - discountAmount;
+    let finalTotal;
+
+    if (taxIncluded) {
+        finalTotal = discountedTotal;
+    } else {
+        const taxAmount = discountedTotal * (taxRate / 100);
+        finalTotal = discountedTotal + taxAmount;
+    }
+    
+    document.getElementById('d-total').value = fmt(finalTotal);
+}
+
 async function openDealModal(dealId = null) {
     try {
         await setupDealModal(dealId);
@@ -965,7 +1016,7 @@ function addDealService(service) {
     if (existingItem) {
         existingItem.quantity = parseFloat(existingItem.quantity) + 1;
     } else {
-        _dealItems.push({ ...service, quantity: 1 });
+        _dealItems.push({ ...service, quantity: service.min_volume || 1 });
     }
     renderDealServices();
 }
@@ -999,8 +1050,7 @@ function renderDealServices() {
             </tr>
         `).join('');
     }
-    const total = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    document.getElementById('d-total').value = fmt(total);
+    calculateDealTotal();
 }
 
 function getContactIdByName(name) {
@@ -1013,6 +1063,9 @@ async function saveDeal(dealId = null) {
   const contactName = document.getElementById('d-contact-input').value.trim();
   const stage_id = parseInt(document.getElementById('d-stage').value, 10);
   const manager = document.getElementById('d-assignee').value;
+  const discount = parseFloat(document.getElementById('d-discount').value) || 0;
+  const tax_rate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
+  const tax_included = document.getElementById('d-tax-included').checked;
 
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
@@ -1021,7 +1074,10 @@ async function saveDeal(dealId = null) {
       title, 
       stage_id, 
       manager: manager || null,
-      services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity }))
+      services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity })),
+      discount,
+      tax_rate,
+      tax_included
   };
   
   const contact_id = getContactIdByName(contactName);
