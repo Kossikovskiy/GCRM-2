@@ -106,39 +106,26 @@ class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_descript
 class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
 
 # --- Response Models to prevent serialization cycles ---
-class EquipmentForMaintResponse(BaseModel):
-    id: int; name: str
-    class Config: orm_mode = True
+class EquipmentForMaintResponse(BaseModel): id: int; name: str
+class MaintenanceForListResponse(BaseModel): id: int; date: date; work_description: str; cost: Optional[float]; equipment_id: int; equipment: EquipmentForMaintResponse
+class ConsumableForMaintResponse(BaseModel): id: int; name: str; unit: Optional[str]
+class MaintConsumableForDetailResponse(BaseModel): quantity: float; price_at_moment: float; consumable: ConsumableForMaintResponse
+class MaintenanceDetailResponse(BaseModel): id: int; equipment_id: int; date: date; work_description: str; notes: Optional[str]; cost: Optional[float]; consumables_used: List[MaintConsumableForDetailResponse]
+class EquipmentResponse(BaseModel): id:int; name:str; model:Optional[str]; serial:Optional[str]; purchase_date:Optional[date]; purchase_cost:Optional[float]; status:Optional[str]; notes:Optional[str]; engine_hours:Optional[float]; fuel_norm:Optional[float]; last_maintenance_date:Optional[date]; next_maintenance_date:Optional[date]
 
-class MaintenanceForListResponse(BaseModel):
-    id: int; date: date; work_description: str; cost: Optional[float]; equipment_id: int
-    equipment: EquipmentForMaintResponse
-    class Config: orm_mode = True
-
-class ConsumableForMaintResponse(BaseModel):
-    id: int; name: str; unit: Optional[str]
-    class Config: orm_mode = True
-
-class MaintConsumableForDetailResponse(BaseModel):
-    quantity: float; price_at_moment: float
-    consumable: ConsumableForMaintResponse
-    class Config: orm_mode = True
-
-class MaintenanceDetailResponse(BaseModel):
-    id: int; equipment_id: int; date: date; work_description: str; notes: Optional[str]; cost: Optional[float]
-    consumables_used: List[MaintConsumableForDetailResponse]
-    class Config: orm_mode = True
+class Config: from_attributes = True
+[m.Config.from_attributes for m in [EquipmentForMaintResponse, MaintenanceForListResponse, ConsumableForMaintResponse, MaintConsumableForDetailResponse, MaintenanceDetailResponse, EquipmentResponse]]
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v11.1)...",flush=True)
+    print("App starting (v11.2)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.1.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.2.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -323,12 +310,15 @@ def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(g
     _cache.invalidate("contacts"); return None
 
 # --- EQUIPMENT & MAINTENANCE ---
-@app.get("/api/equipment")
-def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
+@app.get("/api/equipment", response_model=List[EquipmentResponse])
+def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)): 
+    return db.query(Equipment).order_by(Equipment.name).all()
+
 @app.post("/api/equipment", status_code=201)
 def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     new_item = Equipment(**data.dict()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("equipment"); return new_item
+
 @app.patch("/api/equipment/{eq_id}")
 def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
@@ -355,7 +345,7 @@ def get_maintenance_details(m_id: int, db:DBSession=Depends(get_db), _=Depends(g
     if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
     return m_record
 
-@app.post("/api/maintenance", status_code=201)
+@app.post("/api/maintenance", status_code=201, response_model=MaintenanceDetailResponse)
 def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     total_cost = 0
     try:
@@ -375,6 +365,7 @@ def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_
             db.add(MaintenanceConsumable(maintenance_id=new_item.id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
         
         db.commit()
+        db.refresh(new_item)
         update_equipment_last_maintenance(db, data.equipment_id)
         _cache.invalidate("consumables", "equipment", "maintenance")
         return new_item
@@ -382,7 +373,7 @@ def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_
         db.rollback()
         raise
 
-@app.patch("/api/maintenance/{m_id}")
+@app.patch("/api/maintenance/{m_id}", response_model=MaintenanceDetailResponse)
 def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     try:
         m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
@@ -412,6 +403,7 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
         if 'notes' in update_data: m_record.notes = update_data['notes']
         
         db.commit()
+        db.refresh(m_record)
         update_equipment_last_maintenance(db, m_record.equipment_id)
         _cache.invalidate("consumables", "equipment", "maintenance")
         return m_record
@@ -515,4 +507,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.1) loaded.", flush=True)
+print(f"main.py (v11.2) loaded.", flush=True)
