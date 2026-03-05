@@ -368,14 +368,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-expenses">
-  <div class="ph">
-    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
-    <div class="ph-title">Расходы<span class="ph-year year-display"></span></div>
-  </div>
-  <div class="tcard">
-    <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
-    <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
-  </div>
+    <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+        <div>
+            <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
+            <div class="ph-title">Расходы<span class="ph-year year-display"></span></div>
+        </div>
+        <button class="add-btn" onclick="openExpenseModal()">＋&nbsp;Новый расход</button>
+    </div>
+    <div class="tcard">
+        <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
+        <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+    </div>
 </div>
 
 <div class="page" id="page-equipment">
@@ -443,6 +446,36 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
         <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th>Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
     </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="overlay" id="expense-overlay" onclick="if(event.target===this)closeExpenseModal()">
+  <div class="modal">
+    <div class="modal-title" id="expense-modal-title">Новый <em>расход</em></div>
+    <div class="field full">
+      <label>НАИМЕНОВАНИЕ</label>
+      <input type="text" id="ex-name" placeholder="Например, бензин для газонокосилки" />
+    </div>
+    <div class="modal-grid">
+      <div class="field">
+        <label>СУММА</label>
+        <input type="number" id="ex-amount" placeholder="1000" />
+      </div>
+      <div class="field">
+        <label>ДАТА</label>
+        <input type="date" id="ex-date" />
+      </div>
+    </div>
+    <div class="field full">
+        <label>КАТЕГОРИЯ</label>
+        <input type="text" id="ex-category" placeholder="Например, ГСМ, ремонт, запчасти" />
+    </div>
+    <div class="modal-row">
+      <button class="btn-sec btn-del-modal" id="btn-expense-delete" style="display:none">УДАЛИТЬ</button>
+      <button class="btn-sec" onclick="closeExpenseModal()">ОТМЕНА</button>
+      <button class="btn-pri" onclick="saveExpense()">СОХРАНИТЬ</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODALS -->
@@ -1527,6 +1560,87 @@ async function deleteConsumable(cId) {
     } catch(e) { }
 }
 
+// ── EXPENSE MODAL ──
+let _currentExpenseId = null;
+
+function openExpenseModal(expense = null) {
+    const overlay = document.getElementById('expense-overlay');
+    const title = document.getElementById('expense-modal-title');
+    const nameInput = document.getElementById('ex-name');
+    const amountInput = document.getElementById('ex-amount');
+    const dateInput = document.getElementById('ex-date');
+    const categoryInput = document.getElementById('ex-category');
+    const saveBtn = overlay.querySelector('.btn-pri');
+    const deleteBtn = document.getElementById('btn-expense-delete');
+
+    nameInput.classList.remove('err');
+    amountInput.classList.remove('err');
+    _currentExpenseId = null;
+
+    if (expense) {
+        _currentExpenseId = expense.id;
+        title.innerHTML = 'Редактировать <em>расход</em>';
+        nameInput.value = expense.name || '';
+        amountInput.value = expense.amount || '';
+        dateInput.value = toISODate(expense.date);
+        categoryInput.value = expense.category || '';
+        saveBtn.textContent = 'СОХРАНИТЬ';
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => deleteExpense(_currentExpenseId);
+    } else {
+        title.innerHTML = 'Новый <em>расход</em>';
+        nameInput.value = '';
+        amountInput.value = '';
+        dateInput.valueAsDate = new Date();
+        categoryInput.value = '';
+        saveBtn.textContent = 'СОЗДАТЬ';
+        deleteBtn.style.display = 'none';
+    }
+    saveBtn.onclick = saveExpense;
+    overlay.classList.add('open');
+    setTimeout(() => nameInput.focus(), 100);
+}
+
+function closeExpenseModal() {
+    document.getElementById('expense-overlay').classList.remove('open');
+    _currentExpenseId = null;
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeExpenseModal() });
+
+
+async function saveExpense() {
+    const name = document.getElementById('ex-name').value.trim();
+    const amount = parseFloat(document.getElementById('ex-amount').value);
+    const date = document.getElementById('ex-date').value;
+    const category = document.getElementById('ex-category').value.trim();
+
+    if (!name || !amount) {
+        document.getElementById('ex-name').classList.toggle('err', !name);
+        document.getElementById('ex-amount').classList.toggle('err', !amount);
+        return;
+    }
+    const data = { name, amount, date: date || toISODate(new Date()), category };
+
+    try {
+        const endpoint = _currentExpenseId ? `/expenses/${_currentExpenseId}` : '/expenses';
+        const method = _currentExpenseId ? 'PATCH' : 'POST';
+        await api(endpoint, { method, body: JSON.stringify(data) });
+        showToast(_currentExpenseId ? '✅ Расход обновлен' : '✅ Расход добавлен');
+        closeExpenseModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
+}
+
+async function deleteExpense(expenseId) {
+    if (!confirm('Вы уверены, что хотите удалить этот расход?')) return;
+    try {
+        await api(`/expenses/${expenseId}`, { method: 'DELETE' });
+        showToast('🗑️ Расход удален');
+        closeExpenseModal();
+        loadData(SELECTED_YEAR, true);
+    } catch (e) {}
+}
+
 // ── TASK MODAL ──
 let _currentTaskId = null;
 
@@ -1636,7 +1750,7 @@ function renderExpenses(expenses=[]){
   const tb=document.getElementById('expenses-tbody'),cnt=document.getElementById('expenses-count');
   const total=expenses.reduce((s,e)=>s+e.amount,0);
   if(cnt)cnt.textContent=expenses.length?`${expenses.length} записей · ${fmt(total)}`:'';
-  tb.innerHTML=expenses.length?expenses.map(e=>`<tr><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
+  tb.innerHTML=expenses.length?expenses.map(e=>`<tr onclick='openExpenseModal(${JSON.stringify(e)})'><td>${e.id}</td><td style="color:var(--ink);font-weight:400">${e.name}</td><td><span class="cat-tag">${e.category}</span></td><td><span class="money">${fmt(e.amount)}</span></td><td>${fmtDate(e.date)}</td></tr>`).join(''):empty(5,'Расходов не найдено')
 }
 
 function renderEquipment(eq=[]) {
