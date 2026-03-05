@@ -18,7 +18,7 @@ from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Date,
     DateTime, Boolean, ForeignKey, Text, text, MetaData, extract
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session as DBSession, joinedload
 from pydantic import BaseModel, Field
 import httpx
 from jose import jwt, JWTError
@@ -170,9 +170,9 @@ def init_and_seed_db():
 # ── 5. АВТОРИЗАЦИЯ И FASTAPI APP ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v4.11-final-fix)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
+    print("App starting (v4.12)...", flush=True); init_and_seed_db(); yield; print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="4.11.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="4.12.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -258,20 +258,57 @@ def get_stages(db: DBSession = Depends(get_db), _=Depends(get_current_user)): re
 
 @app.get("/api/deals")
 def get_deals(year: Optional[int] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    q = db.query(Deal).outerjoin(Deal.contact).outerjoin(Deal.stage).order_by(Deal.created_at.desc())
+    q = db.query(Deal).options(joinedload(Deal.contact), joinedload(Deal.stage)).order_by(Deal.created_at.desc())
     if year: q = q.filter(extract("year", Deal.deal_date) == year)
     deals_list = [{"id": d.id, "title": d.title or "", "total": d.total or 0.0, "client": d.contact.name if d.contact else "", "stage": d.stage.name if d.stage else "", "created_at": (d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
     return {"deals": deals_list}
+
+@app.get("/api/deals/{deal_id}")
+def get_deal_details(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).options(
+        joinedload(Deal.contact),
+        joinedload(Deal.stage),
+        joinedload(Deal.services).joinedload(DealService.service)
+    ).filter(Deal.id == deal_id).first()
+
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    users = {u.id: u.name for u in db.query(User).all()}
+    services_details = [
+        {
+            "name": ds.service.name,
+            "quantity": ds.quantity,
+            "price_at_moment": ds.price_at_moment,
+            "unit": ds.service.unit,
+        }
+        for ds in deal.services if ds.service
+    ]
+
+    return {
+        "id": deal.id,
+        "title": deal.title,
+        "total": deal.total,
+        "client": deal.contact.name if deal.contact else None,
+        "stage": deal.stage.name if deal.stage else None,
+        "created_at": deal.created_at.isoformat() if deal.created_at else None,
+        "deal_date": deal.deal_date.isoformat() if deal.deal_date else None,
+        "manager": users.get(deal.manager, "Не назначен"),
+        "services": services_details,
+    }
 
 @app.post("/api/deals", status_code=201)
 def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     contact_id = deal_data.contact_id
     if deal_data.new_contact_name:
-        new_contact = Contact(name=deal_data.new_contact_name)
-        db.add(new_contact)
-        db.commit()
-        db.refresh(new_contact)
-        contact_id = new_contact.id
+        existing_contact = db.query(Contact).filter(Contact.name == deal_data.new_contact_name).first()
+        if existing_contact:
+            contact_id = existing_contact.id
+        else:
+            new_contact = Contact(name=deal_data.new_contact_name)
+            db.add(new_contact)
+            db.flush()
+            contact_id = new_contact.id
 
     total = 0
     service_items = []
@@ -307,6 +344,16 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     if not deal: raise HTTPException(404, "Deal not found")
     for key, value in deal_data.dict(exclude_unset=True).items(): setattr(deal, key, value)
     db.commit(); _cache.invalidate("deals"); return {"status": "ok"}
+
+@app.delete("/api/deals/{deal_id}", status_code=204)
+def delete_single_deal(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    db.delete(deal)
+    db.commit()
+    _cache.invalidate("deals", "years")
+    return {"status": "ok"}
 
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -349,8 +396,8 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
 @app.get("/api/expenses")
 def get_expenses(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)): 
     q = db.query(Expense).outerjoin(Expense.category).filter(extract("year", Expense.date) == year).order_by(Expense.date.desc())
-    expenses = db.query(Expense).all()
-    return {"expenses": [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]}
+    expenses_list = [{"id": e.id, "name": e.name, "amount": e.amount, "category": e.category.name if e.category else "", "date": e.date.isoformat() if e.date else None} for e in q.all()]
+    return {"expenses": expenses_list}
 
 @app.get("/api/equipment")
 def get_equipment(db: DBSession = Depends(get_db), _=Depends(get_current_user)): return db.query(Equipment).order_by(Equipment.name).all()
@@ -373,4 +420,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v4.11-final-fix) loaded.", flush=True)
+print(f"main.py (v4.12) loaded.", flush=True)
