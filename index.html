@@ -104,6 +104,7 @@ nav button.active::after{left:13px;right:13px}
 .page{display:none;padding:40px 44px;min-height:calc(100vh - var(--hh));animation:pageIn .32s ease both}
 .page.active{display:block}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.page-grid{display:grid;grid-template-columns:1fr 2fr;gap:24px;}
 
 /* PAGE HEAD */
 .ph{margin-bottom:36px}
@@ -290,6 +291,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <button onclick="showPage('kanban',this)">Сделки</button>
     <button onclick="showPage('tasks',this)">Задачи</button>
     <button onclick="showPage('expenses',this)">Расходы</button>
+    <button onclick="showPage('taxes',this)">Налог</button>
     <button onclick="showPage('equipment',this)">Техника</button>
     <button onclick="showPage('services',this)">Прайс-лист</button>
     <button onclick="showPage('stock',this)">Склад</button>
@@ -378,6 +380,43 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
         <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+    </div>
+</div>
+
+<div class="page" id="page-taxes">
+    <div class="ph">
+        <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Финансы</span></div>
+        <div class="ph-title">Уплата <em>налогов</em><span class="ph-year year-display"></span></div>
+    </div>
+    <div class="page-grid">
+        <div>
+            <div class="kpi-card" style="--kpi-accent:#2a5280">
+                <span class="kpi-icon">🏛️</span>
+                <div class="kpi-val m-neg" id="tax-balance">—</div>
+                <div class="kpi-label">Налог к уплате</div>
+                <div class="kpi-sub" id="tax-sub">Начислено: —, уплачено: —</div>
+            </div>
+            <div class="tcard" style="margin-top:24px;">
+                <div class="tcard-head"><span class="tcard-title">Новый платёж</span></div>
+                <div style="padding: 20px;">
+                    <div class="field">
+                        <label>СУММА ПЛАТЕЖА</label>
+                        <input type="number" id="tax-payment-amount" placeholder="10000" />
+                    </div>
+                    <div class="field" style="margin-top: 16px;">
+                        <label>ДАТА</label>
+                        <input type="date" id="tax-payment-date" />
+                    </div>
+                    <div class="modal-row" style="justify-content:flex-start; margin-top: 20px;">
+                         <button class="add-btn" onclick="saveTaxPayment()">＋ Добавить платёж</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tcard">
+            <div class="tcard-head"><span class="tcard-title">История платежей</span><span class="tcard-meta" id="tax-payments-count"></span></div>
+            <table><thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th>Примечание</th></tr></thead><tbody id="tax-payments-tbody"></tbody></table>
+        </div>
     </div>
 </div>
 
@@ -819,7 +858,7 @@ async function api(ep,opts={}){
     const r=await fetch(`${API_BASE}${ep}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
     if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
     if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP Error ${r.status}`)}
-    if (r.status === 204) return null;
+    if (r.status === 204 || r.headers.get('content-length') === '0') return null;
     const text = await r.text();
     return text ? JSON.parse(text) : null;
   }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
@@ -1911,6 +1950,64 @@ function buildDash(deals,expenses,equipment){
   document.getElementById('kpi-repair').textContent=equipment.filter(e=>e.status==='repair').length+' в ремонте';
 }
 
+function renderTaxesPage(summary, payments) {
+    if (summary) {
+        const balanceEl = document.getElementById('tax-balance');
+        balanceEl.textContent = fmt(summary.balance);
+        balanceEl.className = 'kpi-val '+(summary.balance > 0 ?'m-neg':'m-pos');
+        document.getElementById('tax-sub').textContent = `Начислено: ${fmt(summary.tax_accrued)}, уплачено: ${fmt(summary.paid)}`;
+    }
+    const tbody = document.getElementById('tax-payments-tbody');
+    const countEl = document.getElementById('tax-payments-count');
+    if (countEl) countEl.textContent = payments.length ? `${payments.length} записей` : '';
+    tbody.innerHTML = payments.length ? payments.map(p => `
+        <tr>
+            <td>${p.id}</td>
+            <td><span class="money">${fmt(p.amount)}</span></td>
+            <td>${fmtDate(p.date)}</td>
+            <td>${p.note || '—'}</td>
+        </tr>
+    `).join('') : empty(4, 'Платежей не найдено');
+}
+
+async function saveTaxPayment() {
+    const amountInput = document.getElementById('tax-payment-amount');
+    const dateInput = document.getElementById('tax-payment-date');
+    const amount = parseFloat(amountInput.value);
+    const date = dateInput.value;
+
+    if (!amount || amount <= 0) {
+        showToast('❌ Введите корректную сумму');
+        amountInput.classList.add('err');
+        return;
+    }
+    if (!date) {
+        showToast('❌ Укажите дату платежа');
+        dateInput.classList.add('err');
+        return;
+    }
+    amountInput.classList.remove('err');
+    dateInput.classList.remove('err');
+    
+    const data = {
+        amount,
+        date,
+        year: SELECTED_YEAR,
+        note: 'Оплата налога'
+    };
+
+    try {
+        await api('/taxes/payments', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Платёж успешно добавлен');
+        amountInput.value = '';
+        dateInput.value = toISODate(new Date());
+        loadData(SELECTED_YEAR, true); // Force reload
+    } catch (e) {
+        // showToast is already called in api()
+    }
+}
+
+
 async function loadData(year, force = false){
   if(!year)return;
   if (force) {
@@ -1920,10 +2017,18 @@ async function loadData(year, force = false){
   document.querySelectorAll('.year-display').forEach(el=>el.textContent=year);
   const yp='?year='+year;
   const endpoints = {
-      deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
-      equipment: '/equipment', services: '/services', consumables: '/consumables',
-      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp,
-      expense_categories: '/expense-categories'
+      deals: '/deals'+yp, 
+      tasks: `/tasks?year=${year}&is_done=false`, 
+      expenses: '/expenses'+yp,
+      equipment: '/equipment', 
+      services: '/services', 
+      consumables: '/consumables',
+      contacts: '/contacts', 
+      stages: '/stages', 
+      maintenance: '/maintenance'+yp,
+      expense_categories: '/expense-categories',
+      taxes_summary: '/taxes/summary' + yp,
+      tax_payments: '/taxes/payments' + yp
   };
   const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
   const data = {};
@@ -1948,6 +2053,7 @@ async function loadData(year, force = false){
   renderContacts(data.contacts || []);
   renderMaintenanceHistory(data.maintenance || []);
   buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
+  renderTaxesPage(data.taxes_summary, data.tax_payments || []);
   
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
@@ -1967,12 +2073,14 @@ async function checkAuth(){
     CURRENT_USER = await api('/me');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
-    await populateYearSelector();await loadData(SELECTED_YEAR);
+    await populateYearSelector();
+    await loadData(SELECTED_YEAR);
     document.getElementById('year-selector').addEventListener('change',()=>{
       const y=parseInt(document.getElementById('year-selector').value,10);
       if(y&&y!==SELECTED_YEAR){SELECTED_YEAR=y;loadData(y)}
     });
     document.getElementById('year-refresh').addEventListener('click',()=>loadData(SELECTED_YEAR, true));
+    document.getElementById('tax-payment-date').value = toISODate(new Date());
   }catch{document.getElementById('login-screen').style.display='flex'}
 }
 

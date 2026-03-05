@@ -35,6 +35,7 @@ CALLBACK_URL   = f"{APP_BASE_URL}/api/auth/callback"
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 ROLE_CLAIM     = "https://grass-crm/role"
 CACHE_TTL      = 300
+TAX_RATE       = float(os.getenv("TAX_RATE", "0.04")) # 4% УСН "Доходы" для самозанятых
 
 # ── 2. КЭШ И УТИЛИТЫ ──────────────────────────────────────────────────────────
 class _Cache:
@@ -47,7 +48,7 @@ class _Cache:
         with self._lock: self._data[key], self._ts[key] = value, _time.monotonic()
     def invalidate(self, *keys):
         with self._lock:
-            if not keys: self._data.clear(); self._ts.clear(); return
+            if not keys or "all" in keys: self._data.clear(); self._ts.clear(); return
             for k in keys:
                 to_remove = [ek for ek in self._data if ek == k or ek.startswith(f"{k}:")]
                 for ek in to_remove: 
@@ -94,6 +95,15 @@ class MaintenanceConsumable(Base): __tablename__="maintenance_consumables"; id=C
 class EquipmentMaintenance(Base): __tablename__ = "equipment_maintenance"; id=Column(Integer,primary_key=True); equipment_id=Column(Integer,ForeignKey("equipment.id",ondelete="CASCADE"),nullable=False); date=Column(Date,nullable=False); work_description=Column(Text,nullable=False); cost=Column(Float); notes=Column(Text); equipment = relationship("Equipment", back_populates="maintenance_records"); consumables_used = relationship("MaintenanceConsumable", back_populates="maintenance_record", cascade="all, delete-orphan")
 class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost=Column(Date),Column(Double,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); engine_hours=Column(Double,default=0.0); fuel_norm=Column(Double,default=0.0); last_maintenance_date=Column(Date); next_maintenance_date=Column(Date); expenses=relationship("Expense",back_populates="equipment"); maintenance_records = relationship("EquipmentMaintenance", back_populates="equipment", cascade="all, delete-orphan")
 class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Integer,primary_key=True),Column(Date,nullable=False,default=date.today),Column(String(300),nullable=False),Column(Float,nullable=False); category_id,equipment_id=Column(Integer,ForeignKey("expense_categories.id")),Column(Integer,ForeignKey("equipment.id")); category=relationship("ExpenseCategory",back_populates="expenses"); equipment=relationship("Equipment",back_populates="expenses")
+
+class TaxPayment(Base):
+    __tablename__ = "tax_payments"
+    id = Column(Integer, primary_key=True)
+    amount = Column(Float, nullable=False)
+    date = Column(Date, nullable=False, default=date.today)
+    note = Column(Text)
+    year = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db_structure(): Base.metadata.create_all(engine)
 def seed_initial_data(s: DBSession):
@@ -148,6 +158,7 @@ class MaintenanceCreate(BaseModel): equipment_id: int; date: date; work_descript
 class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description: Optional[str]=None; notes: Optional[str]=None; consumables: Optional[List[MaintenanceConsumableItem]] = None
 class ExpenseCreate(BaseModel): name: str; amount: float; date: date; category: str
 class ExpenseUpdate(BaseModel): name: Optional[str] = None; amount: Optional[float] = None; date: Optional[date] = None; category: Optional[str] = None
+class TaxPaymentCreate(BaseModel): amount: float; date: date; note: Optional[str] = None; year: int
 
 
 # --- Response Models to prevent serialization cycles ---
@@ -181,13 +192,13 @@ class EquipmentResponse(BaseModel):
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v11.6)...",flush=True)
+    print("App starting (v12.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="11.6.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="12.1.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -231,7 +242,7 @@ def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return 
 @app.get("/api/stages")
 def get_stages(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
 @app.post("/api/cache/invalidate")
-def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate(); return {"status":"ok"}
+def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate("all"); return {"status":"ok"}
 
 # --- SERVICES ---
 @app.get("/api/services")
@@ -686,9 +697,56 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
     task = db.query(Task).filter(Task.id == task_id).first()
     if task: db.delete(task); db.commit(); _cache.invalidate("tasks")
 
+# --- TAXES ---
+@app.get("/api/taxes/summary")
+def get_tax_summary(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    cache_key = f"tax_summary:{year}"
+    if (cached := _cache.get(cache_key)) is not None: return cached
+
+    success_stage = db.query(Stage).filter(Stage.name == "Успешно").first()
+    if not success_stage: raise HTTPException(status_code=404, detail="Этап 'Успешно' не найден для расчета налога.")
+
+    total_revenue = db.query(func.sum(Deal.total)).filter(
+        Deal.stage_id == success_stage.id,
+        extract("year", Deal.deal_date) == year
+    ).scalar() or 0
+
+    tax_accrued = total_revenue * TAX_RATE
+
+    total_paid = db.query(func.sum(TaxPayment.amount)).filter(TaxPayment.year == year).scalar() or 0
+
+    summary = {
+        "revenue": round(total_revenue, 2),
+        "tax_accrued": round(tax_accrued, 2),
+        "paid": round(total_paid, 2),
+        "balance": round(tax_accrued - total_paid, 2)
+    }
+    _cache.set(cache_key, summary)
+    return summary
+
+@app.get("/api/taxes/payments")
+def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    cache_key = f"tax_payments:{year}"
+    if (cached := _cache.get(cache_key)) is not None: return cached
+    
+    payments = db.query(TaxPayment).filter(TaxPayment.year == year).order_by(TaxPayment.date.desc()).all()
+    _cache.set(cache_key, payments)
+    return payments
+
+@app.post("/api/taxes/payments", status_code=201)
+def create_tax_payment(payment_data: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    if payment_data.amount <= 0: raise HTTPException(status_code=400, detail="Сумма платежа должна быть положительной.")
+    
+    new_payment = TaxPayment(**payment_data.model_dump())
+    db.add(new_payment); db.commit(); db.refresh(new_payment)
+    
+    _cache.invalidate(f"tax_summary:{payment_data.year}", f"tax_payments:{payment_data.year}", "years")
+    return new_payment
+
+
 @app.get("/{full_path:path}", response_class=FileResponse)
 async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v11.6) loaded.", flush=True)
+print(f"main.py (v12.1) loaded.", flush=True)
