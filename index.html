@@ -610,7 +610,7 @@ function initDrag(){
       }
     });
     col.addEventListener('drop',e=>{
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       col.classList.remove('drag-over');
       col.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
       const id=e.dataTransfer.getData('text/plain');
@@ -623,12 +623,13 @@ function initDrag(){
       const stage = STAGES.find(s => s.name === newStageName);
       if (!stage) return;
 
+      const oldStageName = deal.stage;
       deal.stage = newStageName;
       renderKanban(_deals);
 
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id, title:deal.title, services: []})})
+      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
         .then(()=>showToast('✅ → '+newStageName))
-        .catch(()=>{deal.stage=_dragSrcStage;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
   });
 }
@@ -650,7 +651,7 @@ async function setupDealModal(dealId = null) {
 
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${escH(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
-    assigneeSel.innerHTML = users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    assigneeSel.innerHTML = `<option value="">Не назначен</option>` + users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
 
     if (dealId) {
         titleEl.innerHTML = `Сделка <em>№${dealId}</em>`;
@@ -763,14 +764,14 @@ async function saveDeal(dealId = null) {
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
 
-  const contact_id = getContactIdByName(contactName);
   const dealData = { 
       title, 
       stage_id, 
-      manager, 
-      services: _dealItems.map(item => ({ service_id: item.id, quantity: item.quantity }))
+      manager: manager || null,
+      services: _dealItems.filter(i => i.id > 0).map(item => ({ service_id: item.id, quantity: item.quantity }))
   };
   
+  const contact_id = getContactIdByName(contactName);
   if (contact_id) {
     dealData.contact_id = contact_id;
   } else if (contactName) {
@@ -847,32 +848,42 @@ async function populateAssignees(selectedId){
 }
 
 async function openTaskModal(taskId = null){
-  _currentTaskId = taskId;
-  document.getElementById('t-title').value='';
-  document.getElementById('t-desc').value='';
-  document.getElementById('t-date').valueAsDate = new Date(Date.now() + 864e5);
-  document.getElementById('t-priority').value='Обычный';
-  document.getElementById('t-status').value='Открыта';
-  document.getElementById('t-title').classList.remove('err');
-  document.getElementById('btn-task-delete').style.display = taskId ? 'block' : 'none';
-  document.getElementById('btn-task-delete').onclick = () => deleteTask(taskId);
+    _currentTaskId = taskId;
+    const overlay = document.getElementById('task-overlay');
+    const titleEl = document.getElementById('t-title');
+    const descEl = document.getElementById('t-desc');
+    const dateEl = document.getElementById('t-date');
+    const priorityEl = document.getElementById('t-priority');
+    const statusEl = document.getElementById('t-status');
+    const deleteBtn = document.getElementById('btn-task-delete');
 
-  if (taskId) {
-    const task = (await api(`/tasks?year=${SELECTED_YEAR}`)).find(t => t.id === taskId);
-    if (task) {
-        document.getElementById('t-title').value = task.title || '';
-        document.getElementById('t-desc').value = task.description || '';
-        if(task.due_date) document.getElementById('t-date').value = task.due_date.split('T')[0];
-        document.getElementById('t-priority').value = task.priority || 'Обычный';
-        document.getElementById('t-status').value = task.status || 'Открыта';
-        await populateAssignees(task.assignee);
+    titleEl.value = ''; descEl.value = ''; 
+    dateEl.valueAsDate = new Date(Date.now() + 864e5);
+    priorityEl.value = 'Обычный'; statusEl.value = 'Открыта';
+    titleEl.classList.remove('err');
+    deleteBtn.style.display = 'none';
+
+    if (taskId) {
+        try {
+            const tasks = await api(`/tasks?year=${SELECTED_YEAR}`);
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                titleEl.value = task.title || '';
+                descEl.value = task.description || '';
+                if (task.due_date) dateEl.value = task.due_date.split('T')[0];
+                priorityEl.value = task.priority || 'Обычный';
+                statusEl.value = task.status || 'Открыта';
+                await populateAssignees(task.assignee);
+                deleteBtn.style.display = 'block';
+                deleteBtn.onclick = () => deleteTask(taskId);
+            } else { throw new Error('Task not found'); }
+        } catch(e) { showToast('❌ Не удалось загрузить задачу'); return; }
+    } else {
+        await populateAssignees(CURRENT_USER?.sub);
     }
-  } else {
-    await populateAssignees(CURRENT_USER?.sub);
-  }
-  
-  document.getElementById('task-overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('t-title').focus(),100);
+
+    overlay.classList.add('open');
+    setTimeout(() => titleEl.focus(), 100);
 }
 
 async function deleteTask(id){

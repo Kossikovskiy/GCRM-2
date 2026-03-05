@@ -39,13 +39,13 @@ CACHE_TTL      = 300
 class _Cache:
     def __init__(self, ttl: int):
         self._ttl, self._data, self._ts, self._lock = ttl, {}, {}, threading.Lock()
-    def get(self, key: str): # ... (cache implementation)
+    def get(self, key: str):
         with self._lock:
             if key not in self._data or _time.monotonic() - self._ts[key] > self._ttl: return None
             return self._data[key]
-    def set(self, key: str, value): # ... (cache implementation)
+    def set(self, key: str, value):
         with self._lock: self._data[key], self._ts[key] = value, _time.monotonic()
-    def invalidate(self, *keys): # ... (cache implementation)
+    def invalidate(self, *keys):
         with self._lock:
             if not keys: self._data.clear(); self._ts.clear(); return
             for k in keys:
@@ -65,14 +65,14 @@ class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Int
 class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
 class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(50),unique=True,index=True),Column(String(100)); deals = relationship("Deal",back_populates="contact")
-class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id")),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
+class Deal(Base): __tablename__ = "deals"; id,contact_id,stage_id,title=Column(Integer,primary_key=True),Column(Integer,ForeignKey("contacts.id"),nullable=False),Column(Integer,ForeignKey("stages.id")),Column(String(200),nullable=False); total,notes,created_at,deal_date=Column(Float,default=0.0),Column(Text,default=""),Column(DateTime,default=datetime.utcnow),Column(DateTime); closed_at,is_repeat,manager,address=Column(DateTime),Column(Boolean,default=False),Column(String(200)),Column(Text); contact=relationship("Contact",back_populates="deals"); stage=relationship("Stage",back_populates="deals"); services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
 class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта")
 class ExpenseCategory(Base): __tablename__="expense_categories"; id,name=Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True); expenses=relationship("Expense",back_populates="category")
 class Equipment(Base): __tablename__="equipment"; id,name,model,serial=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(200),default=""),Column(String(100)); purchase_date,purchase_cost,engine_hours=Column(Date),Column(Float,default=0.0),Column(Float,default=0.0); status,notes=Column(String(50),default="active"),Column(Text); expenses=relationship("Expense",back_populates="equipment")
 class Expense(Base): __tablename__="expenses"; id,date,name,amount=Column(Integer,primary_key=True),Column(Date,nullable=False,default=date.today),Column(String(300),nullable=False),Column(Float,nullable=False); category_id,equipment_id=Column(Integer,ForeignKey("expense_categories.id")),Column(Integer,ForeignKey("equipment.id")); category=relationship("ExpenseCategory",back_populates="expenses"); equipment=relationship("Equipment",back_populates="expenses")
 class Consumable(Base): __tablename__="consumables"; id,name,unit,stock_quantity,notes=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"),Column(Float,default=0.0),Column(Text)
 
-def init_and_seed_db(): # ... (DB init as before)
+def init_and_seed_db():
     try:
         Base.metadata.create_all(engine)
         with SessionFactory() as s:
@@ -84,15 +84,16 @@ def init_and_seed_db(): # ... (DB init as before)
 
 # ── 5. МОДЕЛИ PYDANTIC ────────────────────────────────────────────────────────
 class DealServiceItem(BaseModel): service_id: int; quantity: float
-class DealCreateUpdate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:List[DealServiceItem]=[]
+class DealCreate(BaseModel): title:str; stage_id:int; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:List[DealServiceItem]=[]
+class DealUpdate(BaseModel): title:Optional[str]=None; stage_id:Optional[int]=None; contact_id:Optional[int]=None; new_contact_name:Optional[str]=None; manager:Optional[str]=None; services:Optional[List[DealServiceItem]]=None
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
 
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(app: FastAPI): print("App starting (v5.0)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
+async def lifespan(app: FastAPI): print("App starting (v6.0-final)...",flush=True); init_and_seed_db(); yield; print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="5.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="6.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -150,11 +151,13 @@ def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),_=Depends(get
     return {"deals": deals_list}
 
 @app.post("/api/deals", status_code=201)
-def create_deal(deal_data:DealCreateUpdate,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
+def create_deal(deal_data:DealCreate,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     contact_id=deal_data.contact_id
     if deal_data.new_contact_name:
         new_contact=Contact(name=deal_data.new_contact_name); db.add(new_contact); db.flush(); db.refresh(new_contact)
         contact_id=new_contact.id
+    if not contact_id: raise HTTPException(400, "Не указан клиент")
+
     total=0; service_items=[]
     for item in deal_data.services:
         service=db.query(Service).filter(Service.id==item.service_id).first()
@@ -181,28 +184,37 @@ def get_deal_details(deal_id:int,db:DBSession=Depends(get_db),_=Depends(get_curr
     return {"id":deal.id, "title":deal.title, "total":deal.total, "stage_id":deal.stage_id, "manager":deal.manager, "contact": {"id":deal.contact.id, "name":deal.contact.name} if deal.contact else None, "services": services_list}
 
 @app.patch("/api/deals/{deal_id}")
-def update_deal(deal_id:int,deal_data:DealCreateUpdate,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
-    deal=db.query(Deal).filter(Deal.id==deal_id).first()
-    if not deal: raise HTTPException(404,"Сделка не найдена")
+def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal: raise HTTPException(404, "Сделка не найдена")
 
-    deal.title=deal_data.title; deal.stage_id=deal_data.stage_id; deal.manager=deal_data.manager
-    
-    contact_id=deal_data.contact_id
-    if deal_data.new_contact_name: 
-        new_contact=Contact(name=deal_data.new_contact_name); db.add(new_contact); db.flush(); db.refresh(new_contact)
-        contact_id=new_contact.id
-    deal.contact_id = contact_id
-    
-    db.query(DealService).filter(DealService.deal_id == deal_id).delete()
-    total=0; service_items=[]
-    for item in deal_data.services:
-        service=db.query(Service).filter(Service.id==item.service_id).first()
-        if not service: continue
-        price=service.price; total+=price*item.quantity
-        service_items.append(DealService(deal_id=deal_id,service_id=service.id,quantity=item.quantity,price_at_moment=price))
-    db.add_all(service_items); deal.total=total
-    
-    db.commit(); _cache.invalidate("deals","years"); return {"status":"ok"}
+    update_data = deal_data.dict(exclude_unset=True)
+
+    if "new_contact_name" in update_data:
+        new_contact = Contact(name=update_data["new_contact_name"]); db.add(new_contact); db.flush(); db.refresh(new_contact)
+        deal.contact_id = new_contact.id
+    elif "contact_id" in update_data:
+        deal.contact_id = update_data["contact_id"]
+
+    if "services" in update_data:
+        db.query(DealService).filter(DealService.deal_id == deal_id).delete(synchronize_session=False)
+        total = 0
+        for item_data in update_data["services"]:
+            item = DealServiceItem(**item_data)
+            service = db.query(Service).filter(Service.id == item.service_id).first()
+            if service:
+                price = service.price; total += price * item.quantity
+                db.add(DealService(deal_id=deal_id, service_id=service.id, quantity=item.quantity, price_at_moment=price))
+        deal.total = total
+
+    if "title" in update_data: deal.title = update_data["title"]
+    if "stage_id" in update_data: deal.stage_id = update_data["stage_id"]
+    if "manager" in update_data: deal.manager = update_data["manager"]
+
+    db.commit()
+    _cache.invalidate("deals", "years")
+    return {"status": "ok"}
+
 
 @app.delete("/api/deals/{deal_id}", status_code=204)
 def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current_user)):
@@ -210,7 +222,12 @@ def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current
     if deal: db.delete(deal); db.commit(); _cache.invalidate("deals","years")
     return None
 
-# ... (остальные эндпоинты без изменений)
+@app.get("/api/years")
+def get_years(db: DBSession=Depends(get_db),_=Depends(get_current_user)):
+    if (cached := _cache.get("years")) is not None: return cached
+    years=sorted(set([r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM deal_date)::int FROM deals WHERE deal_date IS NOT NULL")).fetchall() if r[0]] + [r[0] for r in db.execute(text("SELECT DISTINCT EXTRACT(YEAR FROM date)::int FROM expenses WHERE date IS NOT NULL")).fetchall() if r[0]]), reverse=True) or [datetime.utcnow().year]
+    _cache.set("years", years); return years
+
 @app.get("/api/tasks")
 def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     q = db.query(Task).order_by(Task.due_date.asc())
@@ -249,4 +266,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v5.0) loaded.", flush=True)
+print(f"main.py (v6.0-final) loaded.", flush=True)
