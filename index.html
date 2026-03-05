@@ -340,7 +340,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
-    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
+    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
   </div>
 </div>
 
@@ -418,9 +418,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       </div>
       <div class="field">
         <label>ОТВЕТСТВЕННЫЙ</label>
-        <select id="t-assignee" disabled>
-          <option id="t-assignee-opt">— Авто: текущий пользователь —</option>
-        </select>
+        <select id="t-assignee"></select>
       </div>
       <div class="field">
         <label>ПРИОРИТЕТ</label>
@@ -552,7 +550,17 @@ function initDrag(){
 // ── TASK MODAL ──
 let _currentTaskId = null;
 
-function openTaskModal(){
+async function populateAssignees(selectedId){
+  const sel = document.getElementById('t-assignee');
+  try {
+    const users = await api('/users');
+    sel.innerHTML = users.map(u => `<option value="${u.id}" ${u.id === selectedId ? 'selected' : ''}>${u.name}</option>`).join('');
+  } catch(e) {
+    sel.innerHTML = `<option value="">Ошибка загрузки</option>`;
+  }
+}
+
+async function openTaskModal(){
   _currentTaskId = null;
   document.getElementById('t-title').value='';
   document.getElementById('t-desc').value='';
@@ -561,12 +569,14 @@ function openTaskModal(){
   document.getElementById('t-status').value='Открыта';
   document.getElementById('t-title').classList.remove('err');
   document.getElementById('btn-task-delete').style.display = 'none';
-  if(CURRENT_USER) document.getElementById('t-assignee-opt').textContent = CURRENT_USER.username;
+  
+  await populateAssignees(CURRENT_USER?.sub);
+  
   document.getElementById('task-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('t-title').focus(),100);
 }
 
-function openTaskModalWithData(t){
+async function openTaskModalWithData(t){
   _currentTaskId = t.id;
   document.getElementById('t-title').value = t.title || '';
   document.getElementById('t-desc').value = t.description || '';
@@ -576,7 +586,9 @@ function openTaskModalWithData(t){
   document.getElementById('t-title').classList.remove('err');
   document.getElementById('btn-task-delete').style.display = 'block';
   document.getElementById('btn-task-delete').onclick = () => deleteTask(t.id);
-  if(t.assignee) document.getElementById('t-assignee-opt').textContent = t.assignee;
+  
+  await populateAssignees(t.assignee);
+  
   document.getElementById('task-overlay').classList.add('open');
 }
 
@@ -600,6 +612,7 @@ async function saveTask(){
   const due_date=document.getElementById('t-date').value;
   const priority=document.getElementById('t-priority').value;
   const status=document.getElementById('t-status').value;
+  const assignee=document.getElementById('t-assignee').value;
 
   if(!title){document.getElementById('t-title').classList.add('err');return}
   try{
@@ -607,7 +620,7 @@ async function saveTask(){
     const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
     const is_done = status === 'Выполнена';
     
-    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, is_done})});
+    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
     closeTaskModal();
     showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
     await api('/cache/invalidate',{method:'POST'}).catch(()=>{});
@@ -631,7 +644,7 @@ function renderTasks(tasks=[]){
     if(s==='В работе')return'b-blue';
     return 'b-slate';
   };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModalWithData(${JSON.stringify(t).replace(/"/g, '&quot;')})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(4,'Задач не найдено')
+  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModalWithData(${JSON.stringify(t).replace(/"/g, '&quot;')})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${t.description||''}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
 }
 
 function renderExpenses(expenses=[]){

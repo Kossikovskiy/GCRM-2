@@ -99,6 +99,12 @@ engine = create_engine(DATABASE_URL)
 SessionFactory = sessionmaker(bind=engine)
 
 
+class User(Base):
+    __tablename__ = "users"
+    id    = Column(String, primary_key=True)
+    name  = Column(String)
+    email = Column(String)
+
 class Stage(Base):
     __tablename__ = "stages"
     id       = Column(Integer, primary_key=True)
@@ -141,7 +147,7 @@ class Task(Base):
     description = Column(Text, nullable=True)
     is_done     = Column(Boolean, default=False)
     due_date    = Column(Date, nullable=True)
-    assignee    = Column(String, nullable=True)
+    assignee    = Column(String, nullable=True) # Will store user.id (sub)
     priority    = Column(String, default="Обычный")
     status      = Column(String, default="Открыта")
 
@@ -235,12 +241,12 @@ def get_current_user(request: Request) -> dict:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("App starting (v3.8)...", flush=True)
+    print("App starting (v3.9)...", flush=True)
     init_and_seed_db()
     yield
     print("App shutting down.", flush=True)
 
-app = FastAPI(title="GreenCRM API", version="3.8.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="3.9.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware,
                    secret_key=SESSION_SECRET,
@@ -324,11 +330,23 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
     except JWTError as e:
         raise HTTPException(401, f"Token validation failed: {e}")
 
-    # Trying to get name/nickname for display
-    user_name = payload.get("nickname") or payload.get("name") or payload.get("email") or payload.get("sub", "")
+    # Upsert user in DB
+    user_id = payload.get("sub", "")
+    user_name = payload.get("nickname") or payload.get("name") or payload.get("email") or user_id
+    user_email = payload.get("email")
+
+    with SessionFactory() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            user = User(id=user_id, name=user_name, email=user_email)
+            db.add(user)
+        else:
+            user.name = user_name
+            user.email = user_email
+        db.commit()
 
     request.session["user"] = {
-        "sub":  payload.get("sub", ""),
+        "sub":  user_id,
         "name": user_name,
         "role": payload.get(ROLE_CLAIM, "user"),
     }
@@ -350,6 +368,10 @@ def logout(request: Request):
 def get_me(user: dict = Depends(get_current_user)):
     return {"username": user["sub"], "name": user.get("name", user["sub"]), "role": user["role"]}
 
+@app.get("/api/users")
+def get_users(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    users = db.query(User).all()
+    return [{"id": u.id, "name": u.name} for u in users]
 
 @app.get("/api/years")
 def get_years(db: DBSession = Depends(get_db), _=Depends(get_current_user)):
@@ -431,7 +453,7 @@ def create_task(task: TaskCreate,
         due_date=due,
         priority=task.priority,
         status=task.status,
-        assignee=task.assignee or user.get("name", user["sub"])
+        assignee=task.assignee or user["sub"]
     )
     db.add(new_task)
     db.commit()
@@ -456,17 +478,27 @@ def get_tasks(year: Optional[int] = None,
     if is_done is not None:
         q = q.filter(Task.is_done == is_done)
 
-    result = {"tasks": [{
-        "id":          t.id,
-        "title":       t.title,
-        "description": t.description,
-        "status":      t.status,
-        "is_done":     t.is_done,
-        "due_date":    t.due_date.isoformat() if t.due_date else None,
-        "assignee":    t.assignee,
-        "priority":    t.priority,
-    } for t in q.all()]}
+    tasks_list = []
+    for t in q.all():
+        assignee_name = "Не назначен"
+        if t.assignee:
+            user_obj = db.query(User).filter(User.id == t.assignee).first()
+            if user_obj:
+                assignee_name = user_obj.name
+                
+        tasks_list.append({
+            "id":          t.id,
+            "title":       t.title,
+            "description": t.description,
+            "status":      t.status,
+            "is_done":     t.is_done,
+            "due_date":    t.due_date.isoformat() if t.due_date else None,
+            "assignee":    t.assignee,
+            "assignee_name": assignee_name,
+            "priority":    t.priority,
+        })
 
+    result = {"tasks": tasks_list}
     _cache.set(cache_key, result)
     return result
 
@@ -624,4 +656,4 @@ async def serve_frontend(full_path: str):
     return FileResponse("./index.html")
 
 
-print("main.py (v3.8) loaded.", flush=True)
+print("main.py (v3.9) loaded.", flush=True)
