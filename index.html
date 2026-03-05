@@ -252,7 +252,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .item-result-sub{font-size:11px;color:var(--ink3)}
 .item-result-price{color:var(--fern);}
 
-#page-equipment-layout{display:grid;grid-template-columns:2fr 1fr;gap:24px}
+#page-equipment-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:24px}
 
 /* TOAST */
 .toast{
@@ -385,7 +385,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
             <div class="ph-title">Учёт <em>техники</em></div>
         </div>
         <div style="display:flex; gap:10px;">
-            <button class="btn-sec" id="btn-add-maintenance" onclick="openMaintenanceModal()" disabled>＋ ТО</button>
+            <button class="btn-sec" id="btn-add-maintenance" onclick="openMaintenanceModal()">＋ ТО</button>
             <button class="add-btn" onclick="openEquipmentModal()">＋ Техника</button>
         </div>
     </div>
@@ -397,8 +397,8 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
             </div>
         </div>
         <div class="tcard">
-            <div class="tcard-head"><span class="tcard-title">История ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
-            <table><thead><tr><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
+            <div class="tcard-head"><span class="tcard-title">Журнал ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
+            <table><thead><tr><th>Техника</th><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
         </div>
     </div>
 </div>
@@ -750,7 +750,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <script>
 const API_BASE='/api';
 let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
-let _contacts=[],_services=[],_equipment=[],_consumables=[];
+let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[];
 let _selectedEquipmentId = null;
 
 function fmt(n, z = '—'){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : z}
@@ -1234,8 +1234,6 @@ function selectEquipment(eqId, rowElement) {
     _selectedEquipmentId = eqId;
     document.querySelectorAll('#equipment-tbody tr').forEach(row => row.classList.remove('selected'));
     if (rowElement) rowElement.classList.add('selected');
-    document.getElementById('btn-add-maintenance').disabled = !eqId;
-    renderMaintenanceHistory(eqId);
 }
 
 function openEquipmentModal(eq = null) {
@@ -1324,8 +1322,8 @@ async function deleteEquipment(eqId) {
 }
 
 async function openMaintenanceModal(mId = null) {
-    if (!_selectedEquipmentId && !mId) {
-        showToast('Сначала выберите технику');
+    if (!mId && !_selectedEquipmentId) {
+        showToast('💡 Сначала выберите технику в левой таблице');
         return;
     }
     const overlay = document.getElementById('maintenance-modal');
@@ -1344,8 +1342,8 @@ async function openMaintenanceModal(mId = null) {
         const m = await api(`/maintenance/${mId}`);
         if (!m) { showToast('Ошибка загрузки ТО'); return; }
         
-        selectEquipment(m.equipment_id, document.querySelector(`tr[onclick^="selectEquipment(${m.equipment_id},"]`));
-        title.innerHTML = 'Запись <em>о ТО</em>';
+        selectEquipment(m.equipment_id, document.querySelector(`#equipment-tbody tr[data-id="${m.equipment_id}"]`));
+        title.innerHTML = `Запись <em>о ТО #${m.id}</em>`;
         document.getElementById('m-date').value = toISODate(m.date);
         document.getElementById('m-work').value = m.work_description || '';
         document.getElementById('m-notes').value = m.notes || '';
@@ -1410,7 +1408,7 @@ function renderMaintenanceConsumables() {
         tbody.innerHTML = _maintenanceItems.map(item => `
             <tr>
                 <td>${item.name}</td>
-                <td>${fmt(item.price)} / ${item.unit}</td>
+                <td>${fmt(item.price, '0 ₽')} / ${item.unit}</td>
                 <td><input type="number" value="${item.quantity}" onchange="updateMaintenanceConsumableQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
                 <td>${fmt(item.price * item.quantity)}</td>
                 <td><button class="btn-del" onclick="removeMaintenanceConsumable(${item.id})" title="Удалить">⊗</button></td>
@@ -1434,7 +1432,10 @@ async function saveMaintenance() {
 
     const method = _currentMaintenanceId ? 'PATCH' : 'POST';
     const endpoint = _currentMaintenanceId ? `/maintenance/${_currentMaintenanceId}` : '/maintenance';
-    if (method === 'POST') data.equipment_id = _selectedEquipmentId;
+    if (method === 'POST') {
+        if (!_selectedEquipmentId) { showToast('❌ Ошибка: не выбрана техника для ТО'); return; }
+        data.equipment_id = _selectedEquipmentId;
+    }
 
     try {
         await api(endpoint, { method, body: JSON.stringify(data) });
@@ -1641,9 +1642,9 @@ function renderEquipment(eq=[]){
   const tb=document.getElementById('equipment-tbody'),cnt=document.getElementById('equipment-count');
   if(cnt)cnt.textContent=eq.length?eq.length+' единиц':'';
   const SM={active:['b-green','Активна'],repair:['b-amber','В ремонте'],retired:['b-slate','Списана']};
-  tb.innerHTML=eq.length?eq.map(e=>{const[cls,lbl]=SM[e.status]||['b-slate',e.status];return`<tr onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования"><td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td><td><span class="badge ${cls}">${lbl}</span></td><td>${fmtDate(e.purchase_date)}</td><td>${fmt(e.purchase_cost)}</td><td>${fmtShort(e.engine_hours, '0')}</td><td>${e.fuel_norm!=null?e.fuel_norm+' л/ч':'—'}</td><td>${fmtDate(e.last_maintenance_date)}</td><td>${fmtDate(e.next_maintenance_date)}</td></tr>`}).join(''):empty(8,'Техники не найдено');
+  tb.innerHTML=eq.length?eq.map(e=>`<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования"><td><div style="font-weight:500;color:var(--ink)">${e.name}</div><div style="font-size:11px;color:var(--ink3)">${e.model || ''}</div></td><td><span class="badge ${cls}">${lbl}</span></td><td>${fmtDate(e.purchase_date)}</td><td>${fmt(e.purchase_cost)}</td><td>${fmtShort(e.engine_hours, '0')}</td><td>${e.fuel_norm!=null?e.fuel_norm+' л/ч':'—'}</td><td>${fmtDate(e.last_maintenance_date)}</td><td>${fmtDate(e.next_maintenance_date)}</td></tr>`).join(''):empty(8,'Техники не найдено');
   if(_selectedEquipmentId) {
-      const row = tb.querySelector(`tr[onclick^="selectEquipment(${_selectedEquipmentId}"]`);
+      const row = tb.querySelector(`tr[data-id="${_selectedEquipmentId}"]`);
       if(row) row.classList.add('selected');
       else selectEquipment(null);
   } else {
@@ -1651,28 +1652,19 @@ function renderEquipment(eq=[]){
   }
 }
 
-async function renderMaintenanceHistory(eqId) {
+function renderMaintenanceHistory(history) {
+    _maintenanceHistory = history;
     const tbody = document.getElementById('maintenance-tbody');
     const countEl = document.getElementById('maintenance-count');
-    if (!eqId) {
-        tbody.innerHTML = empty(3, 'Выберите технику');
-        countEl.textContent = '';
-        return;
-    }
-    try {
-        const history = await api(`/equipment/${eqId}/maintenance`);
-        tbody.innerHTML = history.length ? history.map(h => 
-            `<tr onclick='openMaintenanceModal(${h.id})'>
-                <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
-                <td>${fmt(h.cost)}</td>
-                <td>${fmtDate(h.date)}</td>
-            </tr>`
-        ).join('') : empty(3, 'Записей о ТО нет');
-        countEl.textContent = history.length ? `${history.length} записей` : '';
-    } catch (e) {
-        tbody.innerHTML = empty(3, 'Ошибка загрузки');
-        countEl.textContent = 'Ошибка';
-    }
+    tbody.innerHTML = history.length ? history.map(h => 
+        `<tr onclick='openMaintenanceModal(${h.id})'>
+            <td style="font-size:11px;color:var(--ink3)">${h.equipment.name}</td>
+            <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
+            <td>${fmt(h.cost)}</td>
+            <td>${fmtDate(h.date)}</td>
+        </tr>`
+    ).join('') : empty(4, 'Записей о ТО нет');
+    countEl.textContent = history.length ? `${history.length} записей` : '';
 }
 
 function renderServices(services=[]){
@@ -1696,7 +1688,7 @@ function renderConsumables(items=[]){
   _consumables = items;
   const tb=document.getElementById('consumables-tbody'),cnt=document.getElementById('consumables-count');
   if(cnt)cnt.textContent=items.length?items.length+' позиций':'';
-  tb.innerHTML=items.length?items.map(c=>`<tr onclick='openConsumableModal(${JSON.stringify(c)})'><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td><span class="money">${c.stock_quantity||0}</span> <span style="font-size:11px;color:var(--ink4)">${c.unit||''}</span></td><td>${fmt(c.price)}</td><td style="color:var(--ink4);font-size:11px;">${c.notes || '-'}</td></tr>`).join(''):empty(5,'Позиций не найдено')
+  tb.innerHTML=items.length?items.map(c=>`<tr onclick='openConsumableModal(${JSON.stringify(c)})'><td>${c.id}</td><td style="color:var(--ink);font-weight:400">${c.name}</td><td><span class="money">${c.stock_quantity||0}</span> <span style="font-size:11px;color:var(--ink4)">${c.unit||''}</span></td><td>${fmt(c.price, '0 ₽')}</td><td style="color:var(--ink4);font-size:11px;">${c.notes || '-'}</td></tr>`).join(''):empty(5,'Позиций не найдено')
 }
 
 function renderContacts(contacts=[]){
@@ -1741,7 +1733,7 @@ async function loadData(year, force = false){
   const endpoints = {
       deals: '/deals'+yp, tasks: `/tasks?year=${year}&is_done=false`, expenses: '/expenses'+yp,
       equipment: '/equipment', services: '/services', consumables: '/consumables',
-      contacts: '/contacts', stages: '/stages'
+      contacts: '/contacts', stages: '/stages', maintenance: '/maintenance'+yp
   };
   const results = await Promise.allSettled(Object.values(endpoints).map(ep => api(ep)));
   const data = {};
@@ -1763,14 +1755,9 @@ async function loadData(year, force = false){
   renderServices(data.services || []);
   renderConsumables(data.consumables || []);
   renderContacts(data.contacts || []);
+  renderMaintenanceHistory(data.maintenance || []);
   buildDash(data.deals?.deals || data.deals || [], (data.expenses?.expenses || data.expenses) || [], data.equipment || []);
   
-  if(_selectedEquipmentId && !data.equipment?.find(e => e.id === _selectedEquipmentId)) {
-      selectEquipment(null);
-  } else {
-      renderMaintenanceHistory(_selectedEquipmentId)
-  }
-
   showToast(hasError?'⚠️ Часть данных не загрузилась':'✅ Данные загружены');
 }
 

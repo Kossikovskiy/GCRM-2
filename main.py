@@ -57,7 +57,7 @@ _cache = _Cache(ttl=CACHE_TTL)
 # ── 3. БАЗА ДАННЫХ ────────────────────────────────────────────────────────────
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, client_encoding='utf8')
-SessionFactory = sessionmaker(bind=engine, autoflush=False) # Autoflush off for complex transactions
+SessionFactory = sessionmaker(bind=engine, autoflush=False)
 
 class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String)
 class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
@@ -108,13 +108,13 @@ class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description:
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    print("App starting (v10.0)...",flush=True)
+    print("App starting (v11.0)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="10.0.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="11.0.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -319,9 +319,15 @@ def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_cur
     if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
     return None
 
+@app.get("/api/maintenance")
+def get_all_maintenance(year: Optional[int] = None, db: DBSession=Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.equipment)).order_by(EquipmentMaintenance.date.desc())
+    if year: q = q.filter(extract("year", EquipmentMaintenance.date) == year)
+    return q.all()
+
 @app.get("/api/maintenance/{m_id}")
 def get_maintenance_details(m_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
-    m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used).joinedload(MaintenanceConsumable.consumable)).filter(EquipmentMaintenance.id == m_id).first()
+    m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used).joinedload(MaintenanceConsumable.consumable), joinedload(EquipmentMaintenance.equipment)).filter(EquipmentMaintenance.id == m_id).first()
     if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
     return m_record
 
@@ -338,7 +344,7 @@ def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_
         
         new_item = EquipmentMaintenance(equipment_id=data.equipment_id, date=data.date, work_description=data.work_description, notes=data.notes, cost=total_cost)
         db.add(new_item)
-        db.flush() # Flush to get new_item.id
+        db.flush()
 
         for item_data in data.consumables:
             consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).first()
@@ -346,7 +352,7 @@ def create_maintenance_record(data: MaintenanceCreate, db:DBSession=Depends(get_
         
         db.commit()
         update_equipment_last_maintenance(db, data.equipment_id)
-        _cache.invalidate("consumables", "equipment")
+        _cache.invalidate("consumables", "equipment", "maintenance")
         return new_item
     except:
         db.rollback()
@@ -358,7 +364,6 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
         m_record = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
         if not m_record: raise HTTPException(404, "Запись о ТО не найдена")
 
-        # Restore old quantities
         for old_item in m_record.consumables_used:
             consumable = db.query(Consumable).filter(Consumable.id == old_item.consumable_id).with_for_update().first()
             if consumable: consumable.stock_quantity += old_item.quantity
@@ -366,7 +371,6 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
         db.query(MaintenanceConsumable).filter(MaintenanceConsumable.maintenance_id == m_id).delete(synchronize_session=False)
         db.flush()
 
-        # Deduct new quantities and calculate cost
         total_cost = 0
         for item_data in data.consumables:
             consumable = db.query(Consumable).filter(Consumable.id == item_data.consumable_id).with_for_update().first()
@@ -376,15 +380,14 @@ def update_maintenance_record(m_id: int, data: MaintenanceUpdate, db:DBSession=D
             total_cost += (consumable.price or 0) * item_data.quantity
             db.add(MaintenanceConsumable(maintenance_id=m_id, consumable_id=item_data.consumable_id, quantity=item_data.quantity, price_at_moment=(consumable.price or 0)))
 
-        # Update maintenance record itself
         m_record.cost = total_cost
-        if data.date: m_record.date = data.date
-        if data.work_description: m_record.work_description = data.work_description
-        if data.notes: m_record.notes = data.notes
+        update_data = data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            if key != "consumables": setattr(m_record, key, value)
         
         db.commit()
         update_equipment_last_maintenance(db, m_record.equipment_id)
-        _cache.invalidate("consumables", "equipment")
+        _cache.invalidate("consumables", "equipment", "maintenance")
         return m_record
     except:
         db.rollback()
@@ -396,7 +399,6 @@ def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends
         item = db.query(EquipmentMaintenance).options(joinedload(EquipmentMaintenance.consumables_used)).filter(EquipmentMaintenance.id == m_id).first()
         if item:
             equipment_id = item.equipment_id
-            # Restore quantities
             for used in item.consumables_used:
                 consumable = db.query(Consumable).filter(Consumable.id == used.consumable_id).with_for_update().first()
                 if consumable: consumable.stock_quantity += used.quantity
@@ -404,7 +406,7 @@ def delete_maintenance_record(m_id: int, db:DBSession=Depends(get_db), _=Depends
             db.delete(item)
             db.commit()
             update_equipment_last_maintenance(db, equipment_id)
-            _cache.invalidate("consumables", "equipment")
+            _cache.invalidate("consumables", "equipment", "maintenance")
     except:
         db.rollback()
         raise
@@ -487,4 +489,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v10.0) loaded.", flush=True)
+print(f"main.py (v11.0) loaded.", flush=True)
