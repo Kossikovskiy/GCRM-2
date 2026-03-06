@@ -453,7 +453,9 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
 @app.delete("/api/deals/{deal_id}", status_code=204)
 def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(require_admin)):
     deal=db.query(Deal).filter(Deal.id==deal_id).first()
-    if deal: db.delete(deal); db.commit(); _cache.invalidate("deals","years")
+    if deal:
+        db.query(DealService).filter(DealService.deal_id==deal_id).delete(synchronize_session=False)
+        db.delete(deal); db.commit(); _cache.invalidate("deals","years")
     return None
 
 # --- CONTACTS ---
