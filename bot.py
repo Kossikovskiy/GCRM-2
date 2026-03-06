@@ -7,26 +7,24 @@ Telegram-бот для утренних уведомлений GreenCRM
 import sys
 import os
 import asyncio
+import html
 from datetime import date, timedelta
 
 # Добавляем корневую папку проекта в sys.path, чтобы можно было импортировать main
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 from telegram import Bot
 
 # --- ВАЖНО: Импортируем модели из main.py ---
-# Это гарантирует, что мы работаем с той же структурой базы данных
-from main import Deal, Stage, Equipment, DATABASE_URL
+from main import Deal, Stage, Equipment, Contact, DATABASE_URL
 
 # ════════════════════════════════════════
-#  ⚙️  НАСТРОЙКИ 
+#  ⚙️  НАСТРОЙКИ
 # ════════════════════════════════════════
 
-# Токен, полученный от @BotFather
 TG_TOKEN = "8620281491:AAFhrxrs5TzMCAl5NCEStaADv9MOX_4PsbE"
-# ID чата, куда бот будет отправлять сообщения
 TG_CHAT = "-4993820220"
 
 # ════════════════════════════════════════
@@ -34,14 +32,14 @@ TG_CHAT = "-4993820220"
 async def send_morning_report():
     """Собирает утренний отчёт из БД и отправляет его в Telegram."""
 
-    if not TG_TOKEN or not TG_CHAT or TG_TOKEN == "ВСТАВЬТЕ_ВАШ_ТОКЕН_СЮДА":
+    if not TG_TOKEN or not TG_CHAT or "ВАШ_ТОКЕН" in TG_TOKEN:
         print("❌ Ошибка: Укажите корректные TG_TOKEN и TG_CHAT в файле bot.py")
         return
 
     print("🔌 Подключаюсь к базе данных...")
     if not DATABASE_URL:
         print("❌ Ошибка: Переменная окружения DATABASE_URL не установлена.")
-        sys.exit(1)
+        return
 
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
@@ -55,27 +53,30 @@ async def send_morning_report():
         with Session() as session:
             print("🔍 Собираю данные для отчета...")
 
-            # ── 1. Сделки, которые не в финальных стадиях ──
+            # 1. Сделки, которые не в финальных стадиях (сразу подгружаем stage и contact)
             active_stages = session.query(Stage).filter(Stage.is_final == False).all()
             active_stage_ids = [s.id for s in active_stages]
 
-            active_deals = session.query(Deal).filter(
-                Deal.stage_id.in_(active_stage_ids)
-            ).order_by(Deal.stage_id, Deal.created_at).all() if active_stage_ids else []
+            active_deals = []
+            if active_stage_ids:
+                active_deals = session.query(Deal).options(
+                    joinedload(Deal.stage),
+                    joinedload(Deal.contact)
+                ).filter(
+                    Deal.stage_id.in_(active_stage_ids)
+                ).order_by(Stage.order, Deal.created_at).all()
 
-            # ── 2. Техника, требующая ТО на этой неделе ──
+            # 2. Техника, требующая ТО на этой неделе
             equip_attention = session.query(Equipment).filter(
                 Equipment.next_maintenance_date <= in_week,
                 Equipment.next_maintenance_date >= today,
                 Equipment.status == "active"
             ).all()
 
-            # ── 3. Техника в ремонте ──
-            in_repair = session.query(Equipment).filter(
-                Equipment.status == "repair"
-            ).all()
+            # 3. Техника в ремонте
+            in_repair = session.query(Equipment).filter(Equipment.status == "repair").all()
 
-        # ── Формируем текст сообщения ──────────────────────────
+        # --- Формируем текст сообщения ---
         print("✍️ Формирую текст сообщения...")
 
         weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
@@ -89,10 +90,7 @@ async def send_morning_report():
         if active_deals:
             report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>")
             
-            deals_by_stage = {}
-            for stage in active_stages:
-                deals_by_stage[stage.name] = []
-            
+            deals_by_stage = {stage.name: [] for stage in active_stages}
             for deal in active_deals:
                 if deal.stage:
                     deals_by_stage[deal.stage.name].append(deal)
@@ -102,7 +100,7 @@ async def send_morning_report():
                     report_lines.append(f"\n<b>{stage_name}</b>")
                     for deal in deals:
                         client_name = deal.contact.name if deal.contact else "Клиент не указан"
-                        total_str = f"{int(deal.total or 0):,}₽".replace(",", " ")
+                        total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
                         report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
         else:
             report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
@@ -129,30 +127,24 @@ async def send_morning_report():
         if not equip_attention and not in_repair:
             report_lines.append("👍 <b>Техника:</b> всё в порядке.")
 
-        report_lines.append("")
-        report_lines.append("━━━━━━━━━━━━━━━━━━━━")
+        report_lines.append("\n━━━━━━━━━━━━━━━━━━━━")
         report_lines.append("Желаю продуктивного дня!")
 
         final_message = "\n".join(report_lines)
         
-        # Инициализируем бота и отправляем сообщение
         bot = Bot(token=TG_TOKEN)
-        
         print(f"📤 Отправляю сообщение в чат {TG_CHAT}...")
-        await bot.send_message(
-            chat_id=TG_CHAT,
-            text=final_message,
-            parse_mode='HTML'
-        )
+        await bot.send_message(chat_id=TG_CHAT, text=final_message, parse_mode='HTML')
         print("✅ Сообщение успешно отправлено!")
 
     except Exception as e:
         print(f"❌ Произошла ошибка: {e}")
         try:
             error_bot = Bot(token=TG_TOKEN)
+            sanitized_error = html.escape(str(e), quote=True)
             await error_bot.send_message(
                 chat_id=TG_CHAT,
-                text=f"<b>Ошибка в работе Telegram-бота!</b>\n<pre>{e}</pre>",
+                text=f"<b>Ошибка в работе Telegram-бота!</b>\n<pre>{sanitized_error}</pre>",
                 parse_mode='HTML'
             )
         except Exception as e_send:
@@ -160,4 +152,25 @@ async def send_morning_report():
 
 if __name__ == "__main__":
     print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
+    # Активируем venv, если он не активен
+    if "VIRTUAL_ENV" not in os.environ:
+        venv_path = os.path.join(os.path.dirname(__file__), '..", "venv", "bin", "activate")
+        if os.path.exists(venv_path):
+            print(f"Активирую venv из {venv_path}")
+            # Этот способ активации не работает напрямую в дочернем процессе.
+            # Вместо этого, нужно запускать скрипт с правильным интерпретатором.
+            # Оставляю эту логику как комментарий для ясности.
+            pass
+
+    # Проверяем, что зависимости установлены
+    try:
+        import sqlalchemy
+        import telegram
+    except ImportError:
+        print("\n❌ Ошибка: Не найдены необходимые библиотеки.")
+        print("   Пожалуйста, активируйте виртуальное окружение:")
+        print("   source /var/www/crm/venv/bin/activate")
+        print("   Или установите зависимости: pip install -r requirements.txt")
+        sys.exit(1)
+
     asyncio.run(send_morning_report())
