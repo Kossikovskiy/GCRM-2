@@ -1,93 +1,163 @@
+# -*- coding: utf-8 -*-
+"""
+Telegram-бот для утренних уведомлений GreenCRM
+Запуск вручную:  python bot.py
+"""
 
-import os
 import sys
+import os
 import asyncio
-from telegram import Bot
-from sqlalchemy import create_engine, select
+from datetime import date, timedelta
+
+# Добавляем корневую папку проекта в sys.path, чтобы можно было импортировать main
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from telegram import Bot
 
 # --- ВАЖНО: Импортируем модели из main.py ---
 # Это гарантирует, что мы работаем с той же структурой базы данных
-from main import Deal, Stage, DATABASE_URL
+from main import Deal, Stage, Equipment, DATABASE_URL
 
-# --- Настройки ---
-# Эти значения должны быть установлены как переменные окружения на вашем хостинге
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# ════════════════════════════════════════
+#  ⚙️  НАСТРОЙКИ 
+# ════════════════════════════════════════
 
-# Проверяем, что DATABASE_URL установлена (она импортируется из main.py)
-if not DATABASE_URL:
-    print("Ошибка: Переменная окружения DATABASE_URL не установлена.")
-    sys.exit(1)
+# Токен, полученный от @BotFather
+TG_TOKEN = "8620281491:AAFhrxrs5TzMCAl5NCEStaADv9MOX_4PsbE"
+# ID чата, куда бот будет отправлять сообщения
+TG_CHAT = "-4993820220"
 
-async def send_daily_summary():
-    """Основная функция: получает данные и отправляет сообщение в Telegram."""
+# ════════════════════════════════════════
 
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Ошибка: Переменные окружения TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID должны быть установлены.")
+async def send_morning_report():
+    """Собирает утренний отчёт из БД и отправляет его в Telegram."""
+
+    if not TG_TOKEN or not TG_CHAT or TG_TOKEN == "ВСТАВЬТЕ_ВАШ_ТОКЕН_СЮДА":
+        print("❌ Ошибка: Укажите корректные TG_TOKEN и TG_CHAT в файле bot.py")
         return
 
-    print("Подключаюсь к базе данных PostgreSQL...")
+    print("🔌 Подключаюсь к базе данных...")
+    if not DATABASE_URL:
+        print("❌ Ошибка: Переменная окружения DATABASE_URL не установлена.")
+        sys.exit(1)
+
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
 
-    message_lines = ["🔥 **Ежедневная сводка по сделкам в работе:**\n"]
+    today = date.today()
+    in_week = today + timedelta(days=7)
+
+    report_lines = []
 
     try:
         with Session() as session:
-            # Выбираем сделки, которые НЕ находятся в конечных стадиях
-            stmt = (
-                select(Deal)
-                .join(Stage)
-                .where(Stage.is_final == False)
-                .order_by(Stage.order)
-            )
-            deals_in_progress = session.execute(stmt).scalars().all()
+            print("🔍 Собираю данные для отчета...")
 
-            if not deals_in_progress:
-                print("Сделок в работе не найдено. Сообщение не отправлено.")
-                # Можно раскомментировать, если нужно получать сообщение, даже когда сделок нет
-                # await Bot(token=TELEGRAM_BOT_TOKEN).send_message(chat_id=TELEGRAM_CHAT_ID, text="Сделок в работе на сегодня нет.")
-                return
+            # ── 1. Сделки, которые не в финальных стадиях ──
+            active_stages = session.query(Stage).filter(Stage.is_final == False).all()
+            active_stage_ids = [s.id for s in active_stages]
 
-            print(f"Найдено сделок в работе: {len(deals_in_progress)}")
+            active_deals = session.query(Deal).filter(
+                Deal.stage_id.in_(active_stage_ids)
+            ).order_by(Deal.stage_id, Deal.created_at).all() if active_stage_ids else []
 
-            current_stage = ""
-            for deal in deals_in_progress:
-                if deal.stage.name != current_stage:
-                    current_stage = deal.stage.name
-                    # Используем MarkdownV2 для форматирования
-                    message_lines.append(f"\n*{current_stage}*" )
-                
-                # Форматируем каждую сделку, экранируя спецсимволы
-                title = deal.title.replace("-", "\\-")
-                client = deal.client.replace("-", "\\-")
-                message_lines.append(f"  - {title} \\(Клиент: {client}\\)")
+            # ── 2. Техника, требующая ТО на этой неделе ──
+            equip_attention = session.query(Equipment).filter(
+                Equipment.next_maintenance_date <= in_week,
+                Equipment.next_maintenance_date >= today,
+                Equipment.status == "active"
+            ).all()
 
-        # Инициализируем бота
-        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+            # ── 3. Техника в ремонте ──
+            in_repair = session.query(Equipment).filter(
+                Equipment.status == "repair"
+            ).all()
+
+        # ── Формируем текст сообщения ──────────────────────────
+        print("✍️ Формирую текст сообщения...")
+
+        weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+        today_str = f"{today.strftime('%d.%m.%Y')}, {weekdays[today.weekday()]}"
+
+        report_lines.append(f"🌿 <b>GreenCRM — Доброе утро!</b>")
+        report_lines.append(f"📅 {today_str}")
+        report_lines.append("")
+
+        # Активные сделки
+        if active_deals:
+            report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>")
+            
+            deals_by_stage = {}
+            for stage in active_stages:
+                deals_by_stage[stage.name] = []
+            
+            for deal in active_deals:
+                if deal.stage:
+                    deals_by_stage[deal.stage.name].append(deal)
+            
+            for stage_name, deals in deals_by_stage.items():
+                if deals:
+                    report_lines.append(f"\n<b>{stage_name}</b>")
+                    for deal in deals:
+                        client_name = deal.contact.name if deal.contact else "Клиент не указан"
+                        total_str = f"{int(deal.total or 0):,}₽".replace(",", " ")
+                        report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
+        else:
+            report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
+
+        report_lines.append("")
+
+        # Техника
+        if equip_attention or in_repair:
+             report_lines.append("🛠️ <b>Техника</b>")
         
-        # Собираем и отправляем сообщение
-        final_message = "\n".join(message_lines)
-        print(f"Отправляю сообщение в чат {TELEGRAM_CHAT_ID}...")
+        if equip_attention:
+            report_lines.append("  <u>Требует внимания (ТО):</u>")
+            for eq in equip_attention:
+                if not eq.next_maintenance_date: continue
+                days_left = (eq.next_maintenance_date - today).days
+                when = "сегодня!" if days_left <= 0 else f"через {days_left} дн."
+                report_lines.append(f"  ⚠️ {eq.name} — {when}")
+
+        if in_repair:
+            report_lines.append("  <u>В ремонте:</u>")
+            for eq in in_repair:
+                report_lines.append(f"  🔴 {eq.name} ({eq.model or ''})")
+
+        if not equip_attention and not in_repair:
+            report_lines.append("👍 <b>Техника:</b> всё в порядке.")
+
+        report_lines.append("")
+        report_lines.append("━━━━━━━━━━━━━━━━━━━━")
+        report_lines.append("Желаю продуктивного дня!")
+
+        final_message = "\n".join(report_lines)
         
+        # Инициализируем бота и отправляем сообщение
+        bot = Bot(token=TG_TOKEN)
+        
+        print(f"📤 Отправляю сообщение в чат {TG_CHAT}...")
         await bot.send_message(
-            chat_id=TELEGRAM_CHAT_ID, 
-            text=final_message, 
-            parse_mode='MarkdownV2'
+            chat_id=TG_CHAT,
+            text=final_message,
+            parse_mode='HTML'
         )
-        
-        print("Сообщение успешно отправлено!")
+        print("✅ Сообщение успешно отправлено!")
 
     except Exception as e:
-        print(f"Произошла ошибка при работе с ботом: {e}")
-        # Можно добавить отправку ошибки в Telegram для отладки
+        print(f"❌ Произошла ошибка: {e}")
         try:
-            error_bot = Bot(token=TELEGRAM_BOT_TOKEN)
-            await error_bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=f"Ошибка в работе Telegram-бота: {e}")
+            error_bot = Bot(token=TG_TOKEN)
+            await error_bot.send_message(
+                chat_id=TG_CHAT,
+                text=f"<b>Ошибка в работе Telegram-бота!</b>\n<pre>{e}</pre>",
+                parse_mode='HTML'
+            )
         except Exception as e_send:
-            print(f"Не удалось даже отправить сообщение об ошибке: {e_send}")
+            print(f"❌ Не удалось отправить сообщение об ошибке: {e_send}")
 
 if __name__ == "__main__":
-    print("Запускаю отправку сводки вручную...")
-    asyncio.run(send_daily_summary())
+    print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
+    asyncio.run(send_morning_report())
