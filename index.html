@@ -317,6 +317,20 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 }
 .toast.show{transform:translateY(0);opacity:1}
 
+/* ── CONTACT DEAL CARDS ─────────────────────────────────────── */
+.c-deal-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border2);transition:border-color .15s}
+.c-deal-card:hover{border-color:var(--fern)}
+.c-deal-info{flex:1;min-width:0}
+.c-deal-title{font-size:12px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-deal-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
+.c-deal-meta span{font-size:10px;color:var(--ink3)}
+.c-deal-amount{font-family:'Playfair Display',serif;font-size:13px;color:var(--ink);white-space:nowrap;flex-shrink:0}
+.c-deal-actions{display:flex;gap:6px;flex-shrink:0}
+.c-deal-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:10px;color:var(--ink3);cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.4px;transition:all .15s;white-space:nowrap}
+.c-deal-btn:hover{border-color:var(--fern);color:var(--fern)}
+.c-deal-btn-copy{border-color:var(--sage);color:var(--sage)}
+.c-deal-btn-copy:hover{background:var(--sage);color:#fff}
+
 /* ── ANALYTICS ───────────────────────────────────────────────── */
 .an-2col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
 .an-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
@@ -1081,7 +1095,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
-  <div class="modal">
+  <div class="modal" style="max-width:600px">
     <div class="modal-title" id="contact-modal-title">Новый <em>контакт</em></div>
     <div class="field full">
       <label>ИМЯ КЛИЕНТА</label>
@@ -1097,7 +1111,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <input type="text" id="c-source" placeholder="Рекомендация" />
       </div>
     </div>
-    <div class="modal-row">
+
+    <!-- Сделки контакта -->
+    <div id="c-deals-section" style="display:none;margin-top:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500">История сделок</div>
+        <span id="c-deals-count" style="font-size:10px;color:var(--ink3)"></span>
+      </div>
+      <div id="c-deals-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:2px"></div>
+    </div>
+
+    <div class="modal-row" style="margin-top:20px">
       <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;">УДАЛИТЬ</button>
       <button class="btn-sec" onclick="closeContactModal()">ОТМЕНА</button>
       <button class="btn-pri" id="btn-contact-save">СОЗДАТЬ</button>
@@ -1769,19 +1793,23 @@ function openContactModal(contact = null) {
     const sourceInput = document.getElementById('c-source');
     const saveBtn = document.getElementById('btn-contact-save');
     const deleteBtn = document.getElementById('btn-contact-delete');
+    const dealsSection = document.getElementById('c-deals-section');
 
     nameInput.classList.remove('err');
     _currentContactId = null;
+    dealsSection.style.display = 'none';
 
     if (contact) {
         _currentContactId = contact.id;
-        title.innerHTML = 'Редактировать <em>контакт</em>';
+        title.innerHTML = `${esc(contact.name)} — <em>карточка клиента</em>`;
         nameInput.value = contact.name || '';
         phoneInput.value = contact.phone || '';
         sourceInput.value = contact.source || '';
         saveBtn.textContent = 'СОХРАНИТЬ';
         deleteBtn.style.display = 'block';
         deleteBtn.onclick = () => deleteContact(_currentContactId);
+        // Load and show deals for this contact
+        loadContactDeals(contact.id, contact.name);
     } else {
         title.innerHTML = 'Новый <em>контакт</em>';
         nameInput.value = '';
@@ -1798,6 +1826,89 @@ function openContactModal(contact = null) {
 function closeContactModal() {
     document.getElementById('contact-overlay').classList.remove('open');
     _currentContactId = null;
+}
+
+function loadContactDeals(contactId, contactName) {
+    const section = document.getElementById('c-deals-section');
+    const list = document.getElementById('c-deals-list');
+    const countEl = document.getElementById('c-deals-count');
+
+    // Filter by contact_id (reliable), fallback to name match for backwards compat
+    const contactDeals = _deals
+        .filter(d => d.contact_id ? d.contact_id === contactId : d.client === contactName)
+        .sort((a, b) => b.id - a.id); // newest first
+
+    if (!contactDeals.length) {
+        // Show section anyway with empty state — so user knows this client has no deals
+        section.style.display = 'block';
+        countEl.textContent = '';
+        list.innerHTML = `<div style="padding:12px 0;font-size:12px;color:var(--ink4);text-align:center">Сделок ещё нет</div>`;
+        return;
+    }
+
+    section.style.display = 'block';
+    const totalRev = contactDeals.filter(d => {
+        const st = STAGES.find(s => s.name === d.stage);
+        return st?.is_final && st.name.toLowerCase().includes('успешно');
+    }).reduce((s,d) => s + d.total, 0);
+    countEl.textContent = `${contactDeals.length} сделок · ${fmt(totalRev)} выручка`;
+
+    list.innerHTML = contactDeals.map(d => {
+        const stageObj = STAGES.find(s => s.name === d.stage);
+        const color = stageObj?.color || '#6b7280';
+        const dateStr = d.created_at ? fmtDate(d.created_at.split('T')[0]) : '—';
+        return `<div class="c-deal-card">
+            <div style="width:3px;min-height:44px;border-radius:2px;background:${color};flex-shrink:0;align-self:stretch"></div>
+            <div class="c-deal-info">
+                <div class="c-deal-title">${esc(d.title)}</div>
+                <div class="c-deal-meta">
+                    <span style="padding:1px 6px;border-radius:4px;background:${color}22;color:${color};font-size:9px">${esc(d.stage)}</span>
+                    <span>№${d.id}</span>
+                    <span>${dateStr}</span>
+                </div>
+            </div>
+            <div class="c-deal-amount">${fmt(d.total)}</div>
+            <div class="c-deal-actions">
+                <button class="c-deal-btn" onclick="closeContactModal();openDealModal(${d.id})" title="Открыть сделку">✎</button>
+                <button class="c-deal-btn c-deal-btn-copy" onclick="copyDealFromContact(${d.id})" title="Скопировать с сегодняшней датой">⧉</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function copyDealFromContact(dealId) {
+    try {
+        showToast('⏳ Создаём копию…');
+        const deal = await api(`/deals/${dealId}`);
+        if (!deal) return;
+
+        const today = new Date().toISOString().split('T')[0];
+        // First non-final stage (fresh start)
+        const firstActiveStage = STAGES.find(s => !s.is_final);
+
+        const payload = {
+            title: deal.title,   // same title, no suffix
+            contact_id: deal.contact?.id,
+            stage_id: firstActiveStage?.id || deal.stage_id,
+            manager: deal.manager || null,
+            discount: deal.discount || 0,
+            tax_rate: deal.tax_rate || 4,
+            tax_included: deal.tax_included ?? true,
+            deal_date: today,
+            address: deal.address || null,
+            notes: deal.notes || null,
+            services: (deal.services || [])
+                .filter(s => s.service?.id)
+                .map(s => ({ service_id: s.service.id, quantity: s.quantity }))
+        };
+
+        const created = await api('/deals', { method: 'POST', body: JSON.stringify(payload) });
+        closeContactModal();
+        showToast('✅ Сделка скопирована — сегодняшняя дата');
+        loadData(SELECTED_YEAR, true);
+    } catch(e) {
+        showToast('❌ Не удалось скопировать');
+    }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContactModal() });

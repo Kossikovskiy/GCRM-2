@@ -282,7 +282,7 @@ def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(g
 def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
     q=db.query(Deal).options(joinedload(Deal.contact),joinedload(Deal.stage)).order_by(Deal.created_at.desc())
     if year: q = q.filter(extract("year", Deal.deal_date) == year)
-    deals_list=[{"id":d.id,"title":d.title or "","total":d.total or 0.0,"client":d.contact.name if d.contact else "","stage":d.stage.name if d.stage else "","created_at":(d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
+    deals_list=[{"id":d.id,"title":d.title or "","total":d.total or 0.0,"client":d.contact.name if d.contact else "","contact_id":d.contact_id,"stage":d.stage.name if d.stage else "","stage_id":d.stage_id,"created_at":(d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
     return {"deals": deals_list}
 
 @app.post("/api/deals", status_code=201)
