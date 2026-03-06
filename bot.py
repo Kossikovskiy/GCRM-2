@@ -96,14 +96,17 @@ async def get_deal_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"Название сделки: <b>{html.escape(deal_title)}</b>.",
         parse_mode='HTML'
     )
+    logger.info("Название сделки получено. Показываю клавиатуру выбора услуг...")
     return await show_services_keyboard(update, context)
 
 async def show_services_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logger.info(f"Запрос услуг из API: {API_BASE_URL}/services")
     try:
         response = requests.get(f"{API_BASE_URL}/services", timeout=5)
         response.raise_for_status()
         services = response.json()
         context.user_data['services_list'] = services
+        logger.info(f"Получено {len(services)} услуг.")
     except requests.RequestException as e:
         logger.error(f"Ошибка при запросе услуг из API: {e}")
         msg = update.callback_query.message if update.callback_query else update.message
@@ -122,13 +125,15 @@ async def show_services_keyboard(update: Update, context: ContextTypes.DEFAULT_T
         await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
     else:
         await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
-
+    
+    logger.info("Отправлена клавиатура выбора услуг. Возвращаю состояние CHOOSE_SERVICE.")
     return CHOOSE_SERVICE
 
 async def choose_service_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     service_id = int(query.data.split('_')[1])
+    logger.info(f"Нажата кнопка выбора услуги: ID {service_id}")
     context.user_data['current_service_id'] = service_id
     
     service_name = "Unknown"
@@ -171,6 +176,13 @@ async def get_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         reply_markup=reply_markup, parse_mode='HTML'
     )
     return ADD_MORE
+
+# --- НОВАЯ ФУНКЦИЯ ДЛЯ ОТЛАДКИ ---
+async def wrong_input_in_service_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logger.warning(f"Получено текстовое сообщение в состоянии CHOOSE_SERVICE: '{update.message.text}'. Пользователь должен был нажать кнопку.")
+    await update.message.reply_text("Пожалуйста, используйте кнопки для выбора услуги, а не вводите текст.")
+    return CHOOSE_SERVICE
+# ------------------------------------
 
 async def add_more_or_finish_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
@@ -341,7 +353,10 @@ def main() -> None:
         states={
             GET_CLIENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_client_name)],
             GET_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_deal_title)],
-            CHOOSE_SERVICE: [CallbackQueryHandler(choose_service_callback, pattern="^service_")],
+            CHOOSE_SERVICE: [
+                CallbackQueryHandler(choose_service_callback, pattern="^service_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, wrong_input_in_service_selection)
+            ],
             GET_QUANTITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_quantity)],
             ADD_MORE: [CallbackQueryHandler(add_more_or_finish_callback, pattern="^(add_more|finish)$")],
         },
