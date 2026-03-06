@@ -236,10 +236,15 @@ async def get_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return GET_QUANTITY
 
     deal_data = context.user_data['deal_data']
+    all_services = context.user_data.get('services_list', {})
+    service_id = context.user_data['current_service_id']
+    price = all_services.get(service_id, {}).get('price', 0)
+
     deal_data['services'].append({
-        'service_id': context.user_data['current_service_id'],
+        'service_id': service_id,
         'quantity': quantity,
-        'name': context.user_data['current_service_name']
+        'name': context.user_data['current_service_name'],
+        'price': price # Сохраняем цену на момент добавления
     })
 
     keyboard = [
@@ -275,7 +280,7 @@ async def wrong_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Отправляет данные о новой сделке в API."""
+    """Отправляет данные о новой сделке в API и показывает итоговую стоимость."""
     deal_data = context.user_data.get('deal_data')
     if not deal_data or not deal_data.get('services'):
         await message.reply_text("Нет данных для создания сделки. /newdeal для старта.")
@@ -302,12 +307,20 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
         response = requests.post(f"{API_BASE_URL}/deals", json=payload, timeout=10, headers=API_HEADERS)
         response.raise_for_status()
         
+        # --- ЛОГИКА РАСЧЕТА ИТОГОВОЙ СТОИМОСТИ ---
+        total_cost = 0
+        for s in deal_data['services']:
+            total_cost += s.get('price', 0) * s.get('quantity', 0)
+        total_cost_str = f"{int(total_cost):,} ₽".replace(",", " ")
+        # ------------------------------------------
+
         services_str = "\n".join([f"- {html.escape(s['name'])} (x{s['quantity']})" for s in deal_data['services']])
         final_text = (
             f"✅ <b>Сделка успешно создана!</b>\n\n"
             f"<b>Клиент:</b> {html.escape(deal_data['client_name'])}\n"
             f"<b>Название:</b> {html.escape(deal_data['title'])}\n"
-            f"<b>Услуги:</b>\n{services_str}"
+            f"<b>Услуги:</b>\n{services_str}\n\n"
+            f"<b>Итоговая стоимость: {total_cost_str}</b>"
         )
         await message.reply_text(final_text, parse_mode='HTML')
             
