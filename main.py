@@ -198,7 +198,7 @@ async def lifespan(app: FastAPI):
     yield
     print("App shutting down.",flush=True)
 
-app = FastAPI(title="GreenCRM API", version="12.1.0", lifespan=lifespan)
+app = FastAPI(title="GreenCRM API", version="12.2.0", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -736,12 +736,34 @@ def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(get_c
 @app.post("/api/taxes/payments", status_code=201)
 def create_tax_payment(payment_data: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     if payment_data.amount <= 0: raise HTTPException(status_code=400, detail="Сумма платежа должна быть положительной.")
-    
     new_payment = TaxPayment(**payment_data.model_dump())
     db.add(new_payment); db.commit(); db.refresh(new_payment)
-    
     _cache.invalidate(f"tax_summary:{payment_data.year}", f"tax_payments:{payment_data.year}", "years")
     return new_payment
+
+class TaxPaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    date: Optional[date] = None
+    note: Optional[str] = None
+
+@app.patch("/api/taxes/payments/{payment_id}")
+def update_tax_payment(payment_id: int, data: TaxPaymentUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    payment = db.query(TaxPayment).filter(TaxPayment.id == payment_id).first()
+    if not payment: raise HTTPException(404, "Платёж не найден")
+    if data.amount is not None and data.amount <= 0: raise HTTPException(400, "Сумма должна быть положительной.")
+    for key, value in data.model_dump(exclude_unset=True).items(): setattr(payment, key, value)
+    db.commit(); db.refresh(payment)
+    _cache.invalidate(f"tax_summary:{payment.year}", f"tax_payments:{payment.year}")
+    return payment
+
+@app.delete("/api/taxes/payments/{payment_id}", status_code=204)
+def delete_tax_payment(payment_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    payment = db.query(TaxPayment).filter(TaxPayment.id == payment_id).first()
+    if payment:
+        year = payment.year
+        db.delete(payment); db.commit()
+        _cache.invalidate(f"tax_summary:{year}", f"tax_payments:{year}")
+    return None
 
 
 @app.get("/{full_path:path}", response_class=FileResponse)
@@ -749,4 +771,4 @@ async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
-print(f"main.py (v12.1) loaded.", flush=True)
+print(f"main.py (v12.2) loaded.", flush=True)
