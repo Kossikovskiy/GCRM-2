@@ -232,8 +232,7 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
         final_text = (
             f"✅ <b>Сделка успешно создана!</b>\n\n"
             f"<b>Клиент:</b> {html.escape(deal_data['client_name'])}\n"
-            f"<b>Название:</b> {html.escape(deal_data['title'])}
-"
+            f"<b>Название:</b> {html.escape(deal_data['title'])}\n"
             f"<b>Услуги:</b>\n{services_str}"
         )
         await message.reply_text(final_text, parse_mode='HTML')
