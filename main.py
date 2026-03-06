@@ -61,7 +61,7 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL, client_encoding='utf8')
 SessionFactory = sessionmaker(bind=engine, autoflush=False)
 
-class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String)
+class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String); role=Column(String, default="User")
 class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
 class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id",ondelete="RESTRICT")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
@@ -220,6 +220,14 @@ def get_current_user(req: Request):
     if not (user := req.session.get("user")): raise HTTPException(401, "Not authenticated")
     return user
 
+def is_admin(user: dict) -> bool:
+    return (user.get("role") or "").strip().lower() == "admin"
+
+def require_admin(user: dict = Depends(get_current_user)):
+    if not is_admin(user):
+        raise HTTPException(403, "Доступ запрещён: требуется роль Admin")
+    return user
+
 # ── 7. ЭНДПОИНТЫ AUTH ─────────────────────────────────────────────────────────
 @app.get("/api/auth/login")
 def login(req:Request): state=secrets.token_urlsafe(16); req.session["oauth_state"]=state; return RedirectResponse(f"https://{AUTH0_DOMAIN}/authorize?response_type=code&client_id={CLIENT_ID}&redirect_uri={CALLBACK_URL}&scope=openid%20profile%20email&audience={AUTH0_AUDIENCE}&state={state}")
@@ -236,12 +244,12 @@ def callback(req:Request, code:str=None, state:str=None, error:str=None):
         if not user: db.add(User(id=user_id,name=user_name,email=profile.get("email")))
         else: user.name,user.email = user_name,profile.get("email")
         db.commit()
-    try:
-        header=jwt.get_unverified_header(tokens['access_token']); key=next((k for k in get_jwks()["keys"] if k["kid"]==header.get("kid")),None)
-        payload=jwt.decode(tokens['access_token'],key,algorithms=["RS256"],audience=AUTH0_AUDIENCE,issuer=f"https://{AUTH0_DOMAIN}/")
-        user_role=payload.get(ROLE_CLAIM, "user")
-    except JWTError: user_role="user"
-    req.session["user"]={"sub":user_id,"name":user_name,"role":user_role}; return RedirectResponse("/")
+    # Роль берём из БД (задаётся вручную в Supabase: Admin / User)
+    with SessionFactory() as _db:
+        _u = _db.query(User).filter(User.id == user_id).first()
+        user_role = (_u.role or "User") if _u else "User"
+    req.session["user"] = {"sub": user_id, "name": user_name, "role": user_role}
+    return RedirectResponse("/")
 @app.get("/api/auth/logout")
 def logout(req:Request): req.session.clear(); return RedirectResponse(f"https://{AUTH0_DOMAIN}/v2/logout?client_id={CLIENT_ID}&returnTo={APP_BASE_URL}")
 
@@ -259,18 +267,18 @@ def invalidate_cache(_=Depends(get_current_user)): _cache.invalidate("all"); ret
 @app.get("/api/services")
 def get_services(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Service).order_by(Service.id).all()
 @app.post("/api/services", status_code=201)
-def create_service(data: ServiceCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def create_service(data: ServiceCreate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     new_item = Service(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("services"); return new_item
 @app.patch("/api/services/{service_id}")
-def update_service(service_id: int, data: ServiceUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def update_service(service_id: int, data: ServiceUpdate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     item = db.query(Service).filter(Service.id == service_id).first()
     if not item: raise HTTPException(404, "Услуга не найдена")
     for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
     db.commit(); db.refresh(item)
     _cache.invalidate("services", "deals"); return item
 @app.delete("/api/services/{service_id}", status_code=204)
-def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     if db.query(DealService).filter(DealService.service_id == service_id).count() > 0:
         raise HTTPException(400, "Нельзя удалить услугу, которая используется в сделках.")
     item = db.query(Service).filter(Service.id == service_id).first()
@@ -279,9 +287,10 @@ def delete_service(service_id: int, db: DBSession = Depends(get_db), _=Depends(g
 
 # --- DEALS ---
 @app.get("/api/deals")
-def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),_=Depends(get_current_user)):
+def get_deals(year:Optional[int]=None,db:DBSession=Depends(get_db),user:dict=Depends(get_current_user)):
     q=db.query(Deal).options(joinedload(Deal.contact),joinedload(Deal.stage)).order_by(Deal.created_at.desc())
     if year: q = q.filter(extract("year", Deal.deal_date) == year)
+    if not is_admin(user): q = q.filter(Deal.manager == user["name"])  # менеджер видит только свои
     deals_list=[{"id":d.id,"title":d.title or "","total":d.total or 0.0,"client":d.contact.name if d.contact else "","contact_id":d.contact_id,"stage":d.stage.name if d.stage else "","stage_id":d.stage_id,"created_at":(d.created_at or datetime.utcnow()).isoformat()} for d in q.all()]
     return {"deals": deals_list}
 
@@ -424,7 +433,7 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     return {"status": "ok"}
 
 @app.delete("/api/deals/{deal_id}", status_code=204)
-def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(get_current_user)):
+def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(require_admin)):
     deal=db.query(Deal).filter(Deal.id==deal_id).first()
     if deal: db.delete(deal); db.commit(); _cache.invalidate("deals","years")
     return None
@@ -472,7 +481,7 @@ def get_expense_categories(db: DBSession = Depends(get_db), _=Depends(get_curren
     return db.query(ExpenseCategory).order_by(ExpenseCategory.name).all()
 
 @app.post("/api/expenses", status_code=201)
-def create_expense(data: ExpenseCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def create_expense(data: ExpenseCreate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     category_name = data.category.strip()
     category = None
     if category_name:
@@ -489,7 +498,7 @@ def create_expense(data: ExpenseCreate, db: DBSession = Depends(get_db), _=Depen
     return new_expense
 
 @app.patch("/api/expenses/{expense_id}")
-def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not expense: raise HTTPException(404, "Расход не найден")
     
@@ -512,7 +521,7 @@ def update_expense(expense_id: int, data: ExpenseUpdate, db: DBSession = Depends
     return expense
 
 @app.delete("/api/expenses/{expense_id}", status_code=204)
-def delete_expense(expense_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def delete_expense(expense_id: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if expense: db.delete(expense); db.commit(); _cache.invalidate("expenses", "years")
     return None
@@ -529,12 +538,12 @@ def get_equipment(db: DBSession=Depends(get_db), _=Depends(get_current_user)):
     return db.query(Equipment).order_by(Equipment.name).all()
 
 @app.post("/api/equipment", status_code=201, response_model=EquipmentResponse)
-def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def create_equipment(data: EquipmentCreate, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     new_item = Equipment(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("equipment"); return new_item
 
 @app.patch("/api/equipment/{eq_id}", response_model=EquipmentResponse)
-def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
     if not item: raise HTTPException(404, "Техника не найдена")
     for key, value in data.model_dump(exclude_unset=True).items(): setattr(item, key, value)
@@ -542,7 +551,7 @@ def update_equipment(eq_id: int, data: EquipmentUpdate, db:DBSession=Depends(get
     _cache.invalidate("equipment"); return item
 
 @app.delete("/api/equipment/{eq_id}", status_code=204)
-def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def delete_equipment(eq_id: int, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     item = db.query(Equipment).filter(Equipment.id == eq_id).first()
     if item: db.delete(item); db.commit(); _cache.invalidate("equipment")
     return None
@@ -650,12 +659,12 @@ def get_consumables(db:DBSession=Depends(get_db), _=Depends(get_current_user)):
     return db.query(Consumable).order_by(Consumable.name).all()
 
 @app.post("/api/consumables", status_code=201)
-def create_consumable(data: ConsumableCreate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def create_consumable(data: ConsumableCreate, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     new_item = Consumable(**data.model_dump()); db.add(new_item); db.commit(); db.refresh(new_item)
     _cache.invalidate("consumables"); return new_item
 
 @app.patch("/api/consumables/{c_id}")
-def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     item = db.query(Consumable).filter(Consumable.id == c_id).first()
     if not item: raise HTTPException(404, "Расходник не найден")
     update_data = data.model_dump(exclude_unset=True)
@@ -664,7 +673,7 @@ def update_consumable(c_id: int, data: ConsumableUpdate, db:DBSession=Depends(ge
     _cache.invalidate("consumables"); return item
 
 @app.delete("/api/consumables/{c_id}", status_code=204)
-def delete_consumable(c_id: int, db:DBSession=Depends(get_db), _=Depends(get_current_user)):
+def delete_consumable(c_id: int, db:DBSession=Depends(get_db), _=Depends(require_admin)):
     if db.query(MaintenanceConsumable).filter(MaintenanceConsumable.consumable_id == c_id).count() > 0:
         raise HTTPException(400, "Нельзя удалить расходник, который используется в записях о ТО.")
     item = db.query(Consumable).filter(Consumable.id == c_id).first()
@@ -678,10 +687,11 @@ def get_years(db: DBSession=Depends(get_db),_=Depends(get_current_user)):
     _cache.set("years", years); return years
 
 @app.get("/api/tasks")
-def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
     q = db.query(Task).order_by(Task.due_date.asc())
     if year: q = q.filter(extract("year", Task.due_date) == year)
     if is_done is not None: q = q.filter(Task.is_done == is_done)
+    if not is_admin(user): q = q.filter(Task.assignee == user["sub"])  # свои задачи
     users = {u.id: u.name for u in db.query(User).all()}
     tasks_with_names = []
     for t in q.all():
@@ -747,7 +757,7 @@ def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(get_c
     return payments
 
 @app.post("/api/taxes/payments", status_code=201)
-def create_tax_payment(payment_data: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def create_tax_payment(payment_data: TaxPaymentCreate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     if payment_data.amount <= 0: raise HTTPException(status_code=400, detail="Сумма платежа должна быть положительной.")
     new_payment = TaxPayment(**payment_data.model_dump())
     db.add(new_payment); db.commit(); db.refresh(new_payment)
@@ -760,7 +770,7 @@ class TaxPaymentUpdate(BaseModel):
     note: Optional[str] = None
 
 @app.patch("/api/taxes/payments/{payment_id}")
-def update_tax_payment(payment_id: int, data: TaxPaymentUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def update_tax_payment(payment_id: int, data: TaxPaymentUpdate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     payment = db.query(TaxPayment).filter(TaxPayment.id == payment_id).first()
     if not payment: raise HTTPException(404, "Платёж не найден")
     if data.amount is not None and data.amount <= 0: raise HTTPException(400, "Сумма должна быть положительной.")
@@ -770,7 +780,7 @@ def update_tax_payment(payment_id: int, data: TaxPaymentUpdate, db: DBSession = 
     return payment
 
 @app.delete("/api/taxes/payments/{payment_id}", status_code=204)
-def delete_tax_payment(payment_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def delete_tax_payment(payment_id: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     payment = db.query(TaxPayment).filter(TaxPayment.id == payment_id).first()
     if payment:
         year = payment.year
@@ -818,11 +828,11 @@ class BudgetUpdate(BaseModel):
 
 # ── АНАЛИТИКА ─────────────────────────────────────────────────────────────────
 @app.get("/api/analytics/funnel")  # kept for backwards compat
-def get_funnel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_funnel(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     return get_analytics(year, db, _)
 
 @app.get("/api/analytics")
-def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     from collections import defaultdict
     MONTHS_RU = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"]
 
@@ -930,18 +940,18 @@ def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(get_curr
 
 # ── БЮДЖЕТ — CRUD ─────────────────────────────────────────────────────────────
 @app.get("/api/budget", response_model=List[BudgetResponse])
-def get_budget(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_budget(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     items = db.query(Budget).filter(Budget.year == year).order_by(Budget.id).all()
     return items
 
 @app.post("/api/budget", status_code=201)
-def create_budget(data: BudgetCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def create_budget(data: BudgetCreate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     item = Budget(**data.model_dump())
     db.add(item); db.commit(); db.refresh(item)
     return item
 
 @app.patch("/api/budget/{item_id}")
-def update_budget(item_id: int, data: BudgetUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def update_budget(item_id: int, data: BudgetUpdate, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     item = db.query(Budget).filter(Budget.id == item_id).first()
     if not item: raise HTTPException(404, "Запись не найдена")
     for k, v in data.model_dump(exclude_unset=True).items():
@@ -950,7 +960,7 @@ def update_budget(item_id: int, data: BudgetUpdate, db: DBSession = Depends(get_
     return item
 
 @app.delete("/api/budget/{item_id}", status_code=204)
-def delete_budget(item_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def delete_budget(item_id: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     item = db.query(Budget).filter(Budget.id == item_id).first()
     if item: db.delete(item); db.commit()
     return None
@@ -967,7 +977,7 @@ def _openpyxl_available():
         return False
 
 @app.get("/api/export/excel")
-def export_excel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def export_excel(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     if not _openpyxl_available():
         raise HTTPException(503, "openpyxl не установлен на сервере")
     
@@ -1099,7 +1109,7 @@ def export_excel(year: int, db: DBSession = Depends(get_db), _=Depends(get_curre
 
 # ── ЭКСПОРТ PDF ───────────────────────────────────────────────────────────────
 @app.get("/api/export/pdf")
-def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors

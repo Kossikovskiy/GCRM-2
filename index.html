@@ -511,17 +511,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <header>
   <a class="logo" href="#">Green<em>CRM</em><sup>PRO</sup></a>
   <nav id="main-nav">
-    <button class="active" onclick="showPage('dash',this)">Дашборд</button>
-    <button onclick="showPage('kanban',this)">Сделки</button>
-    <button onclick="showPage('tasks',this)">Задачи</button>
-    <button onclick="showPage('expenses',this)">Расходы</button>
-    <button onclick="showPage('taxes',this)">Налог</button>
-    <button onclick="showPage('equipment',this)">Техника</button>
-    <button onclick="showPage('services',this)">Прайс-лист</button>
-    <button onclick="showPage('stock',this)">Склад</button>
-    <button onclick="showPage('contacts',this)">Контакты</button>
-    <button onclick="showPage('analytics',this)">Аналитика</button>
-    <button onclick="showPage('budget',this)">Бюджет</button>
+    <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
+    <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
+    <button data-page="tasks" onclick="showPage('tasks',this)">Задачи</button>
+    <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)">Расходы</button>
+    <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)">Налог</button>
+    <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
+    <button data-page="services" onclick="showPage('services',this)">Прайс-лист</button>
+    <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
+    <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
+    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
+    <button data-page="budget" data-role="admin" onclick="showPage('budget',this)">Бюджет</button>
   </nav>
   <div class="header-end">
     <div id="year-selector-container">
@@ -538,14 +538,14 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   <button class="active" data-page="dash" onclick="showPage('dash',this)"><span class="mnav-icon">📊</span>Дашборд</button>
   <button data-page="kanban" onclick="showPage('kanban',this)"><span class="mnav-icon">🗂</span>Сделки</button>
   <button data-page="tasks" onclick="showPage('tasks',this)"><span class="mnav-icon">✅</span>Задачи</button>
-  <button data-page="expenses" onclick="showPage('expenses',this)"><span class="mnav-icon">💸</span>Расходы</button>
-  <button data-page="taxes" onclick="showPage('taxes',this)"><span class="mnav-icon">🏛️</span>Налог</button>
+  <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)"><span class="mnav-icon">💸</span>Расходы</button>
+  <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)"><span class="mnav-icon">🏛️</span>Налог</button>
   <button data-page="equipment" onclick="showPage('equipment',this)"><span class="mnav-icon">🔧</span>Техника</button>
   <button data-page="services" onclick="showPage('services',this)"><span class="mnav-icon">📋</span>Прайс</button>
-  <button data-page="stock" onclick="showPage('stock',this)"><span class="mnav-icon">📦</span>Склад</button>
+  <button data-page="stock" data-role="admin" onclick="showPage('stock',this)"><span class="mnav-icon">📦</span>Склад</button>
   <button data-page="contacts" onclick="showPage('contacts',this)"><span class="mnav-icon">👥</span>Контакты</button>
-  <button data-page="analytics" onclick="showPage('analytics',this)"><span class="mnav-icon">📈</span>Аналитика</button>
-  <button data-page="budget" onclick="showPage('budget',this)"><span class="mnav-icon">💼</span>Бюджет</button>
+  <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)"><span class="mnav-icon">📈</span>Аналитика</button>
+  <button data-page="budget" data-role="admin" onclick="showPage('budget',this)"><span class="mnav-icon">💼</span>Бюджет</button>
 </div>
 
 <div class="page active" id="page-dash">
@@ -2833,11 +2833,48 @@ async function populateYearSelector(){
   }catch{sel.innerHTML=`<option>${SELECTED_YEAR}</option>`}
 }
 
+// ════════════════════════════════════════════════════════
+// РОЛИ И ДОСТУПЫ
+// ════════════════════════════════════════════════════════
+function userIsAdmin(){
+  return (CURRENT_USER?.role || '').trim().toLowerCase() === 'admin';
+}
+
+function applyRoleUI(){
+  const admin = userIsAdmin();
+
+  // 1. Скрыть вкладки с data-role="admin" для не-администраторов
+  document.querySelectorAll('[data-role="admin"]').forEach(el => {
+    el.style.display = admin ? '' : 'none';
+  });
+
+  // 2. Для не-администраторов скрыть кнопки добавления/редактирования
+  //    на страницах техника, прайс, склад (только просмотр)
+  if (!admin) {
+    ['page-equipment','page-services','page-stock'].forEach(pgId => {
+      const pg = document.getElementById(pgId);
+      if (pg) pg.querySelectorAll('.add-btn, .btn-pri, .btn-del-modal').forEach(b => b.style.display='none');
+    });
+  }
+
+  // 3. Значок роли в шапке рядом с именем пользователя
+  const headerEnd = document.querySelector('.header-end');
+  if (headerEnd && !document.getElementById('user-badge')) {
+    const badge = document.createElement('span');
+    badge.id = 'user-badge';
+    const roleLbl = admin ? 'Admin' : 'Менеджер';
+    const roleColor = admin ? 'var(--fern)' : 'var(--ink3)';
+    badge.innerHTML = `<span style="font-size:10px;color:${roleColor};letter-spacing:.5px;font-family:'DM Sans',sans-serif;white-space:nowrap">${esc(CURRENT_USER?.name||'')} · ${roleLbl}</span>`;
+    headerEnd.prepend(badge);
+  }
+}
+
 async function checkAuth(){
   try{
     CURRENT_USER = await api('/me');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
+    applyRoleUI();
     await populateYearSelector();
     await loadData(SELECTED_YEAR);
     document.getElementById('year-selector').addEventListener('change',()=>{
