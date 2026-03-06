@@ -615,6 +615,40 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   td{padding:8px 10px}
   .modal{padding:20px 16px 24px}
 }
+
+/* ── SERVICE PAGE ── */
+#page-service{display:none}
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.svc-grid.full{grid-template-columns:1fr}
+@media(max-width:640px){.svc-grid{grid-template-columns:1fr}}
+.svc-card{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:20px 22px}
+.svc-card-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.svc-card-title span{font-size:14px}
+.svc-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.svc-stat{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;text-align:center}
+.svc-stat-val{font-size:22px;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.svc-stat-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-top:4px}
+.svc-bar-wrap{margin-bottom:8px}
+.svc-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:4px}
+.svc-bar{height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.svc-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.svc-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border2);border-radius:8px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--ink2);width:100%;justify-content:center;margin-bottom:8px}
+.svc-btn:hover{background:var(--surface2);color:var(--ink);border-color:var(--sage)}
+.svc-btn.danger:hover{background:#3d1515;border-color:#ef4444;color:#f87171}
+.svc-btn.success:hover{background:#1a3318;border-color:var(--fern);color:var(--sage)}
+.svc-btn:disabled{opacity:.4;cursor:not-allowed}
+.svc-btn-icon{font-size:15px;line-height:1}
+.svc-log-box{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:12px;font-family:'JetBrains Mono','Courier New',monospace;font-size:10px;color:var(--ink3);max-height:260px;overflow-y:auto;white-space:pre-wrap;line-height:1.6;margin-top:8px}
+.svc-status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+.svc-status-dot.green{background:#22c55e}
+.svc-status-dot.red{background:#ef4444}
+.svc-status-dot.yellow{background:#f59e0b}
+.svc-divider{border:none;border-top:1px solid var(--border2);margin:14px 0}
+.svc-cache-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.svc-cache-tag{font-size:10px;background:var(--leaf);color:var(--fern);padding:2px 8px;border-radius:4px}
+.svc-result{font-size:12px;color:var(--ink3);margin-top:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border2);display:none}
+.svc-result.ok{border-color:var(--fern);color:var(--sage)}
+.svc-result.err{border-color:#ef4444;color:#f87171}
 </style>
 </head>
 <body>
@@ -654,7 +688,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       <button class="hbtn" id="year-refresh" title="Обновить">↺</button>
     </div>
     <button class="hbtn" id="theme-toggle" onclick="toggleTheme()" title="Тема">◑</button>
-    <button class="hbtn" onclick="window.location='/api/auth/logout'" title="Выйти">⏻</button>
+    <button class="hbtn" id="service-btn" onclick="showPage('service',this)" title="Настройки">⚙</button>
   </div>
 </header>
 
@@ -1494,6 +1528,95 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+
+<!-- SERVICE PAGE -->
+<div class="page" id="page-service">
+  <div class="ph-row">
+    <div><div class="ph-label">Сервис</div><div class="ph-title">Панель <em>управления</em></div></div>
+  </div>
+
+  <div class="svc-grid">
+
+    <!-- Система -->
+    <div class="svc-card" id="svc-system-card">
+      <div class="svc-card-title"><span>🖥</span> Система</div>
+      <div class="svc-stat-grid">
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-cpu">—</div><div class="svc-stat-lbl">CPU %</div></div>
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-mem">—</div><div class="svc-stat-lbl">RAM %</div></div>
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-disk">—</div><div class="svc-stat-lbl">Диск %</div></div>
+      </div>
+      <div class="svc-bar-wrap">
+        <div class="svc-bar-label"><span>CPU</span><span id="svc-cpu-lbl">—</span></div>
+        <div class="svc-bar"><div class="svc-bar-fill" id="svc-cpu-bar" style="background:var(--sage)"></div></div>
+      </div>
+      <div class="svc-bar-wrap">
+        <div class="svc-bar-label"><span>Память</span><span id="svc-mem-lbl">—</span></div>
+        <div class="svc-bar"><div class="svc-bar-fill" id="svc-mem-bar" style="background:#60a5fa"></div></div>
+      </div>
+      <div class="svc-bar-wrap">
+        <div class="svc-bar-label"><span>Диск</span><span id="svc-disk-lbl">—</span></div>
+        <div class="svc-bar"><div class="svc-bar-fill" id="svc-disk-bar" style="background:#f59e0b"></div></div>
+      </div>
+    </div>
+
+    <!-- База данных -->
+    <div class="svc-card">
+      <div class="svc-card-title"><span>🗄</span> База данных</div>
+      <div class="svc-stat-grid">
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-deals">—</div><div class="svc-stat-lbl">Сделок</div></div>
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-contacts">—</div><div class="svc-stat-lbl">Контактов</div></div>
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-tasks">—</div><div class="svc-stat-lbl">Задач</div></div>
+      </div>
+      <div class="svc-stat-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-active-deals" style="font-size:16px">—</div><div class="svc-stat-lbl">Активных сделок</div></div>
+        <div class="svc-stat"><div class="svc-stat-val" id="svc-overdue" style="font-size:16px;color:#f87171">—</div><div class="svc-stat-lbl">Просрочено</div></div>
+      </div>
+      <button class="svc-btn success" onclick="svcDbCheck()"><span class="svc-btn-icon">🔌</span> Проверить соединение</button>
+      <div class="svc-result" id="svc-db-result"></div>
+    </div>
+
+    <!-- Кэш -->
+    <div class="svc-card">
+      <div class="svc-card-title"><span>⚡</span> Кэш <span id="svc-cache-count" style="font-size:11px;font-weight:400;color:var(--ink3)"></span></div>
+      <div class="svc-cache-tags" id="svc-cache-tags"></div>
+      <hr class="svc-divider">
+      <button class="svc-btn danger" onclick="svcClearCache()"><span class="svc-btn-icon">🗑</span> Очистить кэш</button>
+      <div class="svc-result" id="svc-cache-result"></div>
+    </div>
+
+    <!-- Telegram -->
+    <div class="svc-card">
+      <div class="svc-card-title"><span>✈️</span> Telegram</div>
+      <div style="margin-bottom:12px;font-size:12px;color:var(--ink3)">
+        <span class="svc-status-dot" id="svc-tg-dot"></span><span id="svc-tg-status">проверка…</span>
+      </div>
+      <button class="svc-btn success" onclick="svcSendReport()"><span class="svc-btn-icon">📊</span> Отправить отчёт сейчас</button>
+      <div class="svc-result" id="svc-tg-result"></div>
+    </div>
+
+  </div>
+
+  <!-- Логи — полная ширина -->
+  <div class="svc-grid full">
+    <div class="svc-card">
+      <div class="svc-card-title" style="justify-content:space-between">
+        <div><span>📋</span> Журнал сервиса</div>
+        <div style="display:flex;gap:8px">
+          <button class="svc-btn" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcLoadLogs()">↺ Обновить</button>
+          <button class="svc-btn danger" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcRestart()">⟳ Перезапуск</button>
+        </div>
+      </div>
+      <div class="svc-log-box" id="svc-log-box">Нажмите «Обновить» для загрузки логов…</div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;text-align:right">
+    <button class="svc-btn danger" style="width:auto;padding:9px 20px;display:inline-flex" onclick="window.location='/api/auth/logout'">
+      <span class="svc-btn-icon">⏻</span> Выйти из системы
+    </button>
+  </div>
+</div>
 
 <script>
 const API_BASE='/api';
@@ -3137,6 +3260,7 @@ async function checkAuth(){
 }
 
 function showPage(id,btn){
+  if(id==='service'){setTimeout(svcLoad,50);setTimeout(svcLoadLogs,100);}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // clear desktop nav buttons
   document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
@@ -3487,6 +3611,121 @@ function exportPdf() {
     })
     .catch(e => showToast('❌ ' + e.message));
 }
+
+// ── SERVICE PAGE ──────────────────────────────────────────────────────────────
+async function svcLoad() {
+  try {
+    const d = await api('/service/status');
+    // Система
+    if (d.system && d.system.cpu !== undefined) {
+      document.getElementById('svc-cpu').textContent  = d.system.cpu + '%';
+      document.getElementById('svc-mem').textContent  = d.system.mem_pct + '%';
+      document.getElementById('svc-disk').textContent = d.system.disk_pct + '%';
+      document.getElementById('svc-cpu-bar').style.width  = d.system.cpu + '%';
+      document.getElementById('svc-mem-bar').style.width  = d.system.mem_pct + '%';
+      document.getElementById('svc-disk-bar').style.width = d.system.disk_pct + '%';
+      document.getElementById('svc-cpu-lbl').textContent  = d.system.cpu + '%';
+      document.getElementById('svc-mem-lbl').textContent  = d.system.mem_used_mb + ' / ' + d.system.mem_total_mb + ' МБ';
+      document.getElementById('svc-disk-lbl').textContent = d.system.disk_used_gb + ' / ' + d.system.disk_total_gb + ' ГБ';
+      // цвет баров
+      const cpuBar = document.getElementById('svc-cpu-bar');
+      cpuBar.style.background = d.system.cpu > 80 ? '#ef4444' : d.system.cpu > 50 ? '#f59e0b' : 'var(--sage)';
+      const memBar = document.getElementById('svc-mem-bar');
+      memBar.style.background = d.system.mem_pct > 85 ? '#ef4444' : '#60a5fa';
+    } else {
+      ['svc-cpu','svc-mem','svc-disk'].forEach(id => document.getElementById(id).textContent = 'н/д');
+    }
+    // БД
+    document.getElementById('svc-deals').textContent        = d.db.deals;
+    document.getElementById('svc-contacts').textContent     = d.db.contacts;
+    document.getElementById('svc-tasks').textContent        = d.db.active_tasks;
+    document.getElementById('svc-active-deals').textContent = d.db.active_deals;
+    const ov = document.getElementById('svc-overdue');
+    ov.textContent = d.db.overdue_tasks;
+    ov.style.color = d.db.overdue_tasks > 0 ? '#f87171' : 'var(--ink)';
+    // Кэш
+    const keys = d.cache.keys || [];
+    document.getElementById('svc-cache-count').textContent = keys.length ? '· ' + keys.length + ' ключей' : '· пусто';
+    const tags = document.getElementById('svc-cache-tags');
+    tags.innerHTML = keys.length
+      ? keys.map(k => '<span class="svc-cache-tag">' + k + '</span>').join('')
+      : '<span style="font-size:12px;color:var(--ink4)">Кэш пуст</span>';
+    // Telegram
+    const dot = document.getElementById('svc-tg-dot');
+    const lbl = document.getElementById('svc-tg-status');
+    if (d.tg_configured) {
+      dot.className = 'svc-status-dot green'; lbl.textContent = 'Настроен';
+    } else {
+      dot.className = 'svc-status-dot red'; lbl.textContent = 'Не настроен (нет TELEGRAM_BOT_TOKEN / CHAT_ID)';
+    }
+  } catch(e) { /* уже показан тост из api() */ }
+}
+
+function svcShowResult(id, ok, msg) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'svc-result ' + (ok ? 'ok' : 'err');
+  el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function svcDbCheck() {
+  try {
+    const d = await api('/service/db/check', {method:'POST'});
+    svcShowResult('svc-db-result', true, d.detail || d.message);
+  } catch(e) { svcShowResult('svc-db-result', false, e.message); }
+}
+
+async function svcClearCache() {
+  try {
+    const d = await api('/service/cache/clear', {method:'POST'});
+    svcShowResult('svc-cache-result', true, d.message);
+    setTimeout(svcLoad, 400);
+  } catch(e) { svcShowResult('svc-cache-result', false, e.message); }
+}
+
+async function svcSendReport() {
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  try {
+    const d = await api('/service/bot/report', {method:'POST'});
+    svcShowResult('svc-tg-result', true, d.message);
+  } catch(e) { svcShowResult('svc-tg-result', false, e.message); }
+  finally { setTimeout(() => btn.disabled = false, 3000); }
+}
+
+async function svcLoadLogs() {
+  const box = document.getElementById('svc-log-box');
+  box.textContent = 'Загрузка…';
+  try {
+    const d = await api('/service/logs?n=80');
+    if (d.ok && d.logs) {
+      // раскраска строк
+      box.innerHTML = d.logs.split('\n').map(line => {
+        if (line.includes('ERROR') || line.includes('FAILURE') || line.includes('Failed'))
+          return '<span style="color:#f87171">' + line.replace(/</g,'&lt;') + '</span>';
+        if (line.includes('startup complete') || line.includes('Started'))
+          return '<span style="color:#4ade80">' + line.replace(/</g,'&lt;') + '</span>';
+        if (line.includes('WARNING') || line.includes('Ignoring'))
+          return '<span style="color:#fbbf24">' + line.replace(/</g,'&lt;') + '</span>';
+        return line.replace(/</g,'&lt;');
+      }).join('\n');
+      box.scrollTop = box.scrollHeight;
+    } else {
+      box.textContent = d.logs || 'Нет данных';
+    }
+  } catch(e) { box.textContent = 'Ошибка: ' + e.message; }
+}
+
+async function svcRestart() {
+  if (!confirm('Перезапустить сервис CRM? Соединение прервётся на ~5 секунд.')) return;
+  try {
+    await api('/service/restart', {method:'POST'});
+    showToast('⟳ Перезапуск…');
+    setTimeout(() => location.reload(), 5000);
+  } catch(e) { /* тост уже показан */ }
+}
+
 </script>
 </body>
 </html>

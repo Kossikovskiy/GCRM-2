@@ -1269,6 +1269,119 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(require_adm
     return StreamingResponse(buf, media_type="application/pdf", headers=headers)
 
 
+
+# ── SERVICE PANEL ─────────────────────────────────────────────────────────────
+
+@app.get("/api/service/status")
+def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    try:
+        import psutil
+        mem  = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+        cpu  = psutil.cpu_percent(interval=0.3)
+        system = {
+            "cpu": round(cpu, 1),
+            "mem_used_mb": round(mem.used / 1024**2),
+            "mem_total_mb": round(mem.total / 1024**2),
+            "mem_pct": round(mem.percent, 1),
+            "disk_used_gb": round(disk.used / 1024**3, 1),
+            "disk_total_gb": round(disk.total / 1024**3, 1),
+            "disk_pct": round(disk.percent, 1),
+        }
+    except Exception:
+        system = {}
+    active_tasks = db.query(Task).filter(Task.is_done == False).count()
+    overdue = db.query(Task).filter(
+        Task.is_done == False, Task.due_date < datetime.utcnow().date()
+    ).count()
+    active_deals = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
+    cache_keys = list(_cache._data.keys())
+    return {
+        "db": {
+            "deals": db.query(Deal).count(),
+            "contacts": db.query(Contact).count(),
+            "active_tasks": active_tasks,
+            "overdue_tasks": overdue,
+            "active_deals": active_deals,
+        },
+        "cache": {"keys": cache_keys, "count": len(cache_keys), "ttl": _cache._ttl},
+        "system": system,
+        "tg_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID")),
+    }
+
+@app.post("/api/service/cache/clear")
+def service_clear_cache(user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    _cache._data.clear()
+    return {"ok": True, "message": "Кэш полностью очищен"}
+
+@app.post("/api/service/bot/report")
+async def service_send_report(db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat  = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        raise HTTPException(400, "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID не заданы в .env")
+    today = datetime.utcnow().date()
+    active_deals  = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
+    active_tasks  = db.query(Task).filter(Task.is_done == False).count()
+    overdue_tasks = db.query(Task).filter(Task.is_done == False, Task.due_date < today).count()
+    today_tasks   = db.query(Task).filter(Task.is_done == False, Task.due_date == today).count()
+    won_stage_ids = {s.id for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()}
+    revenue_today = db.query(func.sum(Deal.total)).filter(
+        Deal.stage_id.in_(won_stage_ids),
+        func.date(Deal.closed_at) == today
+    ).scalar() or 0
+    lines = [
+        "<b>📊 Отчёт GrassCRM</b> (отправлен вручную)\n",
+        f"🗂 Активных сделок: <b>{active_deals}</b>",
+        f"💰 Закрыто сегодня: <b>{revenue_today:,.0f} ₽</b>",
+        f"📋 Открытых задач: <b>{active_tasks}</b>",
+    ]
+    if overdue_tasks:
+        lines.append(f"⚠️ Просрочено: <b>{overdue_tasks}</b>")
+    if today_tasks:
+        lines.append(f"📅 На сегодня: <b>{today_tasks}</b>")
+    text = "\n".join(lines)
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat, "text": text, "parse_mode": "HTML"}
+        )
+        r.raise_for_status()
+    return {"ok": True, "message": "Отчёт отправлен в Telegram"}
+
+@app.post("/api/service/db/check")
+def service_db_check(db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    try:
+        ver = db.execute(text("SELECT version()")).scalar()
+        return {"ok": True, "message": "БД доступна", "detail": str(ver)[:80]}
+    except Exception as e:
+        raise HTTPException(500, f"Ошибка: {e}")
+
+@app.get("/api/service/logs")
+def service_get_logs(n: int = 60, user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    import subprocess as _sp
+    try:
+        r = _sp.run(["journalctl", "-u", "crm.service", f"-n{n}", "--no-pager", "--output=short"],
+                    capture_output=True, text=True, timeout=6)
+        return {"ok": True, "logs": r.stdout}
+    except Exception as e:
+        return {"ok": False, "logs": str(e)}
+
+@app.post("/api/service/restart")
+def service_restart(user: dict = Depends(get_current_user)):
+    if not is_admin(user): raise HTTPException(403, "Admin only")
+    import subprocess as _sp, threading as _th
+    def _do():
+        import time as _t; _t.sleep(2)
+        _sp.Popen(["systemctl", "restart", "crm"])
+    _th.Thread(target=_do, daemon=True).start()
+    return {"ok": True, "message": "Перезапуск через 2 секунды…"}
+
 @app.get("/{full_path:path}", response_class=FileResponse)
 async def serve_frontend(full_path: str):
     path = f"./{full_path.strip()}" if full_path else "./index.html"
