@@ -54,6 +54,14 @@ logger = logging.getLogger(__name__)
 TG_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TG_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 API_BASE_URL = "http://127.0.0.1:8000/api"
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+
+# --- НОВЫЕ ЗАГОЛОВКИ ДЛЯ API ---
+if not INTERNAL_API_KEY:
+    logger.critical("Переменная окружения INTERNAL_API_KEY не установлена!")
+    sys.exit(1)
+API_HEADERS = {"X-Internal-API-Key": INTERNAL_API_KEY}
+# ---------------------------------
 
 # Состояния для диалога
 (GET_CLIENT, GET_TITLE, CHOOSE_SERVICE, GET_QUANTITY, ADD_MORE) = range(5)
@@ -102,7 +110,7 @@ async def get_deal_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def show_services_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logger.info(f"Запрос услуг из API: {API_BASE_URL}/services")
     try:
-        response = requests.get(f"{API_BASE_URL}/services", timeout=5)
+        response = requests.get(f"{API_BASE_URL}/services", timeout=5, headers=API_HEADERS)
         response.raise_for_status()
         services = response.json()
         context.user_data['services_list'] = services
@@ -200,7 +208,7 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
     
     try:
-        response = requests.get(f"{API_BASE_URL}/stages", timeout=5)
+        response = requests.get(f"{API_BASE_URL}/stages", timeout=5, headers=API_HEADERS)
         response.raise_for_status()
         stage_id = response.json()[0]['id']
     except (requests.RequestException, IndexError, KeyError) as e:
@@ -217,14 +225,15 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
     }
 
     try:
-        response = requests.post(f"{API_BASE_URL}/deals", json=payload, timeout=10)
+        response = requests.post(f"{API_BASE_URL}/deals", json=payload, timeout=10, headers=API_HEADERS)
         response.raise_for_status()
         
         services_str = "\n".join([f"- {html.escape(s['name'])} (x{s['quantity']})" for s in deal_data['services']])
         final_text = (
             f"✅ <b>Сделка успешно создана!</b>\n\n"
             f"<b>Клиент:</b> {html.escape(deal_data['client_name'])}\n"
-            f"<b>Название:</b> {html.escape(deal_data['title'])}\n"
+            f"<b>Название:</b> {html.escape(deal_data['title'])}
+"
             f"<b>Услуги:</b>\n{services_str}"
         )
         await message.reply_text(final_text, parse_mode='HTML')

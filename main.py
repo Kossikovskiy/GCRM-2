@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, List
 from functools import lru_cache
 
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -33,6 +33,7 @@ CLIENT_SECRET  = os.getenv("AUTH0_CLIENT_SECRET")
 APP_BASE_URL   = os.getenv("APP_BASE_URL", "https://crmpokos.ru").rstrip("/")
 CALLBACK_URL   = f"{APP_BASE_URL}/api/auth/callback"
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 ROLE_CLAIM     = "https://grass-crm/role"
 CACHE_TTL      = 300
 TAX_RATE       = float(os.getenv("TAX_RATE", "0.04")) # 4% УСН "Доходы" для самозанятых
@@ -223,9 +224,19 @@ app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentia
 @lru_cache(maxsize=1)
 def get_jwks(): return httpx.get(f"https://{AUTH0_DOMAIN}/.well-known/jwks.json", timeout=10).raise_for_status().json()
 def get_db(): db = SessionFactory(); yield db; db.close()
-def get_current_user(req: Request):
-    if not (user := req.session.get("user")): raise HTTPException(401, "Not authenticated")
-    return user
+
+def get_current_user(req: Request, x_internal_api_key: Optional[str] = Header(None, alias="X-Internal-API-Key")):
+    # API Key authentication for internal services (like the Telegram bot)
+    if INTERNAL_API_KEY and x_internal_api_key == INTERNAL_API_KEY:
+        # This is a trusted internal service. We grant it a synthetic admin user profile.
+        return {"sub": "internal-bot", "name": "Telegram Bot", "role": "Admin"}
+
+    # Standard session-based authentication for web users
+    if user := req.session.get("user"):
+        return user
+
+    # If neither authentication method is successful, deny access.
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 def is_admin(user: dict) -> bool:
     return (user.get("role") or "").strip().lower() == "admin"
