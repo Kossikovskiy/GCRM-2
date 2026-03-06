@@ -15,7 +15,7 @@
   --ink:#1c211a;--ink2:#4a5247;--ink3:#8a9287;--ink4:#b8bdb6;
   --gold:#b07d2c;--red:#8b3a2a;--blue:#2a5280;
   --sh-s:0 1px 4px rgba(26,51,24,.07);--sh-m:0 4px 20px rgba(26,51,24,.10);--sh-l:0 12px 48px rgba(26,51,24,.14);
-  --r:10px;--hh:58px;
+  --r:10px;--hh:58px;--bnav:0px;
 }
 html[data-theme="dark"]{
   --bg:#0d120c;--surface:#111810;--surface2:#182016;
@@ -32,7 +32,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg);color
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--sage2)}
 
-/* LOGIN */
+/* ── LOGIN ─────────────────────────────────────────────────── */
 #login-screen{
   position:fixed;inset:0;z-index:999;
   display:flex;align-items:center;justify-content:center;
@@ -59,16 +59,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg);color
 .login-btn span{transition:transform .3s}
 .login-btn:hover span:last-child{transform:translateX(4px)}
 
-/* HEADER */
+/* ── HEADER ────────────────────────────────────────────────── */
 #app{display:none}
 header{
   height:var(--hh);background:var(--forest);
-  display:flex;align-items:center;padding:0 24px 0 28px;
+  display:flex;align-items:center;padding:0 16px 0 20px;
   position:sticky;top:0;z-index:200;
   border-bottom:1px solid rgba(74,124,63,.2);
   box-shadow:0 2px 24px rgba(0,0,0,.18)
 }
-.logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;margin-right:28px;flex-shrink:0;white-space:nowrap}
+.logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;margin-right:20px;flex-shrink:0;white-space:nowrap}
 .logo em{font-style:italic;color:var(--sage)}
 .logo sup{font-family:'DM Sans',sans-serif;font-size:7px;font-weight:500;letter-spacing:1px;color:rgba(122,181,102,.5);vertical-align:super;margin-left:3px}
 nav{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
@@ -82,7 +82,7 @@ nav button::after{content:'';position:absolute;bottom:2px;left:50%;right:50%;hei
 nav button:hover{color:rgba(255,255,255,.65)}
 nav button.active{color:var(--sage)}
 nav button.active::after{left:13px;right:13px}
-.header-end{display:flex;align-items:center;gap:6px;margin-left:16px;flex-shrink:0}
+.header-end{display:flex;align-items:center;gap:6px;margin-left:12px;flex-shrink:0}
 #year-selector-container{display:flex;align-items:center;gap:5px}
 #year-selector{
   background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);
@@ -100,13 +100,55 @@ nav button.active::after{left:13px;right:13px}
 }
 .hbtn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.18)}
 
-/* PAGES */
-.page{display:none;padding:40px 44px;min-height:calc(100vh - var(--hh));animation:pageIn .32s ease both}
+/* ── MOBILE BOTTOM NAV ─────────────────────────────────────── */
+#mobile-nav{display:none}
+@media(max-width:767px){
+  :root{--bnav:62px}
+  #mobile-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:300;
+    background:var(--forest);border-top:1px solid rgba(74,124,63,.25);
+    height:var(--bnav);
+    box-shadow:0 -4px 20px rgba(0,0,0,.2);
+    overflow-x:scroll;overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    /* NO touch-action here — let buttons handle their own taps */
+  }
+  #mobile-nav::-webkit-scrollbar{display:none}
+  #mobile-nav button{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:none;border:none;color:rgba(255,255,255,.38);
+    font-family:'DM Sans',sans-serif;font-size:8px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;
+    padding:0 10px;cursor:pointer;flex:0 0 auto;gap:3px;
+    min-width:58px;height:100%;
+    /* Critical: removes 300ms delay AND allows taps even inside scrollable parent */
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .15s;position:relative;
+    user-select:none;-webkit-user-select:none;
+  }
+  #mobile-nav button .mnav-icon{font-size:17px;line-height:1}
+  #mobile-nav button.active{color:var(--sage)}
+  #mobile-nav button::before{
+    content:'';position:absolute;top:0;left:20%;right:20%;height:2px;
+    background:var(--sage);border-radius:0 0 3px 3px;
+    transform:scaleX(0);transition:transform .2s
+  }
+  #mobile-nav button.active::before{transform:scaleX(1)}
+  /* Hide desktop nav on mobile */
+  header nav{display:none}
+  #year-selector-container{display:none}
+  .logo{margin-right:auto}
+  body{padding-bottom:var(--bnav)}
+}
+
+/* ── PAGES ─────────────────────────────────────────────────── */
+.page{display:none;padding:40px 44px;min-height:calc(100vh - var(--hh) - var(--bnav));animation:pageIn .32s ease both}
 .page.active{display:block}
 @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .page-grid{display:grid;grid-template-columns:1fr 2fr;gap:24px;}
 
-/* PAGE HEAD */
+/* ── PAGE HEAD ──────────────────────────────────────────────── */
 .ph{margin-bottom:36px}
 .ph-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .ph-line{width:20px;height:1px;background:var(--fern)}
@@ -119,7 +161,7 @@ nav button.active::after{left:13px;right:13px}
   padding:2px 12px;margin-left:14px;vertical-align:middle;letter-spacing:0
 }
 
-/* KPI */
+/* ── KPI ───────────────────────────────────────────────────── */
 .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:32px}
 .kpi-card{
   background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);
@@ -136,7 +178,7 @@ nav button.active::after{left:13px;right:13px}
 .kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
 .kpi-sub{font-size:11px;color:var(--ink3);font-weight:300}
 
-/* TABLE CARD */
+/* ── TABLE CARD ────────────────────────────────────────────── */
 .tcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-s)}
 .tcard-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -144,10 +186,11 @@ nav button.active::after{left:13px;right:13px}
 }
 .tcard-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500}
 .tcard-meta{font-size:11px;color:var(--ink4)}
+.tcard-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
 thead tr{background:var(--surface2)}
-th{text-align:left;padding:12px 20px;font-size:9px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2);white-space:nowrap}
-td{padding:12px 20px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--ink2);font-weight:300;transition:background .15s}
+th{text-align:left;padding:12px 16px;font-size:9px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2);white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--ink2);font-weight:300;transition:background .15s}
 td:first-child{color:var(--ink4);font-size:11px;width:44px}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
@@ -155,7 +198,7 @@ tbody tr{cursor:pointer}
 tbody tr.selected td{background:var(--leaf)}
 html[data-theme=dark] tbody tr.selected td{background:var(--moss)}
 
-/* BADGE */
+/* ── BADGE ─────────────────────────────────────────────────── */
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.3px}
 .b-green{background:#dcfce7;color:#16a34a}
 .b-amber{background:#fef3c7;color:#b45309}
@@ -172,7 +215,7 @@ html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
 .cat-tag{font-size:10px;color:var(--fern);background:var(--leaf);padding:2px 8px;border-radius:20px;display:inline-block}
 html[data-theme="dark"] .cat-tag{background:var(--surface2);color:var(--sage)}
 
-/* KANBAN */
+/* ── KANBAN ────────────────────────────────────────────────── */
 .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;padding-bottom:12px}
 .k-col{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 200px);box-shadow:var(--sh-s);transition:background .15s,border-color .15s}
 .k-col.drag-over{background:var(--leaf);border-color:var(--sage)}
@@ -184,7 +227,7 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
 .k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
 .k-cards::-webkit-scrollbar{width:3px}
-.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none}
+.k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .k-card:hover{box-shadow:var(--sh-m);transform:translateY(-2px);background:var(--surface)}
 .k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
 .k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
@@ -195,13 +238,13 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .k-hr{height:1px;background:var(--border2);margin:8px 0}
 .k-date{font-size:10px;color:var(--ink4);font-weight:300}
 
-/* EMPTY */
-.empty{padding:56px 32px;text-align:center}
+/* ── EMPTY ─────────────────────────────────────────────────── */
+.empty{padding:40px 24px;text-align:center}
 .empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
 .empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
 
-/* TABS */
-.tabs-row{display:flex;gap:10px;margin-bottom:18px}
+/* ── TABS ──────────────────────────────────────────────────── */
+.tabs-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
 .tab-btn{
   background:none;border:1px solid var(--border);border-radius:7px;padding:7px 16px;
   font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--ink3);
@@ -210,15 +253,23 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .tab-btn.active{background:var(--fern);border-color:var(--fern);color:#fff}
 .tab-btn:hover:not(.active){border-color:var(--ink3);color:var(--ink)}
 
-/* ADD BUTTON */
+/* ── ADD BUTTON ─────────────────────────────────────────────── */
 .add-btn{display:inline-flex;align-items:center;gap:7px;background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;box-shadow:var(--sh-s)}
 .add-btn:hover{background:var(--moss);transform:translateY(-1px);box-shadow:var(--sh-m)}
 
-/* MODAL */
-.overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+/* ── MODAL ─────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-.item-selector-modal { z-index: 501; }
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;width:100%;max-width:540px;box-shadow:var(--sh-l);transform:translateY(18px) scale(.97);transition:transform .25s}
+.item-selector-modal{z-index:501}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:32px;
+  width:100%;max-width:540px;
+  box-shadow:var(--sh-l);
+  transform:translateY(24px) scale(.97);
+  transition:transform .28s cubic-bezier(.34,1.2,.64,1);
+  max-height:92vh;overflow-y:auto;
+}
 .overlay.open .modal{transform:none}
 .modal-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:var(--ink);margin-bottom:24px}
 .modal-title em{font-style:italic;color:var(--fern)}
@@ -226,11 +277,11 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .field{margin-bottom:16px}
 .field.full{grid-column:span 2}
 .field label{display:block;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:7px}
-.field input, .field textarea, .field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;transition:border-color .2s}
 .field textarea{resize:vertical;min-height:80px}
-.field input:focus, .field textarea:focus, .field select:focus{border-color:var(--fern)}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--fern)}
 .field input.err{border-color:var(--red)}
-.modal-row{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:24px}
+.modal-row{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:24px;flex-wrap:wrap}
 .btn-sec{background:none;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-sec:hover{border-color:var(--ink3);color:var(--ink)}
 .btn-pri{background:var(--fern);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:1px}
@@ -238,26 +289,25 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .btn-del-modal{margin-right:auto;border-color:var(--red);color:var(--red)}
 .btn-del-modal:hover{background:var(--red);color:#fff}
 
-
 #d-services-block{margin-top:20px;border-top:1px solid var(--border2);padding-top:20px}
-#d-services-table th, #m-consumables-table th {font-size:8px;padding:8px 10px}
-#d-services-table td, #m-consumables-table td {font-size:11px;padding:8px 10px}
-#d-services-table .btn-del, #m-consumables-table .btn-del {cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
+#d-services-table th,#m-consumables-table th{font-size:8px;padding:8px 10px}
+#d-services-table td,#m-consumables-table td{font-size:11px;padding:8px 10px}
+#d-services-table .btn-del,#m-consumables-table .btn-del{cursor:pointer;color:var(--red);border:none;background:none;font-size:14px}
 
-.item-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column;}
-.item-selector-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px;}
-.item-selector-results{overflow-y:auto;padding:8px;}
-.item-result{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;border-radius:8px;}
-.item-result:hover{background:var(--surface2);}
-.item-result-name{font-weight:500;}
+.item-selector-modal .modal-content{padding:0;max-height:80vh;display:flex;flex-direction:column}
+.item-selector-search-input{width:100%;border-radius:0;border:none;border-bottom:1px solid var(--border);padding:16px;font-size:14px}
+.item-selector-results{overflow-y:auto;padding:8px}
+.item-result{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;border-radius:8px}
+.item-result:hover{background:var(--surface2)}
+.item-result-name{font-weight:500}
 .item-result-sub{font-size:11px;color:var(--ink3)}
-.item-result-price{color:var(--fern);}
+.item-result-price{color:var(--fern)}
 
 #page-equipment-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:24px}
 
-/* TOAST */
+/* ── TOAST ─────────────────────────────────────────────────── */
 .toast{
-  position:fixed;bottom:22px;right:22px;z-index:400;
+  position:fixed;bottom:calc(var(--bnav) + 12px);right:16px;z-index:400;
   background:var(--forest);color:rgba(255,255,255,.82);
   border:1px solid rgba(122,181,102,.2);border-radius:8px;
   padding:11px 18px;font-size:12px;font-weight:400;
@@ -266,6 +316,105 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   transition:all .35s cubic-bezier(.34,1.46,.64,1);max-width:300px
 }
 .toast.show{transform:translateY(0);opacity:1}
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE — TABLET  (≤ 1024px)
+   ════════════════════════════════════════════════════════════ */
+@media(max-width:1024px){
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  #page-equipment-layout{grid-template-columns:1fr}
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE  (≤ 767px)
+   ════════════════════════════════════════════════════════════ */
+@media(max-width:767px){
+  /* Page padding */
+  .page{padding:20px 16px}
+  .ph{margin-bottom:22px}
+  .ph-title{font-size:30px}
+  .ph-year{font-size:12px;padding:1px 9px;margin-left:8px}
+
+  /* KPI: 2 columns, smaller numbers */
+  .kpi-strip{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+  .kpi-card{padding:16px 14px 14px}
+  .kpi-val{font-size:22px}
+  .kpi-icon{font-size:14px;margin-bottom:8px}
+  .kpi-sub{font-size:10px}
+
+  /* Dashboard activity grid */
+  .dash-activity-grid{grid-template-columns:1fr !important;gap:14px !important}
+
+  /* Tables: all wrapped, smaller padding */
+  .tcard{border-radius:8px}
+  .tcard-head{padding:11px 14px}
+  th{padding:10px 12px;font-size:8px;letter-spacing:1.2px}
+  td{padding:10px 12px;font-size:11px}
+  td:first-child{width:32px}
+
+  /* Page grids → single column */
+  .page-grid{grid-template-columns:1fr !important}
+  #page-equipment-layout{grid-template-columns:1fr !important}
+
+  /* Kanban: horizontal scroll on mobile */
+  .kanban{
+    display:flex;flex-direction:row;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    gap:10px;padding-bottom:16px;
+    /* Snap scrolling for columns */
+    scroll-snap-type:x mandatory
+  }
+  .kanban::-webkit-scrollbar{height:3px}
+  .k-col{
+    min-width:240px;max-width:240px;flex-shrink:0;
+    max-height:calc(100vh - var(--hh) - var(--bnav) - 130px);
+    scroll-snap-align:start
+  }
+
+  /* Modals: slide up from bottom, full width */
+  .overlay{align-items:flex-end}
+  .modal{
+    border-radius:18px 18px 0 0;
+    padding:24px 20px 28px;
+    max-width:100%;
+    max-height:90vh;
+  }
+  .modal-grid{grid-template-columns:1fr !important}
+  .field.full{grid-column:span 1}
+  .modal-title{font-size:22px;margin-bottom:18px}
+  .modal-row{gap:8px}
+  .btn-sec,.btn-pri{padding:10px 14px;font-size:11px}
+  .btn-del-modal{margin-right:0;order:-1;width:100%}
+
+  /* Page head with action button: stack on mobile */
+  .ph-with-btn{flex-direction:column !important;align-items:flex-start !important;gap:12px !important}
+
+  /* Add button: full width on very small screens */
+  .add-btn{font-size:12px;padding:10px 16px}
+
+  /* Tabs */
+  .tabs-row{gap:8px}
+  .tab-btn{padding:6px 12px;font-size:10px}
+
+  /* Equipment: hide less-important columns via class */
+  .col-hide-mobile{display:none !important}
+
+  /* Login box smaller */
+  .login-box{padding:48px 28px}
+  .login-logo{font-size:42px}
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE — SMALL  (≤ 400px)
+   ════════════════════════════════════════════════════════════ */
+@media(max-width:400px){
+  .kpi-strip{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi-val{font-size:20px}
+  .page{padding:16px 12px}
+  th{padding:8px 10px}
+  td{padding:8px 10px}
+  .modal{padding:20px 16px 24px}
+}
 </style>
 </head>
 <body>
@@ -307,6 +456,19 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
 </header>
 
+<!-- MOBILE BOTTOM NAV -->
+<div id="mobile-nav">
+  <button class="active" data-page="dash" onclick="showPage('dash',this)"><span class="mnav-icon">📊</span>Дашборд</button>
+  <button data-page="kanban" onclick="showPage('kanban',this)"><span class="mnav-icon">🗂</span>Сделки</button>
+  <button data-page="tasks" onclick="showPage('tasks',this)"><span class="mnav-icon">✅</span>Задачи</button>
+  <button data-page="expenses" onclick="showPage('expenses',this)"><span class="mnav-icon">💸</span>Расходы</button>
+  <button data-page="taxes" onclick="showPage('taxes',this)"><span class="mnav-icon">🏛️</span>Налог</button>
+  <button data-page="equipment" onclick="showPage('equipment',this)"><span class="mnav-icon">🔧</span>Техника</button>
+  <button data-page="services" onclick="showPage('services',this)"><span class="mnav-icon">📋</span>Прайс</button>
+  <button data-page="stock" onclick="showPage('stock',this)"><span class="mnav-icon">📦</span>Склад</button>
+  <button data-page="contacts" onclick="showPage('contacts',this)"><span class="mnav-icon">👥</span>Контакты</button>
+</div>
+
 <div class="page active" id="page-dash">
   <div class="ph">
     <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Обзор</span></div>
@@ -344,7 +506,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       <div class="kpi-sub" id="kpi-repair">— в ремонте</div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px">
+  <div class="dash-activity-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px">
     <div class="tcard">
       <div class="tcard-head"><span class="tcard-title">Активные задачи</span><span class="tcard-meta" id="dash-tasks-count"></span></div>
       <table><thead><tr><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="dash-tasks-tbody"></tbody></table>
@@ -357,7 +519,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-kanban">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+  <div class="ph ph-with-btn" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
     <div>
       <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Воронка продаж</span></div>
       <div class="ph-title">Сделки <em>по этапам</em><span class="ph-year year-display"></span></div>
@@ -368,7 +530,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 </div>
 
 <div class="page" id="page-tasks">
-  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+  <div class="ph ph-with-btn" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
     <div>
       <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Управление</span></div>
       <div class="ph-title">Задачи<span class="ph-year year-display"></span></div>
@@ -381,7 +543,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
-    <table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th>Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table>
+    <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th class="col-hide-mobile">Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -395,7 +557,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Все расходы</span><span class="tcard-meta" id="expenses-count"></span></div>
-        <table><thead><tr><th>#</th><th>Наименование</th><th>Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table>
+        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Наименование</th><th class="col-hide-mobile">Категория</th><th>Сумма</th><th>Дата</th></tr></thead><tbody id="expenses-tbody"></tbody></table></div>
     </div>
 </div>
 
@@ -431,7 +593,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         </div>
         <div class="tcard">
             <div class="tcard-head"><span class="tcard-title">История платежей</span><span class="tcard-meta" id="tax-payments-count"></span></div>
-            <table><thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th>Примечание</th><th></th></tr></thead><tbody id="tax-payments-tbody"></tbody></table>
+            <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Сумма</th><th>Дата</th><th class="col-hide-mobile">Примечание</th><th></th></tr></thead><tbody id="tax-payments-tbody"></tbody></table></div>
         </div>
     </div>
 </div>
@@ -450,13 +612,13 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <div id="page-equipment-layout">
         <div class="tcard">
             <div class="tcard-head"><span class="tcard-title">Инвентарный список</span><span class="tcard-meta" id="equipment-count"></span></div>
-            <div style="overflow-x: auto;">
-                <table><thead><tr><th>Тип</th><th>Наименование</th><th>Статус</th><th>Покупка</th><th>Стоимость</th><th>Моточасы</th><th>Норма ГСМ</th><th>Посл. ТО</th><th>След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
+            <div class="tcard-scroll">
+                <table><thead><tr><th>Наименование</th><th class="col-hide-mobile">Модель</th><th>Статус</th><th class="col-hide-mobile">Покупка</th><th class="col-hide-mobile">Стоимость</th><th class="col-hide-mobile">Моточасы</th><th class="col-hide-mobile">ГСМ</th><th class="col-hide-mobile">Посл. ТО</th><th class="col-hide-mobile">След. ТО</th></tr></thead><tbody id="equipment-tbody"></tbody></table>
             </div>
         </div>
         <div class="tcard">
             <div class="tcard-head"><span class="tcard-title">Журнал ТО</span><span class="tcard-meta" id="maintenance-count"></span></div>
-            <table><thead><tr><th>Техника</th><th>Работы</th><th>Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table>
+            <div class="tcard-scroll"><table><thead><tr><th>Техника</th><th>Работы</th><th class="col-hide-mobile">Стоимость</th><th>Дата</th></tr></thead><tbody id="maintenance-tbody"></tbody></table></div>
         </div>
     </div>
 </div>
@@ -471,7 +633,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Все услуги</span><span class="tcard-meta" id="services-count"></span></div>
-        <table><thead><tr><th>#</th><th>Наименование</th><th>Ед. изм.</th><th>Цена</th><th>Мин. объём</th><th>Примечание</th></tr></thead><tbody id="services-tbody"></tbody></table>
+        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Наименование</th><th class="col-hide-mobile">Ед. изм.</th><th>Цена</th><th class="col-hide-mobile">Мин. объём</th><th class="col-hide-mobile">Примечание</th></tr></thead><tbody id="services-tbody"></tbody></table></div>
     </div>
 </div>
 
@@ -485,7 +647,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Остатки</span><span class="tcard-meta" id="consumables-count"></span></div>
-        <table><thead><tr><th>#</th><th>Название</th><th>Остаток</th><th>Цена</th><th>Заметки</th></tr></thead><tbody id="consumables-tbody"></tbody></table>
+        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Название</th><th>Остаток</th><th>Цена</th><th class="col-hide-mobile">Заметки</th></tr></thead><tbody id="consumables-tbody"></tbody></table></div>
     </div>
 </div>
 
@@ -499,7 +661,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
-        <table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th>Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table>
+        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th class="col-hide-mobile">Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table></div>
     </div>
 </div>
 
@@ -933,6 +1095,8 @@ function renderKanban(deals=[]){
 
 function initDrag(){
   const board=document.getElementById('kanban-board');
+
+  // ── mouse drag (desktop) ──────────────────────────────────
   board.querySelectorAll('.k-card[draggable]').forEach(el=>{
     el.addEventListener('dragstart',e=>{
       e.stopPropagation();
@@ -953,8 +1117,7 @@ function initDrag(){
       e.preventDefault(); e.dataTransfer.dropEffect='move';
       col.classList.add('drag-over');
       const cards=col.querySelector('.k-cards');
-      const ph=col.querySelector('.k-placeholder');
-      if(!ph){const p=document.createElement('div');p.className='k-placeholder';cards.appendChild(p);}
+      if(!col.querySelector('.k-placeholder')){const p=document.createElement('div');p.className='k-placeholder';cards.appendChild(p);}
     });
     col.addEventListener('dragleave',e=>{
       if(!col.contains(e.relatedTarget)){
@@ -969,26 +1132,115 @@ function initDrag(){
       const id=e.dataTransfer.getData('text/plain');
       const newStageName=col.dataset.stage;
       if(!id||_dragSrcStage===newStageName)return;
-      
       const deal=_deals.find(d=>String(d.id)===String(id));
       if(!deal)return;
-      
-      const stage = STAGES.find(s => s.name === newStageName);
-      if (!stage) return;
-
-      const oldStageName = deal.stage;
-      deal.stage = newStageName;
+      const stage=STAGES.find(s=>s.name===newStageName);
+      if(!stage)return;
+      const oldStageName=deal.stage;
+      deal.stage=newStageName;
       renderKanban(_deals);
-
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
-        .then(()=>{
-          showToast('✅ → '+newStageName);
-          if(stage.is_final){
-            loadData(SELECTED_YEAR, true);
-          }
-        })
+      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id:stage.id})})
+        .then(()=>{showToast('✅ → '+newStageName);if(stage.is_final)loadData(SELECTED_YEAR,true);})
         .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
+  });
+
+  // ── touch drag (mobile) ───────────────────────────────────
+  let _touchCard=null,_touchClone=null,_touchSrcStage=null,_touchLastCol=null;
+  let _touchStartX=0,_touchStartY=0,_touchDragging=false;
+
+  function _touchGetCol(x,y){
+    if(_touchClone)_touchClone.style.visibility='hidden';
+    const el=document.elementFromPoint(x,y);
+    if(_touchClone)_touchClone.style.visibility='';
+    return el ? el.closest('.k-col') : null;
+  }
+
+  function _touchCleanup(){
+    if(_touchCard)_touchCard.classList.remove('dragging');
+    if(_touchClone){_touchClone.remove();_touchClone=null;}
+    board.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
+    board.querySelectorAll('.k-col').forEach(c=>c.classList.remove('drag-over'));
+    _touchCard=null;_touchSrcStage=null;_touchLastCol=null;_touchDragging=false;
+  }
+
+  board.querySelectorAll('.k-card[draggable]').forEach(el=>{
+    el.addEventListener('touchstart',e=>{
+      if(e.touches.length!==1)return;
+      const t=e.touches[0];
+      _touchStartX=t.clientX; _touchStartY=t.clientY;
+      _touchCard=el; _touchSrcStage=el.dataset.stage; _touchDragging=false;
+      // Long-press to activate drag
+      el._touchTimer=setTimeout(()=>{
+        _touchDragging=true;
+        el.classList.add('dragging');
+        const r=el.getBoundingClientRect();
+        _touchClone=el.cloneNode(true);
+        _touchClone.style.cssText=`position:fixed;z-index:9999;width:${r.width}px;pointer-events:none;`
+          +`left:${r.left}px;top:${r.top}px;opacity:.88;`
+          +`transform:scale(1.05) rotate(1.5deg);`
+          +`box-shadow:0 12px 40px rgba(0,0,0,.35);border-radius:8px;transition:none;`;
+        document.body.appendChild(_touchClone);
+        if(navigator.vibrate)navigator.vibrate(40);
+      },350);
+    },{passive:true});
+
+    el.addEventListener('touchmove',e=>{
+      if(!_touchCard)return;
+      const t=e.touches[0];
+      const dx=Math.abs(t.clientX-_touchStartX);
+      const dy=Math.abs(t.clientY-_touchStartY);
+      // If not yet dragging and moved too much — cancel long-press (user is scrolling)
+      if(!_touchDragging){
+        if(dx>8||dy>8){ clearTimeout(el._touchTimer); _touchCard=null; }
+        return;
+      }
+      // Dragging — prevent page scroll
+      e.preventDefault();
+      const x=t.clientX, y=t.clientY;
+      if(_touchClone){
+        _touchClone.style.left=(x-_touchClone.offsetWidth/2)+'px';
+        _touchClone.style.top=(y-_touchClone.offsetHeight/2)+'px';
+      }
+      const col=_touchGetCol(x,y);
+      board.querySelectorAll('.k-col').forEach(c=>{
+        c.classList.remove('drag-over');
+        c.querySelectorAll('.k-placeholder').forEach(p=>p.remove());
+      });
+      if(col&&col!==el.closest('.k-col')){
+        col.classList.add('drag-over');
+        const ph=document.createElement('div');ph.className='k-placeholder';
+        col.querySelector('.k-cards').appendChild(ph);
+        _touchLastCol=col;
+      } else { _touchLastCol=null; }
+    },{passive:false});
+
+    el.addEventListener('touchend',e=>{
+      clearTimeout(el._touchTimer);
+      if(!_touchDragging){ _touchCard=null; return; }
+      const col=_touchLastCol;
+      const srcStage=_touchSrcStage;
+      const card=_touchCard;
+      _touchCleanup();
+      if(!col||col.dataset.stage===srcStage)return;
+      const newStageName=col.dataset.stage;
+      const id=card.dataset.id;
+      const deal=_deals.find(d=>String(d.id)===String(id));
+      if(!deal)return;
+      const stage=STAGES.find(s=>s.name===newStageName);
+      if(!stage)return;
+      const oldStageName=deal.stage;
+      deal.stage=newStageName;
+      renderKanban(_deals);
+      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id:stage.id})})
+        .then(()=>{showToast('✅ → '+newStageName);if(stage.is_final)loadData(SELECTED_YEAR,true);})
+        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+    },{passive:true});
+
+    el.addEventListener('touchcancel',()=>{
+      clearTimeout(el._touchTimer);
+      _touchCleanup();
+    },{passive:true});
   });
 }
 
@@ -1903,14 +2155,14 @@ function renderEquipment(eq=[]) {
         const [cls, lbl] = SM[e.status] || ['b-slate', e.status];
         return `<tr data-id="${e.id}" onclick="selectEquipment(${e.id}, this)" ondblclick='openEquipmentModal(${JSON.stringify(e)})' title="Двойной клик для редактирования">
             <td style="font-weight:500;color:var(--ink)">${e.name}</td>
-            <td style="font-size:11px;color:var(--ink3)">${e.model || '—'}</td>
+            <td class="col-hide-mobile" style="font-size:11px;color:var(--ink3)">${e.model || '—'}</td>
             <td><span class="badge ${cls}">${lbl}</span></td>
-            <td>${fmtDate(e.purchase_date)}</td>
-            <td>${fmt(e.purchase_cost)}</td>
-            <td>${fmtShort(e.engine_hours, '0')}</td>
-            <td>${e.fuel_norm != null ? e.fuel_norm + ' л/ч' : '—'}</td>
-            <td>${fmtDate(e.last_maintenance_date)}</td>
-            <td>${fmtDate(e.next_maintenance_date)}</td>
+            <td class="col-hide-mobile">${fmtDate(e.purchase_date)}</td>
+            <td class="col-hide-mobile">${fmt(e.purchase_cost)}</td>
+            <td class="col-hide-mobile">${fmtShort(e.engine_hours, '0')}</td>
+            <td class="col-hide-mobile">${e.fuel_norm != null ? e.fuel_norm + ' л/ч' : '—'}</td>
+            <td class="col-hide-mobile">${fmtDate(e.last_maintenance_date)}</td>
+            <td class="col-hide-mobile">${fmtDate(e.next_maintenance_date)}</td>
         </tr>`;
     }).join('') : empty(9, 'Техники не найдено');
 
@@ -1931,7 +2183,7 @@ function renderMaintenanceHistory(history) {
         `<tr onclick='openMaintenanceModal(${h.id})'>
             <td style="font-size:11px;color:var(--ink3)">${h.equipment.name}</td>
             <td style="color:var(--ink);font-weight:400">${h.work_description}</td>
-            <td>${fmt(h.cost)}</td>
+            <td class="col-hide-mobile">${fmt(h.cost)}</td>
             <td>${fmtDate(h.date)}</td>
         </tr>`
     ).join('') : empty(4, 'Записей о ТО нет');
@@ -2219,10 +2471,17 @@ async function checkAuth(){
 
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  // clear desktop nav buttons
+  document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
+  // clear mobile nav buttons
+  document.querySelectorAll('#mobile-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  if(btn)btn.classList.add('active');
+  // activate by data-page (mobile) and onclick match (desktop)
+  const mBtn=document.querySelector('#mobile-nav button[data-page="'+id+'"]');
+  if(mBtn)mBtn.classList.add('active');
+  document.querySelectorAll('#main-nav button[onclick*="\''+id+'\'"]').forEach(b=>b.classList.add('active'));
 }
+function syncMobileNav(){}
 
 function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
