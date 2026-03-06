@@ -3,6 +3,7 @@
 GreenCRM Telegram Bot
 - Позволяет создавать сделки через интерактивный диалог с категориями услуг.
 - Автоматически отправляет ежедневные отчеты.
+- Удаляет за собой сообщения в диалоге, оставляя только итоговый результат.
 """
 
 import asyncio
@@ -13,16 +14,13 @@ import sys
 from datetime import date, timedelta, time
 import pytz
 
-# --- ДОБАВЛЕНО: Загрузка переменных окружения из .env файла ---
 from dotenv import load_dotenv
 load_dotenv()
-# ------------------------------------------------------------
 
 import requests
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, joinedload, contains_eager
 
-# Telegram
 from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -34,7 +32,6 @@ from telegram.ext import (
     filters,
 )
 
-# --- МОДЕЛИ ИЗ main.py ---
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     from main import Deal, Stage, Equipment, Contact, Task, DailyPhrase, Service, DATABASE_URL
@@ -64,7 +61,6 @@ API_HEADERS = {"X-Internal-API-Key": INTERNAL_API_KEY}
 # Состояния для диалога
 (GET_TITLE, GET_CLIENT, CHOOSE_CATEGORY, CHOOSE_SERVICE, GET_QUANTITY, ADD_MORE) = range(6)
 
-# --- НОВАЯ СТРУКТУРА КАТЕГОРИЙ УСЛУГ ---
 SERVICE_CATEGORIES = {
     "🌿 Покос травы": list(range(1, 7)),
     "🧹 Уборка и вывоз": list(range(7, 11)),
@@ -74,62 +70,83 @@ SERVICE_CATEGORIES = {
     "🌸 Посадка и уход за клумбами": list(range(25, 34)),
     "🍀 Удобрение и питание газона": list(range(34, 38)),
 }
-# ------------------------------------------
+
+# ════════════════════════════════════════
+#  🗑  УПРАВЛЕНИЕ СООБЩЕНИЯМИ ДИАЛОГА (НОВОЕ)
+# ════════════════════════════════════════
+
+def add_message_to_cleanup(context: ContextTypes.DEFAULT_TYPE, message_id: int):
+    """Добавляет ID сообщения в список для последующей очистки."""
+    if 'messages_to_delete' not in context.user_data:
+        context.user_data['messages_to_delete'] = []
+    context.user_data['messages_to_delete'].append(message_id)
+
+async def cleanup_dialog_messages(context: ContextTypes.DEFAULT_TYPE, chat_id: int):
+    """Удаляет все сообщения, собранные в ходе диалога."""
+    message_ids = context.user_data.get('messages_to_delete', [])
+    if not message_ids:
+        return
+    logger.info(f"Очистка {len(message_ids)} сообщений из диалога...")
+    for message_id in message_ids:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {message_id}: {e}")
+    context.user_data['messages_to_delete'] = []
 
 # ════════════════════════════════════════
 #  💬  ДИАЛОГ СОЗДАНИЯ СДЕЛКИ (ПЕРЕРАБОТАН)
 # ════════════════════════════════════════
 
 async def new_deal_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Начало диалога. Запрашивает название сделки."""
+    context.user_data.clear()
     context.user_data['deal_data'] = {'services': []}
-    await update.message.reply_text(
+    add_message_to_cleanup(context, update.message.message_id)
+    sent_message = await update.message.reply_text(
         "Начинаем создание новой сделки.\n\n"
         "<b>Шаг 1/6:</b> Введите название сделки (например, 'Уход за участком в Павловске').",
         parse_mode='HTML'
     )
+    add_message_to_cleanup(context, sent_message.message_id)
     return GET_TITLE
 
 async def get_deal_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получает название сделки и запрашивает имя клиента."""
     deal_title = update.message.text.strip()
+    add_message_to_cleanup(context, update.message.message_id)
     if not deal_title:
-        await update.message.reply_text("Название сделки не может быть пустым. Попробуйте снова.")
+        sent_message = await update.message.reply_text("Название сделки не может быть пустым. Попробуйте снова.")
+        add_message_to_cleanup(context, sent_message.message_id)
         return GET_TITLE
 
     context.user_data['deal_data']['title'] = deal_title
-    await update.message.reply_text(
+    sent_message = await update.message.reply_text(
         f"Название сделки: <b>{html.escape(deal_title)}</b>.\n\n"
         "<b>Шаг 2/6:</b> Теперь введите имя клиента (или название компании).",
         parse_mode='HTML'
     )
+    add_message_to_cleanup(context, sent_message.message_id)
     return GET_CLIENT
 
 async def get_client_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получает имя клиента и показывает клавиатуру категорий."""
     client_name = update.message.text.strip()
+    add_message_to_cleanup(context, update.message.message_id)
     if not client_name:
-        await update.message.reply_text("Имя клиента не может быть пустым. Попробуйте снова.")
+        sent_message = await update.message.reply_text("Имя клиента не может быть пустым. Попробуйте снова.")
+        add_message_to_cleanup(context, sent_message.message_id)
         return GET_CLIENT
 
     context.user_data['deal_data']['client_name'] = client_name
-    await update.message.reply_text(
-        f"Отлично, клиент: <b>{html.escape(client_name)}</b>.",
-        parse_mode='HTML'
-    )
-    # Сразу переходим к показу категорий
-    return await show_category_keyboard(update, context)
-
+    sent_message = await update.message.reply_text(f"Отлично, клиент: <b>{html.escape(client_name)}</b>.", parse_mode='HTML')
+    add_message_to_cleanup(context, sent_message.message_id)
+    return await show_category_keyboard(update, context, is_new_message=True)
 
 async def fetch_services_if_needed(context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Загружает и кэширует список услуг из API, если он еще не загружен."""
     if 'services_list' not in context.user_data:
         logger.info(f"Запрос услуг из API: {API_BASE_URL}/services")
         try:
             response = requests.get(f"{API_BASE_URL}/services", timeout=5, headers=API_HEADERS)
             response.raise_for_status()
             services = response.json()
-            # Преобразуем в словарь для быстрого доступа по ID
             context.user_data['services_list'] = {s['id']: s for s in services}
             logger.info(f"Получено и кэшировано {len(services)} услуг.")
             return True
@@ -138,101 +155,78 @@ async def fetch_services_if_needed(context: ContextTypes.DEFAULT_TYPE) -> bool:
             return False
     return True
 
-
-async def show_category_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Показывает клавиатуру с категориями услуг."""
-    
-    # Убедимся, что услуги загружены
+async def show_category_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE, is_new_message: bool = False) -> int:
     if not await fetch_services_if_needed(context):
-        msg = update.callback_query.message if update.callback_query else update.message
-        await msg.reply_text("Не удалось загрузить список услуг. Попробуйте отменить (/cancel) и начать заново.")
+        msg_text = "Не удалось загрузить список услуг. Попробуйте отменить (/cancel) и начать заново."
+        if update.callback_query:
+             await update.callback_query.message.reply_text(msg_text)
+        else:
+            await update.message.reply_text(msg_text)
         return CHOOSE_CATEGORY
 
-    keyboard = [
-        [InlineKeyboardButton(category_name, callback_data=f"cat_{category_name}")]
-        for category_name in SERVICE_CATEGORIES.keys()
-    ]
+    keyboard = [[InlineKeyboardButton(name, callback_data=f"cat_{name}")] for name in SERVICE_CATEGORIES.keys()]
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = "<b>Шаг 3/6:</b> Выберите категорию услуг:"
 
-    # Если функция вызвана из коллбэка (нажатие кнопки), редактируем сообщение
-    if update.callback_query:
+    if is_new_message:
+        sent_message = await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
+        add_message_to_cleanup(context, sent_message.message_id)
+        context.user_data['main_dialog_message_id'] = sent_message.message_id
+    else:
         await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
-    else: # Иначе отправляем новое
-        await update.message.reply_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
 
     return CHOOSE_CATEGORY
 
 async def choose_category_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обрабатывает выбор категории и показывает услуги в ней."""
     query = update.callback_query
     await query.answer()
     category_name = query.data.split("cat_", 1)[1]
     context.user_data['current_category'] = category_name
-    
     return await show_services_keyboard(update, context)
 
 async def show_services_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Показывает услуги для выбранной категории."""
-    query = update.callback_query # Эта функция всегда вызывается из коллбэка
+    query = update.callback_query
     category_name = context.user_data['current_category']
-    
     all_services = context.user_data.get('services_list', {})
-    service_ids_in_category = SERVICE_CATEGORIES.get(category_name, [])
-    
-    # Фильтруем услуги для данной категории
-    services_to_show = [s for s_id, s in all_services.items() if s_id in service_ids_in_category]
+    service_ids = SERVICE_CATEGORIES.get(category_name, [])
+    services_to_show = [s for s_id, s in all_services.items() if s_id in service_ids]
 
     if not services_to_show:
-         await query.edit_message_text("В этой категории пока нет услуг.")
-         # Возвращаемся к выбору категорий
-         return await show_category_keyboard(update, context)
+         await query.answer("В этой категории пока нет услуг.", show_alert=True)
+         return CHOOSE_CATEGORY
 
-    keyboard = [
-        [InlineKeyboardButton(f"{s['name']} ({s['price']} ₽)", callback_data=f"service_{s['id']}")]
-        for s in services_to_show
-    ]
-    # Добавляем кнопку "Назад"
+    keyboard = [[InlineKeyboardButton(f"{s['name']} ({s['price']} ₽)", callback_data=f"service_{s['id']}")] for s in services_to_show]
     keyboard.append([InlineKeyboardButton("🔙 Назад к категориям", callback_data="back_to_cat")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
     message_text = f"<b>Категория: {html.escape(category_name)}</b>\n\n<b>Шаг 4/6:</b> Выберите услугу:"
-    
     await query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
-    
     return CHOOSE_SERVICE
 
 async def back_to_category_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Возвращает пользователя к выбору категорий."""
     return await show_category_keyboard(update, context)
 
-
 async def choose_service_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обрабатывает выбор конкретной услуги и запрашивает количество."""
     query = update.callback_query
     await query.answer()
     service_id = int(query.data.split('_')[1])
-    
     context.user_data['current_service_id'] = service_id
-    
-    all_services = context.user_data.get('services_list', {})
-    service_name = all_services.get(service_id, {}).get('name', 'Unknown')
-
+    service_name = context.user_data.get('services_list', {}).get(service_id, {}).get('name', 'Unknown')
     context.user_data['current_service_name'] = service_name
+    
     await query.edit_message_text(
-        text=f"Выбрана услуга: <b>{html.escape(service_name)}</b>.\n\n"
-             "<b>Шаг 5/6:</b> Введите количество (например: 1, 5, 1.5).",
+        text=f"Выбрана услуга: <b>{html.escape(service_name)}</b>.\n\n<b>Шаг 5/6:</b> Введите количество (например: 1, 5, 1.5).",
         parse_mode='HTML'
     )
     return GET_QUANTITY
 
 async def get_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Получает количество, добавляет услугу к сделке и предлагает завершить или добавить еще."""
+    add_message_to_cleanup(context, update.message.message_id)
     try:
         quantity = float(update.message.text.strip().replace(',', '.'))
         if quantity <= 0: raise ValueError
     except ValueError:
-        await update.message.reply_text("Ошибка. Введите положительное число (например, 1 или 2.5).")
+        sent_message = await update.message.reply_text("Ошибка. Введите положительное число (например, 1 или 2.5).")
+        add_message_to_cleanup(context, sent_message.message_id)
         return GET_QUANTITY
 
     deal_data = context.user_data['deal_data']
@@ -244,7 +238,7 @@ async def get_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         'service_id': service_id,
         'quantity': quantity,
         'name': context.user_data['current_service_name'],
-        'price': price # Сохраняем цену на момент добавления
+        'price': price
     })
 
     keyboard = [
@@ -252,35 +246,40 @@ async def get_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         [InlineKeyboardButton("✅ Завершить и создать сделку", callback_data='finish')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        f"Услуга <b>'{html.escape(context.user_data['current_service_name'])}'</b> x{quantity} добавлена.\n\n"
-        "<b>Шаг 6/6:</b> Добавить еще или завершить?",
-        reply_markup=reply_markup, parse_mode='HTML'
-    )
+    
+    # Редактируем основное сообщение диалога, чтобы не плодить новые
+    main_msg_id = context.user_data.get('main_dialog_message_id')
+    if main_msg_id:
+        await context.bot.edit_message_text(
+            chat_id=update.effective_chat.id,
+            message_id=main_msg_id,
+            text=f"Услуга <b>'{html.escape(context.user_data['current_service_name'])}'</b> x{quantity} добавлена.\n\n<b>Шаг 6/6:</b> Добавить еще или завершить?",
+            reply_markup=reply_markup, parse_mode='HTML'
+        )
+    else: # Fallback, если ID вдруг потерялся
+        sent_message = await update.message.reply_text(
+            f"Услуга <b>'{html.escape(context.user_data['current_service_name'])}'</b> x{quantity} добавлена.\n\n<b>Шаг 6/6:</b> Добавить еще или завершить?",
+            reply_markup=reply_markup, parse_mode='HTML'
+        )
+        add_message_to_cleanup(context, sent_message.message_id)
+
     return ADD_MORE
 
 async def add_more_or_finish_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обрабатывает нажатие кнопок 'Добавить еще' или 'Завершить'."""
     query = update.callback_query
     await query.answer()
     if query.data == 'add_more':
-        # Возвращаемся к выбору КАТЕГОРИЙ
         return await show_category_keyboard(update, context)
     elif query.data == 'finish':
-        await query.edit_message_text(text="⏳ Создаю сделку в CRM...", parse_mode='HTML')
-        return await create_deal_in_api(update.callback_query.message, context)
-
+        await cleanup_dialog_messages(context, query.message.chat_id)
+        return await create_deal_in_api(query.message, context)
 
 async def wrong_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Информирует пользователя об ошибке, если он вводит текст вместо нажатия кнопок."""
-    logger.warning(f"Получено текстовое сообщение '{update.message.text}' в состоянии, где ожидался коллбэк от кнопки.")
-    await update.message.reply_text("Пожалуйста, используйте кнопки для выбора, а не вводите текст.")
-    # Возвращаем пользователя на шаг выбора категории, как на наиболее безопасный
-    return await show_category_keyboard(update, context)
-
+    add_message_to_cleanup(context, update.message.message_id)
+    sent_message = await update.message.reply_text("Пожалуйста, используйте кнопки для выбора, а не вводите текст.")
+    add_message_to_cleanup(context, sent_message.message_id)
 
 async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Отправляет данные о новой сделке в API и показывает итоговую стоимость."""
     deal_data = context.user_data.get('deal_data')
     if not deal_data or not deal_data.get('services'):
         await message.reply_text("Нет данных для создания сделки. /newdeal для старта.")
@@ -307,12 +306,8 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
         response = requests.post(f"{API_BASE_URL}/deals", json=payload, timeout=10, headers=API_HEADERS)
         response.raise_for_status()
         
-        # --- ЛОГИКА РАСЧЕТА ИТОГОВОЙ СТОИМОСТИ ---
-        total_cost = 0
-        for s in deal_data['services']:
-            total_cost += s.get('price', 0) * s.get('quantity', 0)
+        total_cost = sum(s.get('price', 0) * s.get('quantity', 0) for s in deal_data['services'])
         total_cost_str = f"{int(total_cost):,} ₽".replace(",", " ")
-        # ------------------------------------------
 
         services_str = "\n".join([f"- {html.escape(s['name'])} (x{s['quantity']})" for s in deal_data['services']])
         final_text = (
@@ -336,47 +331,41 @@ async def create_deal_in_api(message, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Отменяет текущий диалог создания сделки."""
-    await update.message.reply_text("Действие отменено.")
+    chat_id = update.effective_chat.id
+    add_message_to_cleanup(context, update.message.message_id)
+    await cleanup_dialog_messages(context, chat_id)
+    await context.bot.send_message(chat_id, "Действие отменено.")
     context.user_data.clear()
     return ConversationHandler.END
+
+# ... (остальной код без изменений) ...
 
 # ════════════════════════════════════════
 #  📈  ЕЖЕДНЕВНЫЙ ОТЧЕТ (без изменений)
 # ════════════════════════════════════════
 async def build_report_string() -> str:
     if not DATABASE_URL: raise ConnectionError("DATABASE_URL не установлена.")
-
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
     with Session() as session:
         today = date.today()
         tomorrow = today + timedelta(days=1)
-        
         tasks = session.query(Task).filter(Task.due_date == tomorrow, Task.is_done == False).order_by(Task.priority).all()
-        
         active_stage_ids = [s[0] for s in session.query(Stage.id).filter(Stage.is_final == False).all()]
         active_deals = []
         if active_stage_ids:
             active_deals = session.query(Deal).join(Deal.stage).options(contains_eager(Deal.stage), joinedload(Deal.contact)).filter(Deal.stage_id.in_(active_stage_ids)).order_by(Stage.order, Deal.created_at).all()
-        
         equip_attention = session.query(Equipment).filter(Equipment.next_maintenance_date <= tomorrow + timedelta(days=7), Equipment.status == "active").all()
         in_repair = session.query(Equipment).filter(Equipment.status == "repair").all()
         random_phrase = session.query(DailyPhrase).order_by(func.random()).first()
-
         weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
         tomorrow_str = f"{tomorrow.strftime('%d.%m.%Y')}, {weekdays[tomorrow.weekday()]}"
-
         lines = [f"🌿 <b>GreenCRM — План на завтра: {tomorrow_str}</b>", ""]
-        
         if tasks:
             lines.append(f"📝 <b>Задачи на завтра: {len(tasks)}</b>")
-            for t in tasks:
-                lines.append(f"  • {t.title}")
+            for t in tasks: lines.append(f"  • {t.title}")
             lines.append("")
-        else:
-            lines.append("✅ <b>Задач на завтра нет.</b>\n")
-
+        else: lines.append("✅ <b>Задач на завтра нет.</b>\n")
         if active_deals:
             lines.append(f"📋 <b>Активные сделки: {len(active_deals)}</b>")
             current_stage = ""
@@ -387,10 +376,8 @@ async def build_report_string() -> str:
                 client = deal.contact.name if deal.contact else "-no client-"
                 total = f"{int(deal.total or 0):,} ₽".replace(",", " ")
                 lines.append(f"  • <b>{client}</b> ({total}) – <i>{deal.title[:40]}</i>")
-        else:
-            lines.append("✅ <b>Активных сделок нет.</b>")
+        else: lines.append("✅ <b>Активных сделок нет.</b>")
         lines.append("\n")
-
         if equip_attention or in_repair:
              lines.append("🛠️ <b>Техника</b>")
         if equip_attention:
@@ -401,12 +388,9 @@ async def build_report_string() -> str:
                 lines.append(f"  ⚠️ {eq.name} — {when}")
         if in_repair:
             lines.append("  <u>В ремонте:</u>")
-            for eq in in_repair:
-                lines.append(f"  🔴 {eq.name}")
-
+            for eq in in_repair: lines.append(f"  🔴 {eq.name}")
         lines.append("\n━━━━━━━━━━━━━━━━━━━━")
         if random_phrase: lines.append(f"<i>{random_phrase.phrase}</i>")
-        
         return "\n".join(lines)
 
 async def send_report_job(context: ContextTypes.DEFAULT_TYPE):
@@ -450,12 +434,12 @@ def main() -> None:
             GET_CLIENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_client_name)],
             CHOOSE_CATEGORY: [
                 CallbackQueryHandler(choose_category_callback, pattern="^cat_"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, wrong_input_handler) # Ловим текст вместо кнопок
+                MessageHandler(filters.TEXT & ~filters.COMMAND, wrong_input_handler)
             ],
             CHOOSE_SERVICE: [
                 CallbackQueryHandler(choose_service_callback, pattern="^service_"),
                 CallbackQueryHandler(back_to_category_callback, pattern="^back_to_cat$"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, wrong_input_handler) # Ловим текст вместо кнопок
+                MessageHandler(filters.TEXT & ~filters.COMMAND, wrong_input_handler)
             ],
             GET_QUANTITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_quantity)],
             ADD_MORE: [
@@ -464,7 +448,7 @@ def main() -> None:
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
-        conversation_timeout=900 # Увеличено время ожидания
+        conversation_timeout=900
     )
 
     application.add_handler(conv_handler)
