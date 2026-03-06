@@ -5,5 +5,8 @@
 # Активируем виртуальное окружение
 source /var/www/crm/venv/bin/activate
 
+# ГАРАНТИРОВАННО ПЕРЕХОДИМ В ПАПКУ С ПРОЕКТОМ
+cd /var/www/crm/GCRM-2
+
 # Просто запускаем приложение
 exec /var/www/crm/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
