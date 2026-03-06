@@ -24,6 +24,9 @@ from pydantic import BaseModel, Field, ConfigDict
 import httpx
 from jose import jwt, JWTError
 
+# --- НОВЫЙ ИМПОРТ ---
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
 # ── 1. КОНФИГ ─────────────────────────────────────────────────────────────────
 DATABASE_URL   = os.getenv("DATABASE_URL")
 AUTH0_DOMAIN   = os.getenv("AUTH0_DOMAIN")
@@ -200,6 +203,10 @@ async def lifespan(app: FastAPI):
     print("App shutting down.",flush=True)
 
 app = FastAPI(title="GreenCRM API", version="12.2.0", lifespan=lifespan)
+
+# --- ДОБАВЛЯЕМ MIDDLEWARE ДЛЯ ПРОКСИ ---
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
+
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=False, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
