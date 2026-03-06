@@ -52,12 +52,14 @@ async def send_morning_report():
             print("🔍 Собираю данные для отчета...")
 
             # 1. Сделки, которые не в финальных стадиях
-            active_stage_ids = [s.id for s in session.query(Stage.id).filter(Stage.is_final == False).all()]
+            active_stage_ids_tuples = session.query(Stage.id).filter(Stage.is_final == False).all()
+            active_stage_ids = [s_id[0] for s_id in active_stage_ids_tuples]
 
             active_deals = []
             if active_stage_ids:
                 active_deals = session.query(Deal).join(Stage).options(
-                    joinedload(Deal.contact) # Оставляем joinedload для контакта
+                    joinedload(Deal.stage),    # Жадная загрузка Stage
+                    joinedload(Deal.contact)   # Жадная загрузка Contact
                 ).filter(
                     Deal.stage_id.in_(active_stage_ids)
                 ).order_by(Stage.order, Deal.created_at).all()
