@@ -195,6 +195,7 @@ async def lifespan(app: FastAPI):
     print("App starting (v12.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
+    _ensure_budget_table()
     yield
     print("App shutting down.",flush=True)
 
@@ -1137,7 +1138,6 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     headers = {"Content-Disposition": f'attachment; filename="greencrm_{year}.pdf"'}
     return StreamingResponse(buf, media_type="application/pdf", headers=headers)
 
-# Создать таблицы при старте
-_ensure_budget_table()
+
 
 print(f"main.py (v13.0) loaded — analytics, export, budget added.", flush=True)
