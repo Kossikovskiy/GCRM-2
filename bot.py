@@ -10,14 +10,12 @@ import asyncio
 import html
 from datetime import date, timedelta
 
-# Добавляем корневую папку проекта в sys.path, чтобы можно было импортировать main
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, joinedload
 from telegram import Bot
 
-# --- ВАЖНО: Импортируем модели из main.py ---
 from main import Deal, Stage, Equipment, Contact, DATABASE_URL
 
 # ════════════════════════════════════════
@@ -53,15 +51,13 @@ async def send_morning_report():
         with Session() as session:
             print("🔍 Собираю данные для отчета...")
 
-            # 1. Сделки, которые не в финальных стадиях (сразу подгружаем stage и contact)
-            active_stages = session.query(Stage).filter(Stage.is_final == False).all()
-            active_stage_ids = [s.id for s in active_stages]
+            # 1. Сделки, которые не в финальных стадиях
+            active_stage_ids = [s.id for s in session.query(Stage.id).filter(Stage.is_final == False).all()]
 
             active_deals = []
             if active_stage_ids:
-                active_deals = session.query(Deal).options(
-                    joinedload(Deal.stage),
-                    joinedload(Deal.contact)
+                active_deals = session.query(Deal).join(Stage).options(
+                    joinedload(Deal.contact) # Оставляем joinedload для контакта
                 ).filter(
                     Deal.stage_id.in_(active_stage_ids)
                 ).order_by(Stage.order, Deal.created_at).all()
@@ -88,21 +84,17 @@ async def send_morning_report():
 
         # Активные сделки
         if active_deals:
-            report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>")
+            report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>\n")
             
-            deals_by_stage = {stage.name: [] for stage in active_stages}
-            # Заполняем словарь в правильном порядке
+            current_stage_name = ""
             for deal in active_deals:
-                if deal.stage and deal.stage.name in deals_by_stage:
-                    deals_by_stage[deal.stage.name].append(deal)
-            
-            for stage_name, deals in deals_by_stage.items():
-                if deals:
-                    report_lines.append(f"\n<b>{stage_name}</b>")
-                    for deal in deals:
-                        client_name = deal.contact.name if deal.contact else "Клиент не указан"
-                        total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
-                        report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
+                if deal.stage.name != current_stage_name:
+                    current_stage_name = deal.stage.name
+                    report_lines.append(f"<b>{current_stage_name}</b>")
+                
+                client_name = deal.contact.name if deal.contact else "Клиент не указан"
+                total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
+                report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
         else:
             report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
 
@@ -154,15 +146,12 @@ async def send_morning_report():
 if __name__ == "__main__":
     print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
 
-    # Проверяем, что зависимости установлены, и даем понятную инструкцию, если нет
     try:
         import sqlalchemy
         import telegram
     except ImportError:
         print("\n❌ Ошибка: Не найдены необходимые библиотеки.")
-        print("   Пожалуйста, активируйте виртуальное окружение:")
-        print(f"   source /var/www/crm/venv/bin/activate")
-        print("   ... и повторите запуск.")
+        print(f"   Пожалуйста, активируйте виртуальное окружение: `source /var/www/crm/venv/bin/activate`")
         sys.exit(1)
 
     asyncio.run(send_morning_report())
