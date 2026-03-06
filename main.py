@@ -772,3 +772,372 @@ async def serve_frontend(full_path: str):
     return FileResponse(path if os.path.isfile(path) else "./index.html")
 
 print(f"main.py (v12.2) loaded.", flush=True)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# НОВЫЕ ФИЧИ v13.0: Аналитика, Экспорт, Бюджет
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── МОДЕЛЬ БЮДЖЕТ ─────────────────────────────────────────────────────────────
+class Budget(Base):
+    __tablename__ = "budgets"
+    id = Column(Integer, primary_key=True)
+    year = Column(Integer, nullable=False)
+    period = Column(String(20), nullable=False)   # "year" | "q1"-"q4" | "jan"-"dec"
+    name = Column(String(200), nullable=False)
+    planned_revenue = Column(Float, default=0.0)
+    planned_expenses = Column(Float, default=0.0)
+    notes = Column(Text)
+
+# Создать новую таблицу если ещё нет
+from sqlalchemy import inspect as sa_inspect
+def _ensure_budget_table():
+    insp = sa_inspect(engine)
+    if not insp.has_table("budgets"):
+        Budget.__table__.create(engine)
+
+# ── PYDANTIC для бюджета ──────────────────────────────────────────────────────
+class BudgetCreate(BaseModel):
+    year: int
+    period: str
+    name: str
+    planned_revenue: Optional[float] = 0.0
+    planned_expenses: Optional[float] = 0.0
+    notes: Optional[str] = None
+
+class BudgetUpdate(BaseModel):
+    name: Optional[str] = None
+    planned_revenue: Optional[float] = None
+    planned_expenses: Optional[float] = None
+    notes: Optional[str] = None
+
+# ── АНАЛИТИКА ─────────────────────────────────────────────────────────────────
+@app.get("/api/analytics/funnel")
+def get_funnel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    """Воронка продаж: количество и сумма сделок по каждому этапу"""
+    stages = db.query(Stage).order_by(Stage.order).all()
+    deals = db.query(Deal).filter(extract('year', Deal.created_at) == year).all()
+    
+    first_stage_count = None
+    result = []
+    for st in stages:
+        stage_deals = [d for d in deals if d.stage_id == st.id]
+        count = len(stage_deals)
+        total = sum(d.total or 0 for d in stage_deals)
+        
+        if first_stage_count is None:
+            first_stage_count = count
+        
+        conversion = round(count / first_stage_count * 100, 1) if first_stage_count else 0
+        result.append({
+            "stage_id": st.id,
+            "stage_name": st.name,
+            "color": st.color,
+            "is_final": st.is_final,
+            "count": count,
+            "total": total,
+            "conversion": conversion,
+        })
+    
+    # Конверсия между соседними этапами
+    for i in range(1, len(result)):
+        prev = result[i-1]["count"]
+        curr = result[i]["count"]
+        result[i]["step_conversion"] = round(curr / prev * 100, 1) if prev else 0
+    if result:
+        result[0]["step_conversion"] = 100.0
+    
+    # Средний чек по успешным сделкам
+    won = [d for d in deals if any(st.is_final and "успешно" in st.name.lower() and st.id == d.stage_id for st in stages)]
+    avg_check = round(sum(d.total or 0 for d in won) / len(won), 2) if won else 0
+    
+    return {
+        "funnel": result,
+        "total_deals": len(deals),
+        "won_deals": len(won),
+        "avg_check": avg_check,
+        "total_revenue": sum(d.total or 0 for d in won),
+    }
+
+# ── БЮДЖЕТ — CRUD ─────────────────────────────────────────────────────────────
+@app.get("/api/budget")
+def get_budget(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    items = db.query(Budget).filter(Budget.year == year).order_by(Budget.id).all()
+    return items
+
+@app.post("/api/budget", status_code=201)
+def create_budget(data: BudgetCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    item = Budget(**data.model_dump())
+    db.add(item); db.commit(); db.refresh(item)
+    return item
+
+@app.patch("/api/budget/{item_id}")
+def update_budget(item_id: int, data: BudgetUpdate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Budget).filter(Budget.id == item_id).first()
+    if not item: raise HTTPException(404, "Запись не найдена")
+    for k, v in data.model_dump(exclude_unset=True).items():
+        setattr(item, k, v)
+    db.commit(); db.refresh(item)
+    return item
+
+@app.delete("/api/budget/{item_id}", status_code=204)
+def delete_budget(item_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    item = db.query(Budget).filter(Budget.id == item_id).first()
+    if item: db.delete(item); db.commit()
+    return None
+
+# ── ЭКСПОРТ EXCEL ─────────────────────────────────────────────────────────────
+from fastapi.responses import StreamingResponse
+import io
+
+def _openpyxl_available():
+    try:
+        import openpyxl
+        return True
+    except ImportError:
+        return False
+
+@app.get("/api/export/excel")
+def export_excel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    if not _openpyxl_available():
+        raise HTTPException(503, "openpyxl не установлен на сервере")
+    
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # убрать дефолтный лист
+
+    GREEN = "1a3318"; SAGE = "4a7c3f"; LIGHT = "f5f2eb"; WHITE = "FFFFFF"
+    
+    def make_header(ws, cols, header_color=GREEN):
+        for c, (title, width) in enumerate(cols, 1):
+            cell = ws.cell(1, c, title)
+            cell.font = Font(bold=True, color=WHITE, size=10)
+            cell.fill = PatternFill("solid", fgColor=header_color)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            ws.column_dimensions[get_column_letter(c)].width = width
+        ws.row_dimensions[1].height = 28
+
+    def style_row(ws, row, r, alt=False):
+        for c in range(1, len(row)+1):
+            cell = ws.cell(r, c)
+            cell.fill = PatternFill("solid", fgColor="F0ECE3" if alt else WHITE)
+            cell.alignment = Alignment(vertical="center")
+            thin = Side(style="thin", color="E2DDD4")
+            cell.border = Border(bottom=Border(bottom=thin).bottom)
+
+    # ── Лист 1: Сделки ────────────────────────────────────────────────────────
+    ws1 = wb.create_sheet("Сделки")
+    stages = {s.id: s for s in db.query(Stage).all()}
+    contacts = {c.id: c for c in db.query(Contact).all()}
+    deals_q = db.query(Deal).filter(extract('year', Deal.created_at) == year).order_by(Deal.created_at).all()
+    cols1 = [("ID",6),("Название",30),("Клиент",22),("Этап",18),("Сумма",14),("Дата создания",18),("Дата закрытия",18),("Менеджер",18)]
+    make_header(ws1, cols1)
+    for i, d in enumerate(deals_q, 2):
+        row = [d.id, d.title, contacts.get(d.contact_id, type("x",(),{"name":"—"})()).name,
+               stages.get(d.stage_id, type("x",(),{"name":"—"})()).name,
+               d.total or 0,
+               d.created_at.strftime("%d.%m.%Y") if d.created_at else "",
+               d.closed_at.strftime("%d.%m.%Y") if d.closed_at else "",
+               d.manager or ""]
+        for c, v in enumerate(row, 1): ws1.cell(i, c, v)
+        style_row(ws1, row, i, i%2==0)
+    ws1.freeze_panes = "A2"
+    ws1.auto_filter.ref = f"A1:H{len(deals_q)+1}"
+
+    # ── Лист 2: Расходы ───────────────────────────────────────────────────────
+    ws2 = wb.create_sheet("Расходы")
+    expenses_q = db.query(Expense).filter(extract('year', Expense.date) == year).order_by(Expense.date).all()
+    cats = {c.id: c.name for c in db.query(ExpenseCategory).all()}
+    cols2 = [("ID",6),("Дата",14),("Название",35),("Категория",20),("Сумма",14)]
+    make_header(ws2, cols2)
+    for i, e in enumerate(expenses_q, 2):
+        row = [e.id, e.date.strftime("%d.%m.%Y") if e.date else "", e.name, cats.get(e.category_id,"—"), e.amount]
+        for c, v in enumerate(row, 1): ws2.cell(i, c, v)
+        style_row(ws2, row, i, i%2==0)
+    ws2.freeze_panes = "A2"
+    
+    # Итого расходов
+    total_row = len(expenses_q)+2
+    ws2.cell(total_row, 4, "ИТОГО").font = Font(bold=True)
+    ws2.cell(total_row, 5, sum(e.amount for e in expenses_q)).font = Font(bold=True)
+
+    # ── Лист 3: Аналитика ─────────────────────────────────────────────────────
+    ws3 = wb.create_sheet("Аналитика")
+    won_stages = [s for s in stages.values() if s.is_final and "успешно" in s.name.lower()]
+    won_ids = {s.id for s in won_stages}
+    won_deals = [d for d in deals_q if d.stage_id in won_ids]
+    total_rev = sum(d.total or 0 for d in won_deals)
+    total_exp = sum(e.amount for e in expenses_q)
+    avg_check = round(total_rev / len(won_deals), 2) if won_deals else 0
+
+    ws3.column_dimensions["A"].width = 35
+    ws3.column_dimensions["B"].width = 22
+    summary_data = [
+        ("Год", year), ("Всего сделок", len(deals_q)),
+        ("Успешных сделок", len(won_deals)),
+        ("Выручка", total_rev), ("Расходы", total_exp),
+        ("Прибыль", total_rev - total_exp), ("Средний чек", avg_check),
+    ]
+    ws3.cell(1,1,"СВОДКА ЗА ГОД").font = Font(bold=True, size=13, color=GREEN)
+    ws3.row_dimensions[1].height = 26
+    for r, (label, val) in enumerate(summary_data, 2):
+        c1 = ws3.cell(r, 1, label); c2 = ws3.cell(r, 2, val)
+        c1.font = Font(bold=True, size=10)
+        c2.fill = PatternFill("solid", fgColor=LIGHT)
+        c2.alignment = Alignment(horizontal="right")
+
+    ws3.cell(len(summary_data)+3, 1, "ВОРОНКА ПРОДАЖ").font = Font(bold=True, size=11, color=GREEN)
+    funnel_cols = [("Этап",22),("Кол-во",12),("Сумма",16),("Конверсия от первого",22),("Конверсия от предыдущего",26)]
+    frow = len(summary_data)+4
+    for c,(t,w) in enumerate(funnel_cols,1):
+        cell = ws3.cell(frow, c, t)
+        cell.font = Font(bold=True, color=WHITE); cell.fill = PatternFill("solid", fgColor=SAGE)
+        ws3.column_dimensions[get_column_letter(c)].width = w
+    
+    stage_list = sorted(stages.values(), key=lambda s: s.order)
+    first_count = None
+    for i, st in enumerate(stage_list):
+        cnt = sum(1 for d in deals_q if d.stage_id == st.id)
+        amt = sum(d.total or 0 for d in deals_q if d.stage_id == st.id)
+        if first_count is None: first_count = cnt
+        conv_first = f"{round(cnt/first_count*100,1)}%" if first_count else "—"
+        prev_cnt = sum(1 for d in deals_q if d.stage_id == stage_list[i-1].id) if i>0 else cnt
+        conv_step = f"{round(cnt/prev_cnt*100,1)}%" if (i>0 and prev_cnt) else "100%"
+        r = frow+1+i
+        for c,v in enumerate([st.name, cnt, amt, conv_first, conv_step],1):
+            ws3.cell(r, c, v)
+        if (r-frow)%2==0:
+            for c in range(1,6): ws3.cell(r,c).fill = PatternFill("solid", fgColor="F0ECE3")
+
+    # ── Лист 4: Бюджет ────────────────────────────────────────────────────────
+    ws4 = wb.create_sheet("Бюджет")
+    budgets_q = db.query(Budget).filter(Budget.year == year).all()
+    cols4 = [("Название",28),("Период",14),("Плановая выручка",20),("Плановые расходы",20),("Плановая прибыль",20),("Заметки",30)]
+    make_header(ws4, cols4)
+    for i, b in enumerate(budgets_q, 2):
+        profit = (b.planned_revenue or 0) - (b.planned_expenses or 0)
+        row = [b.name, b.period, b.planned_revenue or 0, b.planned_expenses or 0, profit, b.notes or ""]
+        for c, v in enumerate(row, 1): ws4.cell(i, c, v)
+        style_row(ws4, row, i, i%2==0)
+
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    headers = {"Content-Disposition": f'attachment; filename="greencrm_{year}.xlsx"'}
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
+
+# ── ЭКСПОРТ PDF ───────────────────────────────────────────────────────────────
+@app.get("/api/export/pdf")
+def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.units import cm
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        import glob
+        # Попытка зарегистрировать шрифт с поддержкой кириллицы
+        font_registered = False
+        for path in ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                     "/usr/share/fonts/TTF/DejaVuSans.ttf"]:
+            if os.path.exists(path):
+                pdfmetrics.registerFont(TTFont("CyrFont", path))
+                font_registered = True; break
+        FONT = "CyrFont" if font_registered else "Helvetica"
+    except ImportError:
+        raise HTTPException(503, "reportlab не установлен на сервере")
+
+    stages = {s.id: s for s in db.query(Stage).all()}
+    contacts = {c.id: c for c in db.query(Contact).all()}
+    deals_q = db.query(Deal).filter(extract('year', Deal.created_at) == year).order_by(Deal.created_at).all()
+    expenses_q = db.query(Expense).filter(extract('year', Expense.date) == year).order_by(Expense.date).all()
+    
+    won_ids = {s.id for s in stages.values() if s.is_final and "успешно" in s.name.lower()}
+    won_deals = [d for d in deals_q if d.stage_id in won_ids]
+    total_rev = sum(d.total or 0 for d in won_deals)
+    total_exp = sum(e.amount for e in expenses_q)
+    avg_check = round(total_rev / len(won_deals), 2) if won_deals else 0
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    
+    h1 = ParagraphStyle("h1", fontName=FONT, fontSize=18, spaceAfter=6, textColor=colors.HexColor("#1a3318"))
+    h2 = ParagraphStyle("h2", fontName=FONT, fontSize=13, spaceAfter=4, textColor=colors.HexColor("#2d5426"), spaceBefore=16)
+    normal = ParagraphStyle("n", fontName=FONT, fontSize=9, leading=14)
+    
+    FOREST = colors.HexColor("#1a3318"); SAGE_C = colors.HexColor("#4a7c3f")
+    LIGHT_C = colors.HexColor("#f5f2eb"); ALT_C = colors.HexColor("#f0ece3")
+    
+    def tbl_style(header_color=FOREST):
+        return TableStyle([
+            ("BACKGROUND",(0,0),(-1,0), header_color),
+            ("TEXTCOLOR",(0,0),(-1,0), colors.white),
+            ("FONTNAME",(0,0),(-1,-1), FONT),
+            ("FONTSIZE",(0,0),(-1,0), 8), ("FONTSIZE",(0,1),(-1,-1), 8),
+            ("FONTNAME",(0,0),(-1,0), FONT),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white, ALT_C]),
+            ("GRID",(0,0),(-1,-1), 0.3, colors.HexColor("#E2DDD4")),
+            ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+            ("LEFTPADDING",(0,0),(-1,-1),6), ("RIGHTPADDING",(0,0),(-1,-1),6),
+            ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+        ])
+
+    def fmt_money(v): return f"{v:,.0f} руб.".replace(",",".")
+
+    story = []
+    story.append(Paragraph(f"GreenCRM — Отчёт за {year} год", h1))
+    story.append(Paragraph(f"Сформирован: {date.today().strftime('%d.%m.%Y')}", normal))
+    story.append(Spacer(1, 12))
+
+    # Сводка
+    story.append(Paragraph("Сводка", h2))
+    summary_rows = [["Показатель","Значение"],
+        ["Всего сделок", str(len(deals_q))],
+        ["Успешных сделок", str(len(won_deals))],
+        ["Выручка", fmt_money(total_rev)],
+        ["Расходы", fmt_money(total_exp)],
+        ["Прибыль", fmt_money(total_rev-total_exp)],
+        ["Средний чек", fmt_money(avg_check)],
+    ]
+    t = Table(summary_rows, colWidths=[8*cm, 8*cm])
+    t.setStyle(tbl_style())
+    story.append(t); story.append(Spacer(1,8))
+
+    # Воронка
+    story.append(Paragraph("Воронка продаж", h2))
+    funnel_rows = [["Этап","Кол-во","Сумма","Конверсия"]]
+    stage_list = sorted(stages.values(), key=lambda s: s.order)
+    first_cnt = None
+    for st in stage_list:
+        cnt = sum(1 for d in deals_q if d.stage_id == st.id)
+        amt = sum(d.total or 0 for d in deals_q if d.stage_id == st.id)
+        if first_cnt is None: first_cnt = cnt
+        conv = f"{round(cnt/first_cnt*100,1)}%" if first_cnt else "—"
+        funnel_rows.append([st.name, str(cnt), fmt_money(amt), conv])
+    t2 = Table(funnel_rows, colWidths=[7*cm,3*cm,5*cm,3*cm])
+    t2.setStyle(tbl_style(SAGE_C)); story.append(t2); story.append(Spacer(1,8))
+
+    # Топ-10 сделок
+    story.append(Paragraph("Топ-10 успешных сделок", h2))
+    top10 = sorted(won_deals, key=lambda d: d.total or 0, reverse=True)[:10]
+    deal_rows = [["Название","Клиент","Сумма","Дата"]]
+    for d in top10:
+        deal_rows.append([d.title[:35], contacts.get(d.contact_id, type("x",(),{"name":"—"})()).name,
+                         fmt_money(d.total or 0), d.closed_at.strftime("%d.%m.%Y") if d.closed_at else ""])
+    t3 = Table(deal_rows, colWidths=[7*cm,4*cm,4*cm,3*cm])
+    t3.setStyle(tbl_style()); story.append(t3)
+
+    doc.build(story)
+    buf.seek(0)
+    headers = {"Content-Disposition": f'attachment; filename="greencrm_{year}.pdf"'}
+    return StreamingResponse(buf, media_type="application/pdf", headers=headers)
+
+# Создать таблицы при старте
+_ensure_budget_table()
+
+print(f"main.py (v13.0) loaded — analytics, export, budget added.", flush=True)
