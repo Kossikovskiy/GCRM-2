@@ -13,6 +13,11 @@ import sys
 from datetime import date, timedelta, time
 import pytz
 
+# --- ДОБАВЛЕНО: Загрузка переменных окружения из .env файла ---
+from dotenv import load_dotenv
+load_dotenv()
+# ------------------------------------------------------------
+
 import requests
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, joinedload, contains_eager
