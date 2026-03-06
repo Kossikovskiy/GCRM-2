@@ -484,6 +484,37 @@ def update_contact(contact_id: int, contact_data: ContactUpdate, db: DBSession =
     db.commit(); db.refresh(contact)
     _cache.invalidate("contacts", "deals"); return contact
 
+
+@app.get("/api/contacts/{contact_id}/deals")
+def get_contact_all_deals(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    """Все сделки контакта за всё время, от новых к старым"""
+    deals = (db.query(Deal)
+             .options(joinedload(Deal.stage))
+             .filter(Deal.contact_id == contact_id)
+             .order_by(Deal.created_at.desc())
+             .all())
+    won_names = {s.name for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()}
+    result = []
+    for d in deals:
+        result.append({
+            "id": d.id,
+            "title": d.title or "",
+            "total": d.total or 0.0,
+            "stage": d.stage.name if d.stage else "",
+            "stage_color": d.stage.color if d.stage else "#6b7280",
+            "stage_is_won": (d.stage.name in won_names) if d.stage else False,
+            "stage_is_final": d.stage.is_final if d.stage else False,
+            "deal_date": d.deal_date.isoformat() if d.deal_date else None,
+            "created_at": (d.created_at or datetime.utcnow()).isoformat(),
+        })
+    total_revenue = sum(r["total"] for r in result if r["stage_is_won"])
+    return {
+        "deals": result,
+        "total_count": len(result),
+        "won_count": sum(1 for r in result if r["stage_is_won"]),
+        "total_revenue": round(total_revenue, 2),
+    }
+
 @app.delete("/api/contacts/{contact_id}", status_code=204)
 def delete_contact(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
