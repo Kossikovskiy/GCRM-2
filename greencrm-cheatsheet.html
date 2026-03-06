@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GreenCRM — Шпаргалка по серверу</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f1a0e;
+    color: #e4ede0;
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+  }
+
+  .page { max-width: 860px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #243020;
+  }
+  .logo-badge {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, #2d5426, #4a7c3f);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .header-text h1 {
+    font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -.3px;
+  }
+  .header-text p { font-size: 13px; color: #607060; margin-top: 2px; }
+
+  /* Section */
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: #7ab566; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: #243020;
+  }
+
+  /* Cards grid */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cards.single { grid-template-columns: 1fr; }
+  .cards.triple { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: #182016; border: 1px solid #243020;
+    border-radius: 10px; padding: 16px 18px;
+    transition: border-color .15s;
+  }
+  .card:hover { border-color: #4a7c3f; }
+
+  .card-label {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: #607060; font-weight: 500; margin-bottom: 8px;
+  }
+  .card-desc {
+    font-size: 12px; color: #a8b8a4; margin-bottom: 10px; line-height: 1.5;
+  }
+
+  /* Command block */
+  .cmd {
+    background: #0a1009; border: 1px solid #1c2819;
+    border-radius: 7px; padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: #7ab566;
+    word-break: break-all; line-height: 1.6;
+    position: relative;
+  }
+  .cmd .comment { color: #384838; }
+  .cmd .flag { color: #a8cf98; }
+  .cmd .path { color: #5a9448; }
+
+  /* Tag badge */
+  .tag {
+    display: inline-block; font-size: 9px; letter-spacing: .8px;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 4px;
+    font-weight: 600; margin-bottom: 6px;
+  }
+  .tag-red    { background: #3d1515; color: #f87171; }
+  .tag-green  { background: #1a3318; color: #7ab566; }
+  .tag-yellow { background: #2d2210; color: #fbbf24; }
+  .tag-blue   { background: #0f1e30; color: #60a5fa; }
+
+  /* Alert */
+  .alert {
+    background: #1e1a0a; border: 1px solid #3d3010;
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 12px; color: #d4a84b; line-height: 1.6;
+    margin-top: 10px;
+  }
+  .alert strong { color: #fbbf24; }
+
+  /* Flow */
+  .flow {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; margin-top: 10px;
+  }
+  .flow-step {
+    background: #0a1009; border: 1px solid #1c2819;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 11px; color: #a8b8a4;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-arrow { color: #384838; font-size: 14px; }
+
+  @media(max-width: 600px) {
+    .cards, .cards.triple { grid-template-columns: 1fr; }
+    body { padding: 24px 14px 48px; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; padding: 20px; }
+    .card { background: #f8f8f8; border-color: #ddd; break-inside: avoid; }
+    .cmd { background: #f0f0f0; border-color: #ccc; color: #1a5c2a; }
+    .section-title { color: #2d5426; }
+    .header { border-color: #ccc; }
+    .header-text h1 { color: #000; }
+    .header-text p { color: #666; }
+    .card-label { color: #666; }
+    .card-desc { color: #444; }
+    .tag-green { background: #e8f5e0; color: #2d5426; }
+    .tag-red { background: #fde8e8; color: #c00; }
+    .tag-yellow { background: #fef3cd; color: #856404; }
+    .tag-blue { background: #dbeafe; color: #1e40af; }
+    .alert { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+    .flow-step { background: #f0f0f0; border-color: #ccc; color: #333; }
+    .section-title::after { background: #ccc; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo-badge">🌿</div>
+    <div class="header-text">
+      <h1>GreenCRM — Шпаргалка по серверу</h1>
+      <p>VPS: 77.232.134.112 · /var/www/crm/GCRM-2 · Ubuntu 24.04</p>
+    </div>
+  </div>
+
+  <!-- ДЕПЛОЙ -->
+  <div class="section">
+    <div class="section-title">🚀 Деплой</div>
+    <div class="cards single">
+      <div class="card">
+        <div class="tag tag-green">Основная команда</div>
+        <div class="card-desc">Залить новый код с GitHub и перезапустить сервер</div>
+        <div class="cmd">deploy</div>
+        <div class="alert">
+          <strong>Что делает deploy:</strong> stop crm → убить порт 8000 → git fetch → git reset --hard origin/main → start crm
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- УПРАВЛЕНИЕ СЕРВИСОМ -->
+  <div class="section">
+    <div class="section-title">⚙️ Управление сервисом</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-green">Запустить</div>
+        <div class="cmd">systemctl start crm</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-red">Остановить</div>
+        <div class="cmd">systemctl stop crm</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-yellow">Перезапустить</div>
+        <div class="cmd">systemctl restart crm</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Статус</div>
+        <div class="cmd">systemctl status crm --no-pager</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЛОГИ -->
+  <div class="section">
+    <div class="section-title">📋 Просмотр логов</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-blue">Последние 100 строк</div>
+        <div class="card-desc">Самое частое — смотреть что случилось</div>
+        <div class="cmd">journalctl -u crm.service -n 100 --no-pager</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Следить в реальном времени</div>
+        <div class="card-desc">Видеть логи по мере их появления (Ctrl+C чтобы выйти)</div>
+        <div class="cmd">journalctl -u crm.service -f</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Только ошибки</div>
+        <div class="card-desc">Фильтр только ERROR и CRITICAL</div>
+        <div class="cmd">journalctl -u crm.service -n 200 --no-pager | grep -i error</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Логи за сегодня</div>
+        <div class="cmd">journalctl -u crm.service --since today --no-pager</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ДИАГНОСТИКА ПОРТА -->
+  <div class="section">
+    <div class="section-title">🔌 Проблемы с портом 8000</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-yellow">Кто занимает порт?</div>
+        <div class="card-desc">Показывает PID процесса на порту 8000</div>
+        <div class="cmd">fuser 8000/tcp</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-red">Принудительно освободить порт</div>
+        <div class="card-desc">Убить всё что висит на 8000 (потом запускать crm вручную)</div>
+        <div class="cmd">fuser -k 8000/tcp</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Все процессы uvicorn</div>
+        <div class="cmd">ps aux | grep uvicorn</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-red">Убить конкретный процесс</div>
+        <div class="card-desc">Заменить 12345 на нужный PID из ps aux</div>
+        <div class="cmd">kill -9 12345</div>
+      </div>
+    </div>
+    <div class="alert" style="margin-top:10px">
+      <strong>Симптом «address already in use»:</strong> запусти <code style="color:#fbbf24">fuser -k 8000/tcp && sleep 2 && systemctl start crm</code>
+    </div>
+  </div>
+
+  <!-- РЕСУРСЫ СЕРВЕРА -->
+  <div class="section">
+    <div class="section-title">📊 Ресурсы сервера</div>
+    <div class="cards triple">
+      <div class="card">
+        <div class="tag tag-blue">Память и CPU</div>
+        <div class="cmd">htop</div>
+        <div class="card-desc" style="margin-top:8px">Q чтобы выйти</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Место на диске</div>
+        <div class="cmd">df -h</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Память кратко</div>
+        <div class="cmd">free -h</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ФАЙЛЫ -->
+  <div class="section">
+    <div class="section-title">📁 Важные файлы и пути</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-green">Код приложения</div>
+        <div class="cmd">/var/www/crm/GCRM-2/</div>
+        <div class="card-desc" style="margin-top:8px">main.py, index.html, start.sh</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-yellow">Переменные окружения</div>
+        <div class="cmd">/var/www/crm/GCRM-2/.env</div>
+        <div class="card-desc" style="margin-top:8px">Auth0, Supabase, секреты — не коммитить!</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Systemd unit</div>
+        <div class="cmd">/etc/systemd/system/crm.service</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Виртуальное окружение Python</div>
+        <div class="cmd">/var/www/crm/venv/</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PYTHON / PIP -->
+  <div class="section">
+    <div class="section-title">🐍 Python и зависимости</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-green">Установить пакет</div>
+        <div class="cmd">pip install <span class="flag">название</span> --break-system-packages</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Проверить что установлено</div>
+        <div class="cmd">/var/www/crm/venv/bin/pip list</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-yellow">Запустить вручную (для теста)</div>
+        <div class="card-desc">Ctrl+C чтобы остановить</div>
+        <div class="cmd">cd /var/www/crm/GCRM-2 && source /var/www/crm/venv/bin/activate && python main.py</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Проверить синтаксис</div>
+        <div class="cmd">python3 -m py_compile /var/www/crm/GCRM-2/main.py && echo OK</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIT -->
+  <div class="section">
+    <div class="section-title">🔀 Git</div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag tag-blue">Текущий статус</div>
+        <div class="cmd">git -C /var/www/crm/GCRM-2 status</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue">Последние коммиты</div>
+        <div class="cmd">git -C /var/www/crm/GCRM-2 log --oneline -10</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-yellow">Откатиться на 1 коммит назад</div>
+        <div class="cmd">git -C /var/www/crm/GCRM-2 reset --hard HEAD~1</div>
+      </div>
+      <div class="card">
+        <div class="tag tag-red">Сбросить все локальные изменения</div>
+        <div class="cmd">git -C /var/www/crm/GCRM-2 reset --hard origin/main</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ТИПИЧНЫЕ ПРОБЛЕМЫ -->
+  <div class="section">
+    <div class="section-title">🚑 Типичные проблемы и решения</div>
+    <div class="cards single">
+      <div class="card">
+        <div class="card-label">Симптом → Причина → Решение</div>
+        <br>
+
+        <div class="tag tag-red">❌ address already in use</div>
+        <div class="card-desc">Старый процесс не умер, занимает порт 8000</div>
+        <div class="cmd">fuser -k 8000/tcp && sleep 2 && systemctl start crm</div>
+        <br><br>
+
+        <div class="tag tag-red">❌ status=203/EXEC</div>
+        <div class="card-desc">start.sh не исполняемый (нет прав x)</div>
+        <div class="cmd">chmod +x /var/www/crm/GCRM-2/start.sh && systemctl restart crm</div>
+        <br><br>
+
+        <div class="tag tag-red">❌ Assignment outside of section</div>
+        <div class="card-desc">В crm.service попал мусор (заголовок nano)</div>
+        <div class="cmd">tee /etc/systemd/system/crm.service &lt;&lt; 'EOF'
+[Unit]
+Description=Grass CRM FastAPI
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/var/www/crm/GCRM-2
+EnvironmentFile=/var/www/crm/GCRM-2/.env
+ExecStart=/var/www/crm/GCRM-2/start.sh
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload && systemctl restart crm</div>
+        <br><br>
+
+        <div class="tag tag-red">❌ JSON parse error в браузере</div>
+        <div class="card-desc">Сервер упал, вернул HTML вместо JSON. Смотреть логи и перезапускать</div>
+        <div class="cmd">journalctl -u crm.service -n 50 --no-pager</div>
+        <br><br>
+
+        <div class="tag tag-red">❌ 401 / редирект на логин</div>
+        <div class="card-desc">Сессия истекла. Просто войти заново через браузер</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- БЫСТРАЯ ДИАГНОСТИКА -->
+  <div class="section">
+    <div class="section-title">⚡ Быстрая диагностика за 3 шага</div>
+    <div class="card">
+      <div class="card-desc" style="margin-bottom:14px">Что-то не работает? Делай по порядку:</div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+        <div style="min-width:26px;height:26px;border-radius:50%;background:#2d5426;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7ab566;flex-shrink:0">1</div>
+        <div>
+          <div class="card-label">Посмотреть логи</div>
+          <div class="cmd">journalctl -u crm.service -n 50 --no-pager</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+        <div style="min-width:26px;height:26px;border-radius:50%;background:#2d5426;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7ab566;flex-shrink:0">2</div>
+        <div>
+          <div class="card-label">Проверить статус</div>
+          <div class="cmd">systemctl status crm --no-pager</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="min-width:26px;height:26px;border-radius:50%;background:#2d5426;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7ab566;flex-shrink:0">3</div>
+        <div>
+          <div class="card-label">Перезапустить / задеплоить</div>
+          <div class="cmd">deploy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

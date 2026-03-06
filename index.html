@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GreenCRM · Система управления</title>
+<title>GrassCRM · Система управления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -47,7 +47,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg);color
 .login-logo{font-family:'Playfair Display',serif;font-size:56px;font-weight:400;color:#fff;letter-spacing:-1px;line-height:1;margin-bottom:6px}
 .login-logo em{font-style:italic;color:var(--sage)}
 .login-rule{width:40px;height:1px;background:linear-gradient(90deg,transparent,rgba(122,181,102,.5),transparent);margin:20px auto}
-.login-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:40px;font-weight:300}
+.login-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:40px;font-weight:400}
 .login-btn{
   display:inline-flex;align-items:center;gap:12px;
   border:1px solid rgba(122,181,102,.35);color:rgba(255,255,255,.75);
@@ -176,7 +176,7 @@ nav button.active::after{left:13px;right:13px}
 .kpi-icon{font-size:17px;margin-bottom:14px;display:block;opacity:.55}
 .kpi-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:7px;letter-spacing:-.5px}
 .kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
-.kpi-sub{font-size:11px;color:var(--ink3);font-weight:300}
+.kpi-sub{font-size:11px;color:var(--ink3);font-weight:400}
 
 /* ── TABLE CARD ────────────────────────────────────────────── */
 .tcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-s)}
@@ -190,7 +190,7 @@ nav button.active::after{left:13px;right:13px}
 table{width:100%;border-collapse:collapse}
 thead tr{background:var(--surface2)}
 th{text-align:left;padding:12px 16px;font-size:9px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--border2);white-space:nowrap}
-td{padding:12px 16px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--ink2);font-weight:300;transition:background .15s}
+td{padding:12px 16px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--ink2);font-weight:400;transition:background .15s}
 td:first-child{color:var(--ink4);font-size:11px;width:44px}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface2)}
@@ -209,7 +209,7 @@ html[data-theme="dark"] .b-amber{background:#451a03;color:#fb923c}
 html[data-theme="dark"] .b-slate{background:#1e293b;color:#94a3b8}
 html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
 
-.money{font-family:'Playfair Display',serif;font-size:14px;font-weight:500;color:var(--ink)}
+.money{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
 .m-neg{color:var(--red)}
 .m-pos{color:#16a34a}
 .cat-tag{font-size:10px;color:var(--fern);background:var(--leaf);padding:2px 8px;border-radius:20px;display:inline-block}
@@ -224,7 +224,7 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .k-name{font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;flex:1}
 .k-count{font-size:10px;color:var(--ink4);background:var(--surface2);border:1px solid var(--border2);padding:1px 7px;border-radius:20px;min-width:22px;text-align:center}
-.k-total{font-family:'Playfair Display',serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right}
+.k-total{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink3);padding:6px 15px 0;text-align:right;font-weight:500}
 .k-cards{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;flex:1}
 .k-cards::-webkit-scrollbar{width:3px}
 .k-card{background:var(--bg);border:1px solid var(--border2);border-left:3px solid var(--c,var(--sage));border-radius:8px;padding:14px 13px 11px;cursor:pointer;transition:box-shadow .2s,transform .2s,opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.04);user-select:none;-webkit-user-select:none;touch-action:manipulation}
@@ -232,16 +232,16 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
 .k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
 html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
-.k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px}
-.k-title{font-family:'Playfair Display',serif;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
-.k-client{font-size:11px;color:var(--fern);font-weight:300}
+.k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.k-title{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
+.k-client{font-size:11px;color:var(--fern);font-weight:400}
 .k-hr{height:1px;background:var(--border2);margin:8px 0}
-.k-date{font-size:10px;color:var(--ink4);font-weight:300}
+.k-date{font-size:10px;color:var(--ink4);font-weight:400}
 
 /* ── EMPTY ─────────────────────────────────────────────────── */
 .empty{padding:40px 24px;text-align:center}
 .empty-ico{font-size:28px;opacity:.25;margin-bottom:10px}
-.empty-txt{font-size:12px;color:var(--ink4);font-weight:300}
+.empty-txt{font-size:12px;color:var(--ink4);font-weight:400}
 
 /* ── TABS ──────────────────────────────────────────────────── */
 .tabs-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
@@ -634,7 +634,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 <div id="app">
 <header>
-  <a class="logo" href="#">Green<em>CRM</em><sup>PRO</sup></a>
+  <a class="logo" href="#">Grass<em>CRM</em></a>
   <nav id="main-nav">
     <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
     <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
