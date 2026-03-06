@@ -41,11 +41,7 @@ async def send_morning_report():
 
     engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
-
-    today = date.today()
-    in_week = today + timedelta(days=7)
-
-    report_lines = []
+    final_message = ""
 
     try:
         with Session() as session:
@@ -57,76 +53,71 @@ async def send_morning_report():
 
             active_deals = []
             if active_stage_ids:
-                active_deals = session.query(Deal).join(Stage).options(
-                    joinedload(Deal.stage),    # Жадная загрузка Stage
-                    joinedload(Deal.contact)   # Жадная загрузка Contact
+                active_deals = session.query(Deal).options(
+                    joinedload(Deal.stage),
+                    joinedload(Deal.contact)
                 ).filter(
                     Deal.stage_id.in_(active_stage_ids)
-                ).order_by(Stage.order, Deal.created_at).all()
+                ).join(Stage).order_by(Stage.order, Deal.created_at).all()
 
             # 2. Техника, требующая ТО на этой неделе
             equip_attention = session.query(Equipment).filter(
-                Equipment.next_maintenance_date <= in_week,
-                Equipment.next_maintenance_date >= today,
+                Equipment.next_maintenance_date <= date.today() + timedelta(days=7),
+                Equipment.next_maintenance_date >= date.today(),
                 Equipment.status == "active"
             ).all()
 
             # 3. Техника в ремонте
             in_repair = session.query(Equipment).filter(Equipment.status == "repair").all()
 
-        # --- Формируем текст сообщения ---
-        print("✍️ Формирую текст сообщения...")
+            # --- Формируем текст сообщения (ВНУТРИ СЕССИИ!) ---
+            print("✍️ Формирую текст сообщения...")
+            report_lines = []
+            today = date.today()
+            weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+            today_str = f"{today.strftime('%d.%m.%Y')}, {weekdays[today.weekday()]}"
 
-        weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-        today_str = f"{today.strftime('%d.%m.%Y')}, {weekdays[today.weekday()]}"
+            report_lines.append(f"🌿 <b>GreenCRM — Доброе утро!</b>")
+            report_lines.append(f"📅 {today_str}")
+            report_lines.append("")
 
-        report_lines.append(f"🌿 <b>GreenCRM — Доброе утро!</b>")
-        report_lines.append(f"📅 {today_str}")
-        report_lines.append("")
+            if active_deals:
+                report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>\n")
+                current_stage_name = ""
+                for deal in active_deals:
+                    if deal.stage.name != current_stage_name:
+                        current_stage_name = deal.stage.name
+                        report_lines.append(f"<b>{current_stage_name}</b>")
+                    client_name = deal.contact.name if deal.contact else "Клиент не указан"
+                    total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
+                    report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
+            else:
+                report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
 
-        # Активные сделки
-        if active_deals:
-            report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>\n")
+            report_lines.append("\n")
+
+            if equip_attention or in_repair:
+                report_lines.append("🛠️ <b>Техника</b>")
+            if equip_attention:
+                report_lines.append("  <u>Требует внимания (ТО):</u>")
+                for eq in equip_attention:
+                    if not eq.next_maintenance_date: continue
+                    days_left = (eq.next_maintenance_date - today).days
+                    when = "сегодня!" if days_left <= 0 else f"через {days_left} дн."
+                    report_lines.append(f"  ⚠️ {eq.name} — {when}")
+            if in_repair:
+                report_lines.append("  <u>В ремонте:</u>")
+                for eq in in_repair:
+                    report_lines.append(f"  🔴 {eq.name} ({eq.model or ''})")
+            if not equip_attention and not in_repair:
+                report_lines.append("👍 <b>Техника:</b> всё в порядке.")
+
+            report_lines.append("\n━━━━━━━━━━━━━━━━━━━━")
+            report_lines.append("Желаю продуктивного дня!")
             
-            current_stage_name = ""
-            for deal in active_deals:
-                if deal.stage.name != current_stage_name:
-                    current_stage_name = deal.stage.name
-                    report_lines.append(f"<b>{current_stage_name}</b>")
-                
-                client_name = deal.contact.name if deal.contact else "Клиент не указан"
-                total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
-                report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
-        else:
-            report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
+            final_message = "\n".join(report_lines)
 
-        report_lines.append("\n")
-
-        # Техника
-        if equip_attention or in_repair:
-             report_lines.append("🛠️ <b>Техника</b>")
-        
-        if equip_attention:
-            report_lines.append("  <u>Требует внимания (ТО):</u>")
-            for eq in equip_attention:
-                if not eq.next_maintenance_date: continue
-                days_left = (eq.next_maintenance_date - today).days
-                when = "сегодня!" if days_left <= 0 else f"через {days_left} дн."
-                report_lines.append(f"  ⚠️ {eq.name} — {when}")
-
-        if in_repair:
-            report_lines.append("  <u>В ремонте:</u>")
-            for eq in in_repair:
-                report_lines.append(f"  🔴 {eq.name} ({eq.model or ''})")
-
-        if not equip_attention and not in_repair:
-            report_lines.append("👍 <b>Техника:</b> всё в порядке.")
-
-        report_lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-        report_lines.append("Желаю продуктивного дня!")
-
-        final_message = "\n".join(report_lines)
-        
+        # --- Отправка сообщения (после закрытия сессии, когда строка уже готова) ---
         bot = Bot(token=TG_TOKEN)
         print(f"📤 Отправляю сообщение в чат {TG_CHAT}...")
         await bot.send_message(chat_id=TG_CHAT, text=final_message, parse_mode='HTML')
@@ -147,7 +138,6 @@ async def send_morning_report():
 
 if __name__ == "__main__":
     print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
-
     try:
         import sqlalchemy
         import telegram
