@@ -312,10 +312,12 @@ def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depend
     discount_amount = subtotal * (discount_percent / 100.0)
     subtotal_after_discount = subtotal - discount_amount
     
+    # Налог включён: сумма = subtotal, налог отображается отдельно но не прибавляется
+    # Налог сверху: сумма = subtotal + налог
+    tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
     if deal_data.tax_included:
         final_total = subtotal_after_discount
     else:
-        tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
         final_total = subtotal_after_discount + tax_amount
 
     new_deal = Deal(
@@ -405,10 +407,10 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
         discount_amount = subtotal * (discount_percent / 100.0)
         subtotal_after_discount = subtotal - discount_amount
         
+        tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
         if deal.tax_included:
             final_total = subtotal_after_discount
         else:
-            tax_amount = subtotal_after_discount * (tax_rate_percent / 100.0)
             final_total = subtotal_after_discount + tax_amount
         
         deal.total = round(final_total, 2)
@@ -815,52 +817,116 @@ class BudgetUpdate(BaseModel):
     notes: Optional[str] = None
 
 # ── АНАЛИТИКА ─────────────────────────────────────────────────────────────────
-@app.get("/api/analytics/funnel")
+@app.get("/api/analytics/funnel")  # kept for backwards compat
 def get_funnel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
-    """Воронка продаж: количество и сумма сделок по каждому этапу"""
+    return get_analytics(year, db, _)
+
+@app.get("/api/analytics")
+def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    from collections import defaultdict
+    MONTHS_RU = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"]
+
     stages = db.query(Stage).order_by(Stage.order).all()
-    deals = db.query(Deal).filter(extract('year', Deal.created_at) == year).all()
-    
-    first_stage_count = None
-    result = []
+    stage_map = {s.id: s for s in stages}
+
+    deals = (db.query(Deal)
+             .options(joinedload(Deal.services).joinedload(DealService.service),
+                      joinedload(Deal.contact))
+             .filter(extract("year", Deal.created_at) == year)
+             .all())
+
+    won_stage_ids  = {s.id for s in stages if s.is_final and "успешно" in s.name.lower()}
+    lost_stage_ids = {s.id for s in stages if s.is_final and "успешно" not in s.name.lower()}
+    won  = [d for d in deals if d.stage_id in won_stage_ids]
+    lost = [d for d in deals if d.stage_id in lost_stage_ids]
+
+    total_revenue = sum(d.total or 0 for d in won)
+    avg_check     = round(total_revenue / len(won), 2) if won else 0
+    win_rate      = round(len(won) / len(deals) * 100, 1) if deals else 0
+
+    # 1. Воронка
+    funnel = []
     for st in stages:
-        stage_deals = [d for d in deals if d.stage_id == st.id]
-        count = len(stage_deals)
-        total = sum(d.total or 0 for d in stage_deals)
-        
-        if first_stage_count is None:
-            first_stage_count = count
-        
-        conversion = round(count / first_stage_count * 100, 1) if first_stage_count else 0
-        result.append({
-            "stage_id": st.id,
-            "stage_name": st.name,
-            "color": st.color,
-            "is_final": st.is_final,
-            "count": count,
-            "total": total,
-            "conversion": conversion,
+        sd = [d for d in deals if d.stage_id == st.id]
+        funnel.append({
+            "stage_id": st.id, "stage_name": st.name, "color": st.color,
+            "is_final": st.is_final, "count": len(sd),
+            "total": sum(d.total or 0 for d in sd),
         })
-    
-    # Конверсия между соседними этапами
-    for i in range(1, len(result)):
-        prev = result[i-1]["count"]
-        curr = result[i]["count"]
-        result[i]["step_conversion"] = round(curr / prev * 100, 1) if prev else 0
-    if result:
-        result[0]["step_conversion"] = 100.0
-    
-    # Средний чек по успешным сделкам
-    won = [d for d in deals if any(st.is_final and "успешно" in st.name.lower() and st.id == d.stage_id for st in stages)]
-    avg_check = round(sum(d.total or 0 for d in won) / len(won), 2) if won else 0
-    
+
+    # 2. Помесячная динамика
+    rev_by_month = defaultdict(float)
+    for d in won:
+        m = (d.closed_at or d.created_at).month
+        rev_by_month[m] += d.total or 0
+
+    expenses_year = db.query(Expense).filter(extract("year", Expense.date) == year).all()
+    exp_by_month  = defaultdict(float)
+    for e in expenses_year:
+        exp_by_month[e.date.month] += e.amount
+
+    monthly = [
+        {"month": i, "label": MONTHS_RU[i-1],
+         "revenue":  round(rev_by_month[i], 2),
+         "expenses": round(exp_by_month[i], 2),
+         "profit":   round(rev_by_month[i] - exp_by_month[i], 2)}
+        for i in range(1, 13)
+    ]
+
+    # 3. Топ услуг по выручке
+    svc_revenue = defaultdict(float)
+    svc_count   = defaultdict(int)
+    svc_names   = {}
+    for d in won:
+        for ds in d.services:
+            sname = ds.service.name if ds.service else f"#{ds.service_id}"
+            svc_revenue[ds.service_id] += ds.price_at_moment * ds.quantity
+            svc_count[ds.service_id]   += 1
+            svc_names[ds.service_id]    = sname
+    top_services = sorted(
+        [{"id": sid, "name": svc_names[sid],
+          "revenue": round(svc_revenue[sid], 2), "count": svc_count[sid]}
+         for sid in svc_revenue],
+        key=lambda x: x["revenue"], reverse=True
+    )[:8]
+
+    # 4. Расходы по категориям
+    cats = {c.id: c.name for c in db.query(ExpenseCategory).all()}
+    exp_by_cat = defaultdict(float)
+    for e in expenses_year:
+        exp_by_cat[cats.get(e.category_id, "Прочее")] += e.amount
+    expense_by_category = sorted(
+        [{"name": k, "amount": round(v, 2)} for k, v in exp_by_cat.items()],
+        key=lambda x: x["amount"], reverse=True
+    )
+
+    # 5. Повторные клиенты
+    repeat_won = [d for d in won if d.is_repeat]
+    new_won    = [d for d in won if not d.is_repeat]
+    repeat_rev = sum(d.total or 0 for d in repeat_won)
+    new_rev    = sum(d.total or 0 for d in new_won)
+
     return {
-        "funnel": result,
-        "total_deals": len(deals),
-        "won_deals": len(won),
-        "avg_check": avg_check,
-        "total_revenue": sum(d.total or 0 for d in won),
+        "total_deals":   len(deals),
+        "won_deals":     len(won),
+        "lost_deals":    len(lost),
+        "win_rate":      win_rate,
+        "avg_check":     avg_check,
+        "total_revenue": round(total_revenue, 2),
+        "total_expenses": round(sum(e.amount for e in expenses_year), 2),
+        "funnel":              funnel,
+        "monthly":             monthly,
+        "top_services":        top_services,
+        "expense_by_category": expense_by_category,
+        "repeat": {
+            "repeat_count":   len(repeat_won),
+            "new_count":      len(new_won),
+            "repeat_revenue": round(repeat_rev, 2),
+            "new_revenue":    round(new_rev, 2),
+            "repeat_rate":    round(len(repeat_won) / len(won) * 100, 1) if won else 0,
+        },
     }
+
 
 # ── БЮДЖЕТ — CRUD ─────────────────────────────────────────────────────────────
 @app.get("/api/budget", response_model=List[BudgetResponse])
