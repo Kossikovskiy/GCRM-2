@@ -91,8 +91,9 @@ async def send_morning_report():
             report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>")
             
             deals_by_stage = {stage.name: [] for stage in active_stages}
+            # Заполняем словарь в правильном порядке
             for deal in active_deals:
-                if deal.stage:
+                if deal.stage and deal.stage.name in deals_by_stage:
                     deals_by_stage[deal.stage.name].append(deal)
             
             for stage_name, deals in deals_by_stage.items():
@@ -105,7 +106,7 @@ async def send_morning_report():
         else:
             report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
 
-        report_lines.append("")
+        report_lines.append("\n")
 
         # Техника
         if equip_attention or in_repair:
@@ -152,25 +153,16 @@ async def send_morning_report():
 
 if __name__ == "__main__":
     print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
-    # Активируем venv, если он не активен
-    if "VIRTUAL_ENV" not in os.environ:
-        venv_path = os.path.join(os.path.dirname(__file__), '..", "venv", "bin", "activate")
-        if os.path.exists(venv_path):
-            print(f"Активирую venv из {venv_path}")
-            # Этот способ активации не работает напрямую в дочернем процессе.
-            # Вместо этого, нужно запускать скрипт с правильным интерпретатором.
-            # Оставляю эту логику как комментарий для ясности.
-            pass
 
-    # Проверяем, что зависимости установлены
+    # Проверяем, что зависимости установлены, и даем понятную инструкцию, если нет
     try:
         import sqlalchemy
         import telegram
     except ImportError:
         print("\n❌ Ошибка: Не найдены необходимые библиотеки.")
         print("   Пожалуйста, активируйте виртуальное окружение:")
-        print("   source /var/www/crm/venv/bin/activate")
-        print("   Или установите зависимости: pip install -r requirements.txt")
+        print(f"   source /var/www/crm/venv/bin/activate")
+        print("   ... и повторите запуск.")
         sys.exit(1)
 
     asyncio.run(send_morning_report())
