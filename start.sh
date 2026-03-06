@@ -9,4 +9,4 @@ source /var/www/crm/venv/bin/activate
 cd /var/www/crm/GCRM-2
 
 # Просто запускаем приложение
-exec /var/www/crm/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+exec /var/www/crm/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --sd-notify
