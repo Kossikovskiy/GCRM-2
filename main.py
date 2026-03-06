@@ -15,7 +15,6 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Date, DateTime, 
     Boolean, ForeignKey, Text, text, MetaData, extract, Double, func
@@ -190,17 +189,27 @@ class EquipmentResponse(BaseModel):
     id:int; name:str; model:Optional[str]; serial:Optional[str]; purchase_date:Optional[date]; purchase_cost:Optional[float]; status:Optional[str]; notes:Optional[str]; engine_hours:Optional[float]; fuel_norm:Optional[float]; last_maintenance_date:Optional[date]; next_maintenance_date:Optional[date]
     model_config = ConfigDict(from_attributes=True)
 
+class BudgetResponse(BaseModel):
+    id: int
+    year: int
+    period: str
+    name: str
+    planned_revenue: Optional[float] = 0.0
+    planned_expenses: Optional[float] = 0.0
+    notes: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
 # ── 6. FASTAPI APP ────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("App starting (v12.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
+    _ensure_budget_table()
     yield
     print("App shutting down.",flush=True)
 
 app = FastAPI(title="GreenCRM API", version="12.2.0", lifespan=lifespan)
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -768,13 +777,6 @@ def delete_tax_payment(payment_id: int, db: DBSession = Depends(get_db), _=Depen
     return None
 
 
-@app.get("/{full_path:path}", response_class=FileResponse)
-async def serve_frontend(full_path: str):
-    path = f"./{full_path.strip()}" if full_path else "./index.html"
-    return FileResponse(path if os.path.isfile(path) else "./index.html")
-
-print(f"main.py (v12.2) loaded.", flush=True)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # НОВЫЕ ФИЧИ v13.0: Аналитика, Экспорт, Бюджет
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -861,7 +863,7 @@ def get_funnel(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     }
 
 # ── БЮДЖЕТ — CRUD ─────────────────────────────────────────────────────────────
-@app.get("/api/budget")
+@app.get("/api/budget", response_model=List[BudgetResponse])
 def get_budget(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
     items = db.query(Budget).filter(Budget.year == year).order_by(Budget.id).all()
     return items
@@ -1139,7 +1141,10 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     headers = {"Content-Disposition": f'attachment; filename="greencrm_{year}.pdf"'}
     return StreamingResponse(buf, media_type="application/pdf", headers=headers)
 
-# Создать таблицы при старте
-_ensure_budget_table()
+
+@app.get("/{full_path:path}", response_class=FileResponse)
+async def serve_frontend(full_path: str):
+    path = f"./{full_path.strip()}" if full_path else "./index.html"
+    return FileResponse(path if os.path.isfile(path) else "./index.html")
 
 print(f"main.py (v13.0) loaded — analytics, export, budget added.", flush=True)
