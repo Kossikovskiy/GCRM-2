@@ -943,7 +943,12 @@ function initDrag(){
       renderKanban(_deals);
 
       api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id: stage.id})})
-        .then(()=>showToast('✅ → '+newStageName))
+        .then(()=>{
+          showToast('✅ → '+newStageName);
+          if(stage.is_final){
+            loadData(SELECTED_YEAR, true);
+          }
+        })
         .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
     });
   });
