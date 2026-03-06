@@ -105,6 +105,13 @@ class TaxPayment(Base):
     year = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class DailyPhrase(Base):
+    __tablename__ = "daily_phrases"
+    id = Column(Integer, primary_key=True)
+    phrase = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def init_db_structure(): Base.metadata.create_all(engine)
 def seed_initial_data(s: DBSession):
     if s.query(Stage).count()==0: s.add_all([Stage(**d) for d in [{"name":"Согласовать","order":1,"color":"#3B82F6"},{"name":"Ожидание","order":2,"color":"#F59E0B"},{"name":"В работе","order":3,"color":"#EC4899"},{"name":"Успешно","order":4,"color":"#10B981","is_final":True},{"name":"Провалена","order":5,"color":"#EF4444","is_final":True}]])
@@ -722,7 +729,7 @@ def delete_task(task_id: int, db: DBSession = Depends(get_db), _=Depends(get_cur
 
 # --- TAXES ---
 @app.get("/api/taxes/summary")
-def get_tax_summary(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_tax_summary(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     cache_key = f"tax_summary:{year}"
     if (cached := _cache.get(cache_key)) is not None: return cached
 
@@ -748,7 +755,7 @@ def get_tax_summary(year: int, db: DBSession = Depends(get_db), _=Depends(get_cu
     return summary
 
 @app.get("/api/taxes/payments")
-def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+def get_tax_payments(year: int, db: DBSession = Depends(get_db), _=Depends(require_admin)):
     cache_key = f"tax_payments:{year}"
     if (cached := _cache.get(cache_key)) is not None: return cached
     
@@ -1167,7 +1174,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(require_adm
             ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
         ])
 
-    def fmt_money(v): return f"{v:,.0f} руб.".replace(",",".")
+    def fmt_money(v): return f"{v:,.0f} руб.".replace(",","_")
 
     story = []
     story.append(Paragraph(f"GreenCRM — Отчёт за {year} год", h1))

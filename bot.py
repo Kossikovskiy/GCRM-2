@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Telegram-бот для утренних уведомлений GreenCRM
+Telegram-бот для вечерних уведомлений GreenCRM
 Запуск вручную:  python bot.py
 """
 
@@ -10,13 +10,12 @@ import asyncio
 import html
 from datetime import date, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, joinedload
+from sqlalchemy import create_engine, func
+from sqlalchemy.orm import sessionmaker, joinedload, contains_eager
 from telegram import Bot
 
-from main import Deal, Stage, Equipment, Contact, DATABASE_URL
+# --- ВАЖНО: Импортируем модели из main.py ---
+from main import Deal, Stage, Equipment, Contact, Task, DailyPhrase, DATABASE_URL
 
 # ════════════════════════════════════════
 #  ⚙️  НАСТРОЙКИ
@@ -27,8 +26,8 @@ TG_CHAT = "-4993820220"
 
 # ════════════════════════════════════════
 
-async def send_morning_report():
-    """Собирает утренний отчёт из БД и отправляет его в Telegram."""
+async def send_evening_report():
+    """Собирает вечерний отчёт из БД и отправляет его в Telegram."""
 
     if not TG_TOKEN or not TG_CHAT or "ВАШ_ТОКЕН" in TG_TOKEN:
         print("❌ Ошибка: Укажите корректные TG_TOKEN и TG_CHAT в файле bot.py")
@@ -47,57 +46,77 @@ async def send_morning_report():
         with Session() as session:
             print("🔍 Собираю данные для отчета...")
 
-            # 1. Сделки, которые не в финальных стадиях
+            today = date.today()
+            tomorrow = today + timedelta(days=1)
+
+            # 1. Задачи на завтра
+            tasks_for_tomorrow = session.query(Task).filter(
+                Task.due_date == tomorrow,
+                Task.is_done == False
+            ).order_by(Task.priority).all()
+
+            # 2. Сделки, которые не в финальных стадиях
             active_stage_ids_tuples = session.query(Stage.id).filter(Stage.is_final == False).all()
             active_stage_ids = [s_id[0] for s_id in active_stage_ids_tuples]
 
             active_deals = []
             if active_stage_ids:
-                active_deals = session.query(Deal).options(
-                    joinedload(Deal.stage),
+                active_deals = session.query(Deal).join(Deal.stage).options(
+                    contains_eager(Deal.stage),
                     joinedload(Deal.contact)
                 ).filter(
                     Deal.stage_id.in_(active_stage_ids)
-                ).join(Stage).order_by(Stage.order, Deal.created_at).all()
+                ).order_by(Stage.order, Deal.created_at).all()
 
-            # 2. Техника, требующая ТО на этой неделе
+            # 3. Техника в ремонте или требующая ТО
+            in_repair = session.query(Equipment).filter(Equipment.status == "repair").all()
             equip_attention = session.query(Equipment).filter(
-                Equipment.next_maintenance_date <= date.today() + timedelta(days=7),
-                Equipment.next_maintenance_date >= date.today(),
+                Equipment.next_maintenance_date <= tomorrow + timedelta(days=7),
                 Equipment.status == "active"
             ).all()
 
-            # 3. Техника в ремонте
-            in_repair = session.query(Equipment).filter(Equipment.status == "repair").all()
+            # 4. Случайная фраза
+            random_phrase = session.query(DailyPhrase).order_by(func.random()).first()
 
             # --- Формируем текст сообщения (ВНУТРИ СЕССИИ!) ---
             print("✍️ Формирую текст сообщения...")
             report_lines = []
-            today = date.today()
             weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-            today_str = f"{today.strftime('%d.%m.%Y')}, {weekdays[today.weekday()]}"
+            tomorrow_str = f"{tomorrow.strftime('%d.%m.%Y')}, {weekdays[tomorrow.weekday()]}"
 
-            report_lines.append(f"🌿 <b>GreenCRM — Доброе утро!</b>")
-            report_lines.append(f"📅 {today_str}")
+            report_lines.append(f"🌿 <b>GreenCRM — Добрый вечер!</b>")
+            report_lines.append(f"📅 План на завтра: {tomorrow_str}")
             report_lines.append("")
+            
+            # Задачи
+            if tasks_for_tomorrow:
+                report_lines.append(f"📝 <b>Задачи на завтра: {len(tasks_for_tomorrow)}</b>")
+                for task in tasks_for_tomorrow:
+                    priority_emoji = {"Высокий": "🔥", "Средний": "🔸", "Низкий": "🔹"}.get(task.priority, "")
+                    report_lines.append(f"  • {priority_emoji} {task.title}")
+                report_lines.append("")
+            else:
+                report_lines.append("✅ <b>Задач на завтра нет.</b> Отличная работа!\n")
 
+            # Сделки
             if active_deals:
-                report_lines.append(f"📋 <b>Активных сделок: {len(active_deals)}</b>\n")
+                report_lines.append(f"📋 <b>Активные сделки: {len(active_deals)}</b>")
                 current_stage_name = ""
                 for deal in active_deals:
                     if deal.stage.name != current_stage_name:
                         current_stage_name = deal.stage.name
-                        report_lines.append(f"<b>{current_stage_name}</b>")
+                        report_lines.append(f"\n<b>{current_stage_name}</b>")
                     client_name = deal.contact.name if deal.contact else "Клиент не указан"
                     total_str = f"{int(deal.total or 0):,} ₽".replace(",", " ")
                     report_lines.append(f"  • <b>{client_name}</b> ({total_str}) – <i>{deal.title[:40]}</i>")
             else:
-                report_lines.append("✅ <b>Активных сделок нет.</b> Время создавать новые!")
+                report_lines.append("✅ <b>Активных сделок нет.</b>")
 
             report_lines.append("\n")
 
+            # Техника
             if equip_attention or in_repair:
-                report_lines.append("🛠️ <b>Техника</b>")
+                 report_lines.append("🛠️ <b>Техника</b>")
             if equip_attention:
                 report_lines.append("  <u>Требует внимания (ТО):</u>")
                 for eq in equip_attention:
@@ -113,7 +132,11 @@ async def send_morning_report():
                 report_lines.append("👍 <b>Техника:</b> всё в порядке.")
 
             report_lines.append("\n━━━━━━━━━━━━━━━━━━━━")
-            report_lines.append("Желаю продуктивного дня!")
+            
+            if random_phrase:
+                report_lines.append(f"<i>{random_phrase.phrase}</i>")
+
+            report_lines.append("\nХорошего вечера!")
             
             final_message = "\n".join(report_lines)
 
@@ -137,7 +160,7 @@ async def send_morning_report():
             print(f"❌ Не удалось отправить сообщение об ошибке: {e_send}")
 
 if __name__ == "__main__":
-    print("🌿 GreenCRM — запуск отправки утреннего отчёта...")
+    print("🌿 GreenCRM — запуск отправки вечернего отчёта...")
     try:
         import sqlalchemy
         import telegram
@@ -146,4 +169,4 @@ if __name__ == "__main__":
         print(f"   Пожалуйста, активируйте виртуальное окружение: `source /var/www/crm/venv/bin/activate`")
         sys.exit(1)
 
-    asyncio.run(send_morning_report())
+    asyncio.run(send_evening_report())
