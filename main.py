@@ -15,6 +15,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Date, DateTime, 
     Boolean, ForeignKey, Text, text, MetaData, extract, Double, func
@@ -199,6 +200,7 @@ async def lifespan(app: FastAPI):
     print("App shutting down.",flush=True)
 
 app = FastAPI(title="GreenCRM API", version="12.2.0", lifespan=lifespan)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -1096,7 +1098,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
 
     # Сводка
     story.append(Paragraph("Сводка", h2))
-    summary_rows = [["Показатель","Значение"],
+    summary_rows = [['Показатель','Значение'],
         ["Всего сделок", str(len(deals_q))],
         ["Успешных сделок", str(len(won_deals))],
         ["Выручка", fmt_money(total_rev)],
@@ -1110,7 +1112,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
 
     # Воронка
     story.append(Paragraph("Воронка продаж", h2))
-    funnel_rows = [["Этап","Кол-во","Сумма","Конверсия"]]
+    funnel_rows = [['Этап','Кол-во','Сумма','Конверсия']]
     stage_list = sorted(stages.values(), key=lambda s: s.order)
     first_cnt = None
     for st in stage_list:
@@ -1125,7 +1127,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     # Топ-10 сделок
     story.append(Paragraph("Топ-10 успешных сделок", h2))
     top10 = sorted(won_deals, key=lambda d: d.total or 0, reverse=True)[:10]
-    deal_rows = [["Название","Клиент","Сумма","Дата"]]
+    deal_rows = [['Название','Клиент','Сумма','Дата']]
     for d in top10:
         deal_rows.append([d.title[:35], contacts.get(d.contact_id, type("x",(),{"name":"—"})()).name,
                          fmt_money(d.total or 0), d.closed_at.strftime("%d.%m.%Y") if d.closed_at else ""])
