@@ -1513,11 +1513,14 @@ async function api(ep,opts={}){
   try{
     const r=await fetch(`${API_BASE}${ep}`,{...opts,credentials:'include',headers:{'Content-Type':'application/json',...(opts.headers||{})}});
     if(r.status===401){window.location.href='/api/auth/login';throw new Error('401')}
+    if(r.status===403){throw new Error('Нет доступа')}
     if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail||`HTTP Error ${r.status}`)}
-    if (r.status === 204 || r.headers.get('content-length') === '0') return null;
-    const text = await r.text();
-    return text ? JSON.parse(text) : null;
-  }catch(e){showToast('❌ '+(e.message || '[object Object]'));throw e}
+    if(r.status===204||r.headers.get('content-length')==='0') return null;
+    const text=await r.text();
+    if(!text) return null;
+    try{ return JSON.parse(text); }
+    catch(pe){ console.error('JSON parse error for',ep,':',text.slice(0,200)); throw new Error('Сервер вернул неожиданный ответ'); }
+  }catch(e){showToast('❌ '+(e.message||'Ошибка сети'));throw e}
 }
 
 // ── KANBAN STATE ──
