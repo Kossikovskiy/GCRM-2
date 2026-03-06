@@ -24,9 +24,6 @@ from pydantic import BaseModel, Field, ConfigDict
 import httpx
 from jose import jwt, JWTError
 
-# --- НОВЫЙ ИМПОРТ ---
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-
 # ── 1. КОНФИГ ─────────────────────────────────────────────────────────────────
 DATABASE_URL   = os.getenv("DATABASE_URL")
 AUTH0_DOMAIN   = os.getenv("AUTH0_DOMAIN")
@@ -198,16 +195,11 @@ async def lifespan(app: FastAPI):
     print("App starting (v12.1)...",flush=True)
     init_db_structure()
     with SessionFactory() as db: seed_initial_data(db)
-    _ensure_budget_table()
     yield
     print("App shutting down.",flush=True)
 
 app = FastAPI(title="GreenCRM API", version="12.2.0", lifespan=lifespan)
-
-# --- ДОБАВЛЯЕМ MIDDLEWARE ДЛЯ ПРОКСИ ---
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="127.0.0.1")
-
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=False, same_site="lax")
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET, https_only=True, same_site="lax")
 app.add_middleware(CORSMiddleware, allow_origins=[APP_BASE_URL], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 @lru_cache(maxsize=1)
@@ -1104,7 +1096,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
 
     # Сводка
     story.append(Paragraph("Сводка", h2))
-    summary_rows = [['Показатель','Значение'],
+    summary_rows = [["Показатель","Значение"],
         ["Всего сделок", str(len(deals_q))],
         ["Успешных сделок", str(len(won_deals))],
         ["Выручка", fmt_money(total_rev)],
@@ -1118,7 +1110,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
 
     # Воронка
     story.append(Paragraph("Воронка продаж", h2))
-    funnel_rows = [['Этап','Кол-во','Сумма','Конверсия']]
+    funnel_rows = [["Этап","Кол-во","Сумма","Конверсия"]]
     stage_list = sorted(stages.values(), key=lambda s: s.order)
     first_cnt = None
     for st in stage_list:
@@ -1133,7 +1125,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     # Топ-10 сделок
     story.append(Paragraph("Топ-10 успешных сделок", h2))
     top10 = sorted(won_deals, key=lambda d: d.total or 0, reverse=True)[:10]
-    deal_rows = [['Название','Клиент','Сумма','Дата']]
+    deal_rows = [["Название","Клиент","Сумма","Дата"]]
     for d in top10:
         deal_rows.append([d.title[:35], contacts.get(d.contact_id, type("x",(),{"name":"—"})()).name,
                          fmt_money(d.total or 0), d.closed_at.strftime("%d.%m.%Y") if d.closed_at else ""])
@@ -1145,6 +1137,7 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(get_current
     headers = {"Content-Disposition": f'attachment; filename="greencrm_{year}.pdf"'}
     return StreamingResponse(buf, media_type="application/pdf", headers=headers)
 
-
+# Создать таблицы при старте
+_ensure_budget_table()
 
 print(f"main.py (v13.0) loaded — analytics, export, budget added.", flush=True)
