@@ -998,16 +998,21 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         </div>
     </div>
 
-    <div class="modal-grid" style="margin-top: 20px;">
+    <div class="modal-grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr 1fr;">
       <div class="field">
         <label>ЭТАП</label>
         <select id="d-stage"></select>
       </div>
+       <div class="field">
+        <label>СУММА НАЛОГА</label>
+        <input type="text" id="d-tax-amount" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
+      </div>
       <div class="field">
         <label>ИТОГОВАЯ СУММА</label>
-        <input type="text" id="d-total" readonly style="background:var(--bg); color: var(--ink3); font-family: 'Playfair Display', serif; font-size: 16px;" />
+        <input type="text" id="d-total" readonly style="background:var(--bg); color: var(--ink); font-family: 'Playfair Display', serif; font-size: 16px; font-weight: bold;" />
       </div>
     </div>
+
 
     <div class="modal-row">
         <button class="btn-sec btn-del-modal" id="btn-deal-delete" style="display:none;">Удалить</button>
@@ -1466,6 +1471,7 @@ async function setupDealModal(dealId = null) {
     document.getElementById('d-discount').value = 0;
     document.getElementById('d-tax-rate').value = 4;
     document.getElementById('d-tax-included').checked = true;
+    document.getElementById('d-tax-amount').value = fmt(0)
 
     contactList.innerHTML = _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
     const users = await api('/users').catch(() => []);
@@ -1488,6 +1494,7 @@ async function setupDealModal(dealId = null) {
         document.getElementById('d-discount').value = deal.discount || 0;
         document.getElementById('d-tax-rate').value = deal.tax_rate;
         document.getElementById('d-tax-included').checked = deal.tax_included;
+        document.getElementById('d-tax-amount').value = fmt(deal.tax_amount);
 
         _dealItems = deal.services.map(s => ({
             id: s.service.id,
@@ -1512,28 +1519,31 @@ async function setupDealModal(dealId = null) {
 
 function calculateDealTotal() {
     const subtotal = _dealItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discountInput = document.getElementById('d-discount');
-    const taxRate = parseFloat(document.getElementById('d-tax-rate').value) || 0;
+    const discount = parseFloat(document.getElementById('d-discount').value) || 0;
+    const taxRatePercent = parseFloat(document.getElementById('d-tax-rate').value) || 0;
     const taxIncluded = document.getElementById('d-tax-included').checked;
+    
+    const discountAmount = subtotal * (discount / 100.0);
+    const subtotalAfterDiscount = subtotal - discountAmount;
+    
+    let finalTotal = subtotalAfterDiscount;
+    let taxAmount = 0;
 
-    if (subtotal > 10000 && parseFloat(discountInput.value) === 0) {
-        discountInput.value = 5;
-    }
-    const discount = parseFloat(discountInput.value) || 0;
-
-    const discountAmount = subtotal * (discount / 100);
-    const discountedTotal = subtotal - discountAmount;
-    let finalTotal;
-
-    if (taxIncluded) {
-        finalTotal = discountedTotal;
-    } else {
-        const taxAmount = discountedTotal * (taxRate / 100);
-        finalTotal = discountedTotal + taxAmount;
+    if (taxRatePercent > 0) {
+        if (taxIncluded) {
+            // total = base + base * tax_rate => base = total / (1 + tax_rate)
+            const taxableBase = subtotalAfterDiscount / (1 + taxRatePercent / 100.0);
+            taxAmount = taxableBase * (taxRatePercent / 100.0);
+        } else {
+            taxAmount = subtotalAfterDiscount * (taxRatePercent / 100.0);
+            finalTotal = subtotalAfterDiscount + taxAmount;
+        }
     }
     
     document.getElementById('d-total').value = fmt(finalTotal);
+    document.getElementById('d-tax-amount').value = fmt(taxAmount);
 }
+
 
 async function openDealModal(dealId = null) {
     try {
@@ -1582,7 +1592,7 @@ function renderDealServices() {
             <tr>
                 <td>${item.name} ${item.id === -1 ? '<small style="color:var(--red)">[удалена]</small>' : ''}</td>
                 <td>${fmt(item.price)}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
+                <td><input type="number" value="${item.quantity}" oninput="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
                 <td>${fmt(item.price * item.quantity)}</td>
                 <td><button class="btn-del" onclick="removeDealService(${item.id})" title="Удалить">⊗</button></td>
             </tr>
