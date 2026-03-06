@@ -1275,12 +1275,14 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(require_adm
 @app.get("/api/service/status")
 def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
     if not is_admin(user): raise HTTPException(403, "Admin only")
+    
+    system_payload = {}
     try:
         import psutil
-        mem  = psutil.virtual_memory()
+        mem = psutil.virtual_memory()
         disk = psutil.disk_usage("/")
-        cpu  = psutil.cpu_percent(interval=0.3)
-        system = {
+        cpu = psutil.cpu_percent(interval=0.3)
+        system_payload = {
             "cpu": round(cpu, 1),
             "mem_used_mb": round(mem.used / 1024**2),
             "mem_total_mb": round(mem.total / 1024**2),
@@ -1289,14 +1291,18 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
             "disk_total_gb": round(disk.total / 1024**3, 1),
             "disk_pct": round(disk.percent, 1),
         }
-    except Exception:
-        system = {}
+    except ImportError:
+        system_payload = {"error": "psutil is not installed"}
+    except Exception as e:
+        system_payload = {"error": str(e)}
+
     active_tasks = db.query(Task).filter(Task.is_done == False).count()
     overdue = db.query(Task).filter(
         Task.is_done == False, Task.due_date < datetime.utcnow().date()
     ).count()
     active_deals = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
     cache_keys = list(_cache._data.keys())
+
     return {
         "db": {
             "deals": db.query(Deal).count(),
@@ -1306,7 +1312,7 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
             "active_deals": active_deals,
         },
         "cache": {"keys": cache_keys, "count": len(cache_keys), "ttl": _cache._ttl},
-        "system": system,
+        "system": system_payload,
         "tg_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID")),
     }
 
