@@ -364,11 +364,116 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     context.user_data.clear()
     return ConversationHandler.END
 
-# ... (остальной код отчетов без изменений) ...
-async def build_report_string(): return ""
-async def send_report_job(c): pass
-async def send_report_command(u,c): pass
-# ...
+# ════════════════════════════════════════
+#  📊  ОТЧЁТ
+# ════════════════════════════════════════
+
+from sqlalchemy import text as sa_text
+
+async def build_report_string() -> str:
+    """Формирует текст ежедневного отчёта: сделки в работе, задачи, цитата."""
+    engine_r = create_engine(DATABASE_URL)
+    Session_r = sessionmaker(bind=engine_r)
+    today = date.today()
+    lines = []
+
+    with Session_r() as session:
+        # ── Сделки в работе ──
+        active_deals = (
+            session.query(Deal)
+            .join(Stage)
+            .filter(Stage.is_final == False)
+            .order_by(Stage.order, Deal.created_at.desc())
+            .all()
+        )
+
+        lines.append(f"GrassCRM — отчёт за {today.strftime('%d.%m.%Y')}")
+        lines.append("")
+
+        if active_deals:
+            lines.append("Сделки в работе:")
+            current_stage = None
+            for deal in active_deals:
+                stage_name = deal.stage.name if deal.stage else "Без стадии"
+                if stage_name != current_stage:
+                    current_stage = stage_name
+                    lines.append(f"\n  {stage_name}:")
+                client = deal.contact.name if deal.contact else "Без клиента"
+                total = f"{int(deal.total or 0):,}".replace(",", " ")
+                lines.append(f"    - {deal.title} ({client}) — {total} руб.")
+        else:
+            lines.append("Активных сделок нет.")
+
+        lines.append("")
+
+        # ── Задачи ──
+        today_tasks = (
+            session.query(Task)
+            .filter(Task.is_done == False, Task.due_date == today)
+            .order_by(Task.due_date)
+            .all()
+        )
+        overdue_tasks = (
+            session.query(Task)
+            .filter(Task.is_done == False, Task.due_date < today)
+            .order_by(Task.due_date)
+            .all()
+        )
+
+        if today_tasks:
+            lines.append("Задачи на сегодня:")
+            for t in today_tasks:
+                lines.append(f"  - {t.title}")
+            lines.append("")
+
+        if overdue_tasks:
+            lines.append(f"Просроченные задачи ({len(overdue_tasks)}):")
+            for t in overdue_tasks[:5]:
+                due = t.due_date.strftime("%d.%m") if t.due_date else "—"
+                lines.append(f"  - {t.title} (до {due})")
+            if len(overdue_tasks) > 5:
+                lines.append(f"  ...и ещё {len(overdue_tasks) - 5}")
+            lines.append("")
+
+        if not today_tasks and not overdue_tasks:
+            lines.append("Задач на сегодня нет.")
+            lines.append("")
+
+        # ── Случайная цитата из daily_phrases ──
+        try:
+            row = session.execute(
+                sa_text("SELECT phrase FROM daily_phrases ORDER BY RANDOM() LIMIT 1")
+            ).fetchone()
+            if row:
+                lines.append("- " * 15)
+                lines.append(row[0])
+        except Exception as e:
+            logger.warning(f"Не удалось получить цитату: {e}")
+
+    engine_r.dispose()
+    return "\n".join(lines)
+
+
+async def send_report_job(context: ContextTypes.DEFAULT_TYPE):
+    """Запускается по расписанию в 18:00 МСК."""
+    logger.info("Отправляю ежедневный отчёт...")
+    try:
+        msg = await build_report_string()
+        await context.bot.send_message(chat_id=TG_CHAT_ID, text=msg)
+        logger.info("Отчёт отправлен.")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке отчёта: {e}")
+
+
+async def send_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /sendreport — отправить отчёт вручную."""
+    await update.message.reply_text("Формирую отчёт...")
+    try:
+        msg = await build_report_string()
+        await context.bot.send_message(chat_id=TG_CHAT_ID, text=msg)
+    except Exception as e:
+        logger.error(f"Ошибка при ручной отправке: {e}")
+        await update.message.reply_text(f"Ошибка: {e}")
 
 # ════════════════════════════════════════
 #  🚀  ЗАПУСК БОТА
@@ -416,6 +521,4 @@ def main() -> None:
     application.run_polling()
 
 if __name__ == "__main__":
-    # Hiding report logic for brevity as it's unchanged
-    async def build_report_string() -> str: return "Отчет отключен в этом превью."
     main()
