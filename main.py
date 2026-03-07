@@ -71,7 +71,7 @@ class User(Base): __tablename__ = "users"; id,username,name,email = Column(Strin
 class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
 class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id",ondelete="RESTRICT")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
-class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(50),unique=True,index=True),Column(String(100)); deals = relationship("Deal",back_populates="contact")
+class Contact(Base): __tablename__ = "contacts"; id,name,phone,source=Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(String(50),unique=True,index=True),Column(String(100)); address=Column(Text); deals = relationship("Deal",back_populates="contact")
 class Deal(Base): 
     __tablename__ = "deals"
     id=Column(Integer,primary_key=True)
@@ -89,6 +89,7 @@ class Deal(Base):
     tax_rate = Column(Float, default=4.0, nullable=False)
     tax_included = Column(Boolean, default=True, nullable=False)
     discount = Column(Float, default=0.0, nullable=False)
+    loss_reason = Column(Text)
 
     contact=relationship("Contact",back_populates="deals")
     stage=relationship("Stage",back_populates="deals")
@@ -184,6 +185,7 @@ class DealCreate(BaseModel):
     work_date: Optional[str] = None
     work_time: Optional[str] = None
     address: Optional[str] = None
+    loss_reason: Optional[str] = None
 
 class DealUpdate(BaseModel): 
     title:Optional[str]=None; 
@@ -198,11 +200,12 @@ class DealUpdate(BaseModel):
     work_date: Optional[str] = None
     work_time: Optional[str] = None
     address: Optional[str] = None
+    loss_reason: Optional[str] = None
 
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None; contact_id: Optional[int]=None; deal_id: Optional[int]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None; contact_id: Optional[int]=None; deal_id: Optional[int]=None
-class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None
-class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None
+class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None; address: Optional[str] = None
+class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None; address: Optional[str] = None
 class ServiceCreate(BaseModel): name: str = Field(...,min_length=1); price: float; unit: str; min_volume: Optional[float]=1.0; notes: Optional[str]=None
 class ServiceUpdate(BaseModel): name: Optional[str]=Field(None,min_length=1); price: Optional[float]=None; unit: Optional[str]=None; min_volume: Optional[float]=None; notes: Optional[str]=None
 class EquipmentCreate(BaseModel): name: str; model: Optional[str]=None; serial: Optional[str]=None; purchase_date: Optional[date]=None; purchase_cost: Optional[float]=None; status: Optional[str]='active'; notes: Optional[str]=None; engine_hours: Optional[float]=None; fuel_norm: Optional[float]=None; last_maintenance_date: Optional[date]=None; next_maintenance_date: Optional[date]=None
@@ -456,6 +459,7 @@ def get_deal_details(deal_id: int, db: DBSession = Depends(get_db), _=Depends(ge
         "tax_included": deal.tax_included,
         "deal_date": deal.deal_date.isoformat() if deal.deal_date else None,
         "address": deal.address or "",
+        "loss_reason": deal.loss_reason or "",
     }
 
 @app.patch("/api/deals/{deal_id}")
@@ -508,6 +512,7 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     if "stage_id" in update_data: deal.stage_id = update_data["stage_id"]
     if "manager" in update_data: deal.manager = update_data["manager"]
     if "address" in update_data: deal.address = update_data["address"]
+    if "loss_reason" in update_data: deal.loss_reason = update_data["loss_reason"]
     if "work_date" in update_data or "work_time" in update_data:
         work_date = update_data.get("work_date") or (deal.deal_date.date().isoformat() if deal.deal_date else None)
         work_time = update_data.get("work_time") or (deal.deal_date.strftime("%H:%M") if deal.deal_date else None)
@@ -535,7 +540,19 @@ def delete_deal(deal_id: int, db:DBSession=Depends(get_db),_=Depends(require_adm
 # --- CONTACTS ---
 @app.get("/api/contacts")
 def get_contacts(db:DBSession=Depends(get_db),_=Depends(get_current_user)):
-    return db.query(Contact).order_by(Contact.name).all()
+    contacts = db.query(Contact).order_by(Contact.name).all()
+    result = []
+    for c in contacts:
+        last_deal = (db.query(Deal)
+                     .filter(Deal.contact_id == c.id)
+                     .order_by(Deal.created_at.desc())
+                     .first())
+        result.append({
+            "id": c.id, "name": c.name, "phone": c.phone,
+            "source": c.source, "address": c.address,
+            "last_deal_date": last_deal.created_at.date().isoformat() if last_deal and last_deal.created_at else None,
+        })
+    return result
 
 @app.post("/api/contacts", status_code=201)
 def create_contact(contact_data: ContactCreate, db: DBSession = Depends(get_db), _=Depends(get_current_user)):

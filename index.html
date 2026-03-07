@@ -310,7 +310,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* ── MODAL ─────────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-.item-selector-modal{z-index:501}
+.item-selector-modal{z-index:600}
 .modal{
   background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:32px;
@@ -790,6 +790,13 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
   .cal-cell{min-height:60px;padding:4px}
   .cal-legend{display:none}
 }
+/* ── STYLED NUMBER SPINNER ──────────────────────────────────── */
+.qty-spinner{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:7px;overflow:hidden;height:32px;background:var(--surface)}
+.qty-spinner input[type=number]{width:46px;text-align:center;border:none;background:transparent;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:0;-moz-appearance:textfield;outline:none}
+.qty-spinner input[type=number]::-webkit-inner-spin-button,.qty-spinner input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.qty-spinner-btn{width:28px;height:100%;background:none;border:none;border-left:1px solid var(--border);color:var(--ink3);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;user-select:none;flex-shrink:0}
+.qty-spinner-btn:first-child{border-left:none;border-right:1px solid var(--border)}
+.qty-spinner-btn:hover{background:var(--leaf);color:var(--fern)}
 /* ── FILES ──────────────────────────────────────────────────── */
 .files-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:700px){.files-page-grid{grid-template-columns:1fr}}
@@ -1178,7 +1185,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     </div>
     <div class="tcard">
         <div class="tcard-head"><span class="tcard-title">Все клиенты</span><span class="tcard-meta" id="contacts-count"></span></div>
-        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th class="col-hide-mobile">Источник</th></tr></thead><tbody id="contacts-tbody"></tbody></table></div>
+        <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Имя</th><th>Телефон</th><th class="col-hide-mobile">Источник</th><th class="col-hide-mobile">Адрес</th><th class="col-hide-mobile">Посл. сделка</th></tr></thead><tbody id="contacts-tbody"></tbody></table></div>
     </div>
 </div>
 
@@ -1399,8 +1406,17 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     </div>
     <div class="field full">
         <label>КАТЕГОРИЯ</label>
-        <input type="text" id="ex-category" list="expense-categories-list" placeholder="Например, ГСМ, ремонт, запчасти" />
-        <datalist id="expense-categories-list"></datalist>
+        <select id="ex-category">
+          <option value="">— Выберите категорию —</option>
+          <option>Техника</option>
+          <option>Расходники</option>
+          <option>Тех. Жидкости</option>
+          <option>Запчасти</option>
+          <option>Реклама</option>
+          <option>CRM</option>
+          <option>Сайт</option>
+          <option>Авито</option>
+        </select>
     </div>
     <div class="modal-row">
       <button class="btn-sec btn-del-modal" id="btn-expense-delete" style="display:none">УДАЛИТЬ</button>
@@ -1536,7 +1552,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     <div class="modal-grid" style="margin-top: 20px; grid-template-columns: 1fr 1fr 1fr;">
       <div class="field">
         <label>ЭТАП</label>
-        <select id="d-stage"></select>
+        <select id="d-stage" onchange="dealStageChanged(this)"></select>
       </div>
        <div class="field">
         <label>СУММА НАЛОГА</label>
@@ -1548,6 +1564,20 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       </div>
     </div>
 
+
+    <div class="field full" id="d-loss-reason-wrap" style="display:none;margin-top:4px">
+      <label style="color:var(--red)">ПРИЧИНА ПРОВАЛА <span style="color:var(--red)">*</span></label>
+      <select id="d-loss-reason">
+        <option value="">— Укажите причину —</option>
+        <option>Дорого</option>
+        <option>Нашли другого подрядчика</option>
+        <option>Передумали</option>
+        <option>Не выходили на связь</option>
+        <option>Не наш регион</option>
+        <option>Не устроили сроки</option>
+        <option>Другое</option>
+      </select>
+    </div>
 
     <div class="modal-row">
         <button class="btn-sec btn-del-modal" id="btn-deal-delete" style="display:none;">Удалить</button>
@@ -1646,8 +1676,20 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
           </div>
           <div class="field" style="margin-bottom:0">
             <label>ИСТОЧНИК</label>
-            <input type="text" id="c-source" placeholder="Рекомендация" />
+            <select id="c-source">
+              <option value="">— Не указан —</option>
+              <option>Авито Основной</option>
+              <option>Авито Лера</option>
+              <option>Авито Второй</option>
+              <option>Чат СНТ</option>
+              <option>По рекомендации</option>
+              <option>Сайт</option>
+            </select>
           </div>
+        </div>
+        <div class="field" style="margin-top:12px;margin-bottom:0">
+          <label>АДРЕС</label>
+          <input type="text" id="c-address" placeholder="ул. Ленина 10, СНТ Рябинка" />
         </div>
         <div class="ccard-edit-actions">
           <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;font-size:10px;padding:7px 14px" onclick="deleteContact(_currentContactId)">УДАЛИТЬ</button>
@@ -2271,6 +2313,13 @@ async function setupDealModal(dealId = null) {
         }
         document.getElementById('d-address').value = deal.address || '';
 
+        // Причина провала — показываем если этап провальный
+        const lossStage = STAGES.find(s => s.id === deal.stage_id && s.is_final && !s.name.toLowerCase().includes('успешно'));
+        const lossWrap = document.getElementById('d-loss-reason-wrap');
+        const lossReasonSel = document.getElementById('d-loss-reason');
+        if (lossWrap) lossWrap.style.display = lossStage ? 'block' : 'none';
+        if (lossReasonSel) lossReasonSel.value = deal.loss_reason || '';
+
         _dealItems = deal.services.map(s => ({
             id: s.service.id,
             name: s.service.name,
@@ -2297,6 +2346,8 @@ async function setupDealModal(dealId = null) {
         _currentDealId = null;
         document.getElementById('dcomments-wrap').style.display = 'none';
         document.getElementById('deal-files-wrap').style.display = 'none';
+        const lossWrapNew = document.getElementById('d-loss-reason-wrap');
+        if (lossWrapNew) lossWrapNew.style.display = 'none';
     }
 
     renderDealServices();
@@ -2378,7 +2429,7 @@ function renderDealServices() {
             <tr>
                 <td>${item.name} ${item.id === -1 ? '<small style="color:var(--red)">[удалена]</small>' : ''}</td>
                 <td>${fmt(item.price)}</td>
-                <td><input type="number" value="${item.quantity}" oninput="updateDealServiceQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
+                <td><div class="qty-spinner"><button class="qty-spinner-btn" type="button" onclick="updateDealServiceQty(${item.id}, Math.max(0.01,(${item.quantity})-1))">−</button><input type="number" value="${item.quantity}" min="0.01" step="1" oninput="updateDealServiceQty(${item.id}, parseFloat(this.value)||1)"><button class="qty-spinner-btn" type="button" onclick="updateDealServiceQty(${item.id},(${item.quantity})+1)">+</button></div></td>
                 <td>${fmt(item.price * item.quantity)}</td>
                 <td><button class="btn-del" onclick="removeDealService(${item.id})" title="Удалить">⊗</button></td>
             </tr>
@@ -2390,6 +2441,14 @@ function renderDealServices() {
 function getContactIdByName(name) {
     const el = document.querySelector(`#d-contact-list option[value="${esc(name)}"]`);
     return el ? parseInt(el.dataset.id, 10) : null;
+}
+
+function dealStageChanged(sel) {
+    const selectedOpt = sel.options[sel.selectedIndex];
+    const stageName = selectedOpt ? selectedOpt.text : '';
+    const isLost = STAGES.find(s => s.id === parseInt(sel.value) && s.is_final && !s.name.toLowerCase().includes('успешно'));
+    const wrap = document.getElementById('d-loss-reason-wrap');
+    if (wrap) wrap.style.display = isLost ? 'block' : 'none';
 }
 
 async function saveDeal(dealId = null) {
@@ -2404,6 +2463,18 @@ async function saveDeal(dealId = null) {
   const work_time = document.getElementById('d-work-time').value || null;
   const address = document.getElementById('d-address').value.trim() || null;
 
+  // Проверяем причину провала если выбран провальный этап
+  const lossWrap = document.getElementById('d-loss-reason-wrap');
+  const lossReasonSel = document.getElementById('d-loss-reason');
+  const isLostStage = lossWrap && lossWrap.style.display !== 'none';
+  const loss_reason = lossReasonSel ? lossReasonSel.value.trim() : '';
+  if (isLostStage && !loss_reason) {
+      lossReasonSel.classList.add('err');
+      showToast('❌ Укажите причину провала сделки');
+      return;
+  }
+  if (lossReasonSel) lossReasonSel.classList.remove('err');
+
   if (!title) { document.getElementById('d-title').classList.add('err'); return; }
   if (_dealItems.length === 0) { showToast('❌ Добавьте хотя бы одну услугу'); return; }
 
@@ -2417,7 +2488,8 @@ async function saveDeal(dealId = null) {
       tax_included,
       work_date,
       work_time,
-      address
+      address,
+      loss_reason: loss_reason || null
   };
   
   const contact_id = getContactIdByName(contactName);
@@ -2535,10 +2607,12 @@ function openContactModal(contact = null) {
         document.getElementById('ccard-avatar').textContent = initials;
         document.getElementById('ccard-name-display').textContent = contact.name || '—';
 
-        // Мета-линия (телефон / источник)
+        // Мета-линия (телефон / источник / адрес / последняя сделка)
         const metaParts = [];
         if (contact.phone) metaParts.push(contact.phone);
         if (contact.source) metaParts.push(contact.source);
+        if (contact.address) metaParts.push('📍 ' + contact.address);
+        if (contact.last_deal_date) metaParts.push('Посл. сделка: ' + new Date(contact.last_deal_date).toLocaleDateString('ru-RU'));
         const metaLine = document.getElementById('ccard-meta-line');
         metaLine.innerHTML = metaParts.map(p =>
             `<span class="ccard-meta-val">${esc(p)}</span>`
@@ -2556,6 +2630,7 @@ function openContactModal(contact = null) {
         document.getElementById('c-name').value = contact.name || '';
         document.getElementById('c-phone').value = contact.phone || '';
         document.getElementById('c-source').value = contact.source || '';
+        document.getElementById('c-address').value = contact.address || '';
 
         delBtn.style.display = 'block';
         saveBtn.textContent = 'СОХРАНИТЬ';
@@ -2575,6 +2650,7 @@ function openContactModal(contact = null) {
         document.getElementById('c-name').value = '';
         document.getElementById('c-phone').value = '';
         document.getElementById('c-source').value = '';
+        document.getElementById('c-address').value = '';
 
         editForm.classList.add('open');
         delBtn.style.display = 'none';
@@ -2844,7 +2920,8 @@ async function saveContact() {
     const data = {
         name,
         phone: document.getElementById('c-phone').value.trim() || null,
-        source: document.getElementById('c-source').value.trim() || null
+        source: document.getElementById('c-source').value.trim() || null,
+        address: document.getElementById('c-address').value.trim() || null
     };
 
     try {
@@ -3132,7 +3209,7 @@ function renderMaintenanceConsumables() {
             <tr>
                 <td>${item.name}</td>
                 <td>${fmt(item.price, '0 ₽')} / ${item.unit}</td>
-                <td><input type="number" value="${item.quantity}" onchange="updateMaintenanceConsumableQty(${item.id}, this.value)" style="width:70px; text-align:center; font-size: 12px; padding: 4px 6px;"></td>
+                <td><div class="qty-spinner"><button class="qty-spinner-btn" type="button" onclick="updateMaintenanceConsumableQty(${item.id}, Math.max(0.01,(parseFloat(document.querySelector('[data-maid=\'${item.id}\']').value)||1)-1))">−</button><input type="number" data-maid="${item.id}" value="${item.quantity}" min="0.01" step="0.01" onchange="updateMaintenanceConsumableQty(${item.id}, parseFloat(this.value)||1)"><button class="qty-spinner-btn" type="button" onclick="updateMaintenanceConsumableQty(${item.id},(parseFloat(document.querySelector('[data-maid=\'${item.id}\']').value)||1)+1)">+</button></div></td>
                 <td>${fmt(item.price * item.quantity)}</td>
                 <td><button class="btn-del" onclick="removeMaintenanceConsumable(${item.id})" title="Удалить">⊗</button></td>
             </tr>
@@ -3267,11 +3344,9 @@ async function openExpenseModal(expense = null) {
     const amountInput = document.getElementById('ex-amount');
     const dateInput = document.getElementById('ex-date');
     const categoryInput = document.getElementById('ex-category');
-    const categoryList = document.getElementById('expense-categories-list');
+    // category is now a fixed select — datalist no longer needed
     const saveBtn = overlay.querySelector('.btn-pri');
     const deleteBtn = document.getElementById('btn-expense-delete');
-    
-    categoryList.innerHTML = _expenseCategories.map(c => `<option value="${esc(c.name)}">`).join('');
 
     nameInput.classList.remove('err');
     amountInput.classList.remove('err');
@@ -3607,7 +3682,9 @@ function renderContacts(contacts=[]){
         <td>${c.id}</td>
         <td style="color:var(--ink);font-weight:400">${c.name}</td>
         <td style="color:var(--fern);font-size:11px">${c.phone||'—'}</td>
-        <td style="color:var(--ink3);font-size:11px">${c.source||'—'}</td>
+        <td class="col-hide-mobile" style="color:var(--ink3);font-size:11px">${c.source||'—'}</td>
+        <td class="col-hide-mobile" style="color:var(--ink3);font-size:11px">${c.address||'—'}</td>
+        <td class="col-hide-mobile" style="color:var(--ink3);font-size:11px">${c.last_deal_date ? new Date(c.last_deal_date).toLocaleDateString('ru-RU') : '—'}</td>
     </tr>`
   ).join('') : empty(4, 'Контактов не найдено');
 }
