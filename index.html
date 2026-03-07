@@ -15,7 +15,7 @@
   --ink:#1c211a;--ink2:#4a5247;--ink3:#8a9287;--ink4:#b8bdb6;
   --gold:#b07d2c;--red:#8b3a2a;--blue:#2a5280;
   --sh-s:0 1px 4px rgba(26,51,24,.07);--sh-m:0 4px 20px rgba(26,51,24,.10);--sh-l:0 12px 48px rgba(26,51,24,.14);
-  --r:10px;--hh:58px;--bnav:0px;
+  --r:10px;--hh:80px;--bnav:0px;
 }
 html[data-theme="dark"]{
   --bg:#0d120c;--surface:#111810;--surface2:#182016;
@@ -61,28 +61,36 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg);color
 
 /* ── HEADER ────────────────────────────────────────────────── */
 #app{display:none}
+:root{--hh:80px;--bnav:0px}
 header{
-  height:var(--hh);background:var(--forest);
-  display:flex;align-items:center;padding:0 16px 0 20px;
+  background:var(--forest);
+  display:flex;flex-direction:column;align-items:stretch;
+  padding:0;height:var(--hh);
   position:sticky;top:0;z-index:200;
   border-bottom:1px solid rgba(74,124,63,.2);
-  box-shadow:0 2px 24px rgba(0,0,0,.18)
+  box-shadow:0 2px 24px rgba(0,0,0,.18);
 }
-.logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;margin-right:20px;flex-shrink:0;white-space:nowrap}
+.header-row1{
+  display:flex;align-items:center;padding:0 16px 0 20px;height:36px;
+  border-bottom:1px solid rgba(74,124,63,.12);gap:10px;
+}
+.header-row2{
+  display:flex;align-items:center;padding:0 8px;height:44px;overflow:hidden;
+}
+.logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;flex-shrink:0;white-space:nowrap}
 .logo em{font-style:italic;color:var(--sage)}
 .logo sup{font-family:'DM Sans',sans-serif;font-size:7px;font-weight:500;letter-spacing:1px;color:rgba(122,181,102,.5);vertical-align:super;margin-left:3px}
-nav{display:flex;align-items:center;gap:0;flex:1;overflow-x:auto}
-nav::-webkit-scrollbar{display:none}
+nav{display:flex;align-items:center;gap:0;flex:1;flex-wrap:wrap;overflow:hidden;height:44px;align-content:center}
 nav button{
-  background:none;border:none;color:rgba(255,255,255,.35);
-  font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;
-  padding:8px 13px;cursor:pointer;transition:color .2s;white-space:nowrap;border-radius:4px;flex-shrink:0;position:relative
+  background:none;border:none;color:rgba(255,255,255,.38);
+  font-family:'DM Sans',sans-serif;font-size:9px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;
+  padding:5px 9px;cursor:pointer;transition:color .2s;white-space:nowrap;border-radius:4px;flex-shrink:0;position:relative
 }
-nav button::after{content:'';position:absolute;bottom:2px;left:50%;right:50%;height:1px;background:var(--sage);transition:left .25s ease,right .25s ease}
-nav button:hover{color:rgba(255,255,255,.65)}
+nav button::after{content:'';position:absolute;bottom:1px;left:50%;right:50%;height:1px;background:var(--sage);transition:left .25s,right .25s}
+nav button:hover{color:rgba(255,255,255,.7)}
 nav button.active{color:var(--sage)}
-nav button.active::after{left:13px;right:13px}
-.header-end{display:flex;align-items:center;gap:6px;margin-left:12px;flex-shrink:0}
+nav button.active::after{left:9px;right:9px}
+.header-end{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto}
 #year-selector-container{display:flex;align-items:center;gap:5px}
 #year-selector{
   background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);
@@ -93,53 +101,82 @@ nav button.active::after{left:13px;right:13px}
 #year-selector:focus{border-color:rgba(122,181,102,.6)}
 #year-selector option{background:#1a3318}
 .hbtn{
-  width:30px;height:30px;border-radius:6px;
+  width:28px;height:28px;border-radius:6px;
   border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
   color:rgba(255,255,255,.4);cursor:pointer;font-size:13px;
   display:inline-flex;align-items:center;justify-content:center;transition:all .2s
 }
 .hbtn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.18)}
 
-/* ── MOBILE BOTTOM NAV ─────────────────────────────────────── */
+/* ── MOBILE ──────────────────────────────────────────────────── */
 #mobile-nav{display:none}
+#mobile-menu-btn{display:none}
+#mobile-nav-overlay{display:none;position:fixed;inset:0;z-index:390;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .25s}
+#mobile-nav-overlay.open{display:block;opacity:1;pointer-events:auto}
+
 @media(max-width:767px){
-  :root{--bnav:62px}
-  #mobile-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:300;
-    background:var(--forest);border-top:1px solid rgba(74,124,63,.25);
-    height:var(--bnav);
-    box-shadow:0 -4px 20px rgba(0,0,0,.2);
-    overflow-x:scroll;overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    /* NO touch-action here — let buttons handle their own taps */
-  }
-  #mobile-nav::-webkit-scrollbar{display:none}
-  #mobile-nav button{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:none;border:none;color:rgba(255,255,255,.38);
-    font-family:'DM Sans',sans-serif;font-size:8px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;
-    padding:0 10px;cursor:pointer;flex:0 0 auto;gap:3px;
-    min-width:58px;height:100%;
-    /* Critical: removes 300ms delay AND allows taps even inside scrollable parent */
-    touch-action:manipulation;
-    -webkit-tap-highlight-color:transparent;
-    transition:color .15s;position:relative;
-    user-select:none;-webkit-user-select:none;
-  }
-  #mobile-nav button .mnav-icon{font-size:17px;line-height:1}
-  #mobile-nav button.active{color:var(--sage)}
-  #mobile-nav button::before{
-    content:'';position:absolute;top:0;left:20%;right:20%;height:2px;
-    background:var(--sage);border-radius:0 0 3px 3px;
-    transform:scaleX(0);transition:transform .2s
-  }
-  #mobile-nav button.active::before{transform:scaleX(1)}
-  /* Hide desktop nav on mobile */
+  :root{--hh:52px;--bnav:0px}
+  header{flex-direction:row;align-items:center;height:var(--hh);padding:0 12px}
+  .header-row1,.header-row2{display:contents}
   header nav{display:none}
   #year-selector-container{display:none}
-  .logo{margin-right:auto}
-  body{padding-bottom:var(--bnav)}
+  #user-badge{display:none!important}
+  .logo{margin-right:auto;font-size:17px}
+
+  #mobile-menu-btn{
+    display:flex!important;
+    width:38px;height:38px;border-radius:9px;
+    border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);
+    color:rgba(255,255,255,.75);cursor:pointer;font-size:18px;
+    align-items:center;justify-content:center;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;flex-shrink:0;
+  }
+
+  #mobile-nav{
+    display:block;
+    position:fixed;bottom:0;left:0;right:0;z-index:400;
+    background:var(--forest);
+    border-top:1px solid rgba(74,124,63,.35);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -12px 40px rgba(0,0,0,.45);
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    padding:0 14px calc(20px + env(safe-area-inset-bottom));
+    max-height:80vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  }
+  #mobile-nav.open{transform:translateY(0)}
+  #mobile-nav-handle{width:40px;height:4px;background:rgba(255,255,255,.18);border-radius:2px;margin:14px auto 14px}
+  #mobile-nav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
+  #mobile-nav button{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    color:rgba(255,255,255,.5);
+    font-family:'DM Sans',sans-serif;font-size:9px;font-weight:500;
+    letter-spacing:.3px;text-transform:uppercase;
+    padding:14px 4px 12px;gap:7px;min-height:72px;width:100%;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    transition:background .12s,color .12s,border-color .12s,transform .1s;
+    user-select:none;-webkit-user-select:none;cursor:pointer;
+  }
+  #mobile-nav button .mnav-icon{font-size:24px;line-height:1}
+  #mobile-nav button.active{color:var(--sage);background:rgba(122,181,102,.14);border-color:rgba(122,181,102,.35)}
+  #mobile-nav button:active{transform:scale(.93);background:rgba(122,181,102,.22)}
+
+  body{padding-bottom:0}
+  .page{padding:20px 16px 40px}
+  .ph{margin-bottom:20px}
+  .ph-title{font-size:28px}
+
+  .tcard-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:100%;table-layout:auto}
+  #expenses-tbody td:first-child,#page-expenses thead th:first-child{display:none}
+  #tax-payments-tbody td:first-child,#page-taxes thead th:first-child{display:none}
+}
+@media(min-width:768px){
+  #mobile-menu-btn{display:none!important}
 }
 
 /* ── PAGES ─────────────────────────────────────────────────── */
@@ -801,47 +838,61 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 
 <div id="app">
 <header>
-  <a class="logo" href="#">Grass<em>CRM</em></a>
-  <nav id="main-nav">
-    <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
-    <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
-    <button data-page="tasks" onclick="showPage('tasks',this)">Задачи</button>
-    <button data-page="calendar" onclick="showPage('calendar',this);calInit()">Календарь</button>
-    <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)">Расходы</button>
-    <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)">Налог</button>
-    <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
-    <button data-page="services" onclick="showPage('services',this)">Прайс-лист</button>
-    <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
-    <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
-    <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
-    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
-    <button data-page="budget" data-role="admin" onclick="showPage('budget',this)">Бюджет</button>
-  </nav>
-  <div class="header-end">
-    <div id="year-selector-container">
-      <select id="year-selector"></select>
-      <button class="hbtn" id="year-refresh" title="Обновить">↺</button>
+  <!-- Строка 1: лого + user + controls -->
+  <div class="header-row1">
+    <a class="logo" href="#">Grass<em>CRM</em></a>
+    <div class="header-end">
+      <div id="year-selector-container">
+        <select id="year-selector"></select>
+        <button class="hbtn" id="year-refresh" title="Обновить">↺</button>
+      </div>
+      <button class="hbtn" id="theme-toggle" onclick="toggleTheme()" title="Тема">◑</button>
+      <button class="hbtn" id="service-btn" onclick="showPage('service',this)" title="Настройки">⚙</button>
+      <!-- Hamburger — только на мобиле -->
+      <button id="mobile-menu-btn" onclick="mobileNavOpen()" title="Меню">☰</button>
     </div>
-    <button class="hbtn" id="theme-toggle" onclick="toggleTheme()" title="Тема">◑</button>
-    <button class="hbtn" id="service-btn" onclick="showPage('service',this)" title="Настройки">⚙</button>
+  </div>
+  <!-- Строка 2: навигация (только десктоп) -->
+  <div class="header-row2">
+    <nav id="main-nav">
+      <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
+      <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
+      <button data-page="tasks" onclick="showPage('tasks',this)">Задачи</button>
+      <button data-page="calendar" onclick="showPage('calendar',this);calInit()">Календарь</button>
+      <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)">Расходы</button>
+      <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)">Налог</button>
+      <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
+      <button data-page="services" onclick="showPage('services',this)">Прайс-лист</button>
+      <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
+      <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
+      <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
+      <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
+      <button data-page="budget" data-role="admin" onclick="showPage('budget',this)">Бюджет</button>
+    </nav>
   </div>
 </header>
 
-<!-- MOBILE BOTTOM NAV -->
+<!-- Оверлей для мобильного меню -->
+<div id="mobile-nav-overlay" onclick="mobileNavClose()"></div>
+
+<!-- МОБИЛЬНОЕ МЕНЮ — drawer снизу -->
 <div id="mobile-nav">
-  <button class="active" data-page="dash" onclick="showPage('dash',this)"><span class="mnav-icon">📊</span>Дашборд</button>
-  <button data-page="kanban" onclick="showPage('kanban',this)"><span class="mnav-icon">🗂</span>Сделки</button>
-  <button data-page="tasks" onclick="showPage('tasks',this)"><span class="mnav-icon">✅</span>Задачи</button>
-  <button data-page="calendar" onclick="showPage('calendar',this);calInit()"><span class="mnav-icon">📅</span>Календарь</button>
-  <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)"><span class="mnav-icon">💸</span>Расходы</button>
-  <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)"><span class="mnav-icon">🏛️</span>Налог</button>
-  <button data-page="equipment" onclick="showPage('equipment',this)"><span class="mnav-icon">🔧</span>Техника</button>
-  <button data-page="services" onclick="showPage('services',this)"><span class="mnav-icon">📋</span>Прайс</button>
-  <button data-page="stock" data-role="admin" onclick="showPage('stock',this)"><span class="mnav-icon">📦</span>Склад</button>
-  <button data-page="contacts" onclick="showPage('contacts',this)"><span class="mnav-icon">👥</span>Контакты</button>
-  <button data-page="files" onclick="showPage('files',this);loadFilesPage()"><span class="mnav-icon">📎</span>Файлы</button>
-  <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)"><span class="mnav-icon">📈</span>Аналитика</button>
-  <button data-page="budget" data-role="admin" onclick="showPage('budget',this)"><span class="mnav-icon">💼</span>Бюджет</button>
+  <div id="mobile-nav-handle"></div>
+  <div id="mobile-nav-grid">
+    <button class="active" data-page="dash" onclick="showPage('dash',this);mobileNavClose()"><span class="mnav-icon">📊</span>Дашборд</button>
+    <button data-page="kanban" onclick="showPage('kanban',this);mobileNavClose()"><span class="mnav-icon">🗂</span>Сделки</button>
+    <button data-page="tasks" onclick="showPage('tasks',this);mobileNavClose()"><span class="mnav-icon">✅</span>Задачи</button>
+    <button data-page="calendar" onclick="showPage('calendar',this);calInit();mobileNavClose()"><span class="mnav-icon">📅</span>Календарь</button>
+    <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this);mobileNavClose()"><span class="mnav-icon">💸</span>Расходы</button>
+    <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this);mobileNavClose()"><span class="mnav-icon">🏛️</span>Налог</button>
+    <button data-page="equipment" onclick="showPage('equipment',this);mobileNavClose()"><span class="mnav-icon">🔧</span>Техника</button>
+    <button data-page="services" onclick="showPage('services',this);mobileNavClose()"><span class="mnav-icon">📋</span>Прайс</button>
+    <button data-page="stock" data-role="admin" onclick="showPage('stock',this);mobileNavClose()"><span class="mnav-icon">📦</span>Склад</button>
+    <button data-page="contacts" onclick="showPage('contacts',this);mobileNavClose()"><span class="mnav-icon">👥</span>Контакты</button>
+    <button data-page="files" onclick="showPage('files',this);loadFilesPage();mobileNavClose()"><span class="mnav-icon">📎</span>Файлы</button>
+    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this);mobileNavClose()"><span class="mnav-icon">📈</span>Аналитика</button>
+    <button data-page="budget" data-role="admin" onclick="showPage('budget',this);mobileNavClose()"><span class="mnav-icon">💼</span>Бюджет</button>
+  </div>
 </div>
 
 <div class="page active" id="page-dash">
@@ -3855,17 +3906,27 @@ async function checkAuth(){
 function showPage(id,btn){
   if(id==='service'){setTimeout(svcLoad,50);setTimeout(svcLoadLogs,100);}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  // clear desktop nav buttons
   document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
-  // clear mobile nav buttons
   document.querySelectorAll('#mobile-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  // activate by data-page (mobile) and onclick match (desktop)
   const mBtn=document.querySelector('#mobile-nav button[data-page="'+id+'"]');
   if(mBtn)mBtn.classList.add('active');
   document.querySelectorAll('#main-nav button[onclick*="\''+id+'\'"]').forEach(b=>b.classList.add('active'));
 }
 function syncMobileNav(){}
+
+function mobileNavOpen(){
+  document.getElementById('mobile-nav').classList.add('open');
+  const ov=document.getElementById('mobile-nav-overlay');
+  ov.style.display='block';
+  requestAnimationFrame(()=>ov.classList.add('open'));
+}
+function mobileNavClose(){
+  document.getElementById('mobile-nav').classList.remove('open');
+  const ov=document.getElementById('mobile-nav-overlay');
+  ov.classList.remove('open');
+  setTimeout(()=>{if(!ov.classList.contains('open'))ov.style.display='none';},280);
+}
 
 function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
