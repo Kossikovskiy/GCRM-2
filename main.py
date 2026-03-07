@@ -1303,6 +1303,14 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
     active_deals = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
     cache_keys = list(_cache._data.keys())
 
+    # Дата последнего бэкапа
+    import glob as _glob
+    backup_files = sorted(_glob.glob("/var/www/crm/GCRM-2/backups/*.sql.gz"))
+    last_backup = None
+    if backup_files:
+        mtime = os.path.getmtime(backup_files[-1])
+        last_backup = datetime.fromtimestamp(mtime).strftime("%d.%m.%Y %H:%M")
+
     return {
         "db": {
             "deals": db.query(Deal).count(),
@@ -1310,6 +1318,7 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
             "active_tasks": active_tasks,
             "overdue_tasks": overdue,
             "active_deals": active_deals,
+            "last_backup": last_backup,
         },
         "cache": {"keys": cache_keys, "count": len(cache_keys), "ttl": _cache._ttl},
         "system": system_payload,
@@ -1330,40 +1339,39 @@ async def service_send_report(db: DBSession = Depends(get_db), user: dict = Depe
     if not token or not chat:
         raise HTTPException(400, "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID не заданы в .env")
     today = datetime.utcnow().date()
-    active_deals   = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
-    active_tasks   = db.query(Task).filter(Task.is_done == False).count()
-    overdue_tasks  = db.query(Task).filter(Task.is_done == False, Task.due_date < today).count()
-    today_tasks    = db.query(Task).filter(Task.is_done == False, Task.due_date == today).count()
-    won_stage_ids  = {s.id for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()}
-    pipeline_total = db.query(func.sum(Deal.total)).join(Stage).filter(Stage.is_final == False).scalar() or 0
-    revenue_year   = db.query(func.sum(Deal.total)).filter(
+    active_deals  = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
+    active_tasks  = db.query(Task).filter(Task.is_done == False).count()
+    overdue_tasks = db.query(Task).filter(Task.is_done == False, Task.due_date < today).count()
+    today_tasks   = db.query(Task).filter(Task.is_done == False, Task.due_date == today).count()
+    won_stages    = [s for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()]
+    won_stage_ids = {s.id for s in won_stages}
+    # revenue по всем выигранным сделкам за текущий год (closed_at может не ставиться)
+    revenue_total = db.query(func.sum(Deal.total)).filter(
         Deal.stage_id.in_(won_stage_ids),
         extract("year", func.coalesce(Deal.closed_at, Deal.created_at)) == today.year
     ).scalar() or 0
-
+    pipeline_total = db.query(func.sum(Deal.total)).join(Stage).filter(Stage.is_final == False).scalar() or 0
     def fmt(n): return f"{int(n):,}".replace(",", " ")
-
     lines = [
-        f"<b>GrassCRM — отчёт за {today.strftime('%d.%m.%Y')}</b>",
+        f"GrassCRM — отчёт за {today.strftime('%d.%m.%Y')}",
         "",
-        f"Активных сделок: <b>{active_deals}</b>",
-        f"Воронка (сумма): <b>{fmt(pipeline_total)} руб.</b>",
-        f"Выручка за {today.year} г.: <b>{fmt(revenue_year)} руб.</b>",
-        f"Открытых задач: <b>{active_tasks}</b>",
+        f"Активных сделок: {active_deals}",
+        f"Воронка (сумма): {fmt(pipeline_total)} руб.",
+        f"Выручка за {today.year} г.: {fmt(revenue_total)} руб.",
+        f"Открытых задач: {active_tasks}",
     ]
     if overdue_tasks:
-        lines.append(f"Просрочено задач: <b>{overdue_tasks}</b>")
+        lines.append(f"Просрочено задач: {overdue_tasks}")
     if today_tasks:
-        lines.append(f"На сегодня: <b>{today_tasks}</b>")
+        lines.append(f"На сегодня: {today_tasks}")
     text = "\n".join(lines)
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat, "text": text, "parse_mode": "HTML"}
+            json={"chat_id": chat, "text": text}
         )
         if not r.is_success:
-            detail = r.text[:200]
-            raise HTTPException(500, f"Telegram вернул ошибку {r.status_code}: {detail}")
+            raise HTTPException(500, f"Telegram ошибка {r.status_code}: {r.text[:200]}")
     return {"ok": True, "message": "Отчёт отправлен в Telegram"}
 
 @app.post("/api/service/db/check")
