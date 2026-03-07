@@ -76,16 +76,16 @@ header{
   border-bottom:1px solid rgba(74,124,63,.12);gap:10px;
 }
 .header-row2{
-  display:flex;align-items:center;padding:0 8px;height:44px;overflow:hidden;
+  display:flex;align-items:center;padding:0 8px;height:44px;overflow:visible;
 }
 .logo{font-family:'Playfair Display',serif;font-size:19px;font-weight:500;color:#fff;text-decoration:none;letter-spacing:-.2px;flex-shrink:0;white-space:nowrap}
 .logo em{font-style:italic;color:var(--sage)}
 .logo sup{font-family:'DM Sans',sans-serif;font-size:7px;font-weight:500;letter-spacing:1px;color:rgba(122,181,102,.5);vertical-align:super;margin-left:3px}
-nav{display:flex;align-items:center;gap:0;flex:1;flex-wrap:wrap;overflow:hidden;height:44px;align-content:center}
+nav{display:flex;align-items:center;gap:0;flex:1;flex-wrap:nowrap;height:44px;align-content:center;justify-content:space-between}
 nav button{
-  background:none;border:none;color:rgba(255,255,255,.38);
-  font-family:'DM Sans',sans-serif;font-size:9px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;
-  padding:5px 9px;cursor:pointer;transition:color .2s;white-space:nowrap;border-radius:4px;flex-shrink:0;position:relative
+  background:none;border:none;color:rgba(255,255,255,.4);
+  font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:500;letter-spacing:.4px;text-transform:uppercase;
+  padding:5px 7px;cursor:pointer;transition:color .2s;white-space:nowrap;border-radius:4px;flex:1;text-align:center;position:relative
 }
 nav button::after{content:'';position:absolute;bottom:1px;left:50%;right:50%;height:1px;background:var(--sage);transition:left .25s,right .25s}
 nav button:hover{color:rgba(255,255,255,.7)}
@@ -311,7 +311,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* ── MODAL ─────────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-#maintenance-modal{z-index:550}.item-selector-modal{z-index:620}
+#maintenance-modal{z-index:550}.item-selector-modal{z-index:700}
 .modal{
   background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:32px;
@@ -371,14 +371,14 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* ── CONTACT DEAL CARDS ─────────────────────────────────────── */
 /* ── CONTACT CARD ──────────────────────────────────────────── */
 /* Overlay: выезжает справа, а не снизу */
-#contact-overlay{align-items:stretch;justify-content:flex-end}
+#contact-overlay{align-items:stretch;justify-content:center}
 #contact-overlay .modal{
-  max-width:860px;width:100%;border-radius:16px 0 0 16px;
-  padding:0;max-height:100vh;height:100%;
+  max-width:1100px;width:calc(100% - 40px);border-radius:16px;
+  padding:0;max-height:96vh;height:96vh;
   display:flex;flex-direction:column;overflow:hidden;
-  transform:translateX(40px) scale(1);
+  transform:translateY(20px) scale(.98);
 }
-#contact-overlay.open .modal{transform:translateX(0) scale(1)}
+#contact-overlay.open .modal{transform:translateY(0) scale(1)}
 /* Двухколоночное тело */
 .ccard-cols{
   flex:1;display:grid;
@@ -531,6 +531,25 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   .ccard-body{padding:18px 18px 28px}
   .ccard-kpi-val{font-size:18px}
 }
+
+
+
+/* ── SETTINGS USERS ─────────────────────────────────────────── */
+.svc-user-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);margin-bottom:8px;background:var(--bg)}
+.svc-user-avatar{width:34px;height:34px;border-radius:50%;background:rgba(122,181,102,.2);border:1px solid rgba(122,181,102,.3);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--sage);flex-shrink:0}
+.svc-user-info{flex:1;min-width:0}
+.svc-user-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc-user-email{font-size:10px;color:var(--ink4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc-user-role{font-size:9px;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border-radius:4px;font-weight:600;flex-shrink:0}
+.svc-user-role.admin{background:rgba(122,181,102,.15);color:var(--fern);border:1px solid rgba(122,181,102,.3)}
+.svc-user-role.user{background:var(--surface2);color:var(--ink3);border:1px solid var(--border2)}
+
+/* ── LOSS REASONS ───────────────────────────────────────────── */
+.loss-reason-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.loss-reason-label{font-size:12px;color:var(--ink2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loss-reason-track{flex:2;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.loss-reason-fill{height:100%;border-radius:4px;background:#ef4444;transition:width .5s cubic-bezier(.34,1.1,.64,1)}
+.loss-reason-count{font-size:11px;color:var(--ink3);width:24px;text-align:right;flex-shrink:0}
 
 /* ── ANALYTICS ───────────────────────────────────────────────── */
 .an-2col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
@@ -918,16 +937,15 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
       <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
       <button data-page="tasks" onclick="showPage('tasks',this)">Задачи</button>
+      <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
       <button data-page="calendar" onclick="showPage('calendar',this);calInit()">Календарь</button>
       <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)">Расходы</button>
       <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)">Налог</button>
-      <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
-      <button data-page="services" onclick="showPage('services',this)">Прайс-лист</button>
-      <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
-      <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
-      <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
-      <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
       <button data-page="budget" data-role="admin" onclick="showPage('budget',this)">Бюджет</button>
+      <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
+      <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
+      <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
+      <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
     </nav>
   </div>
 </header>
@@ -942,16 +960,15 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     <button class="active" data-page="dash" onclick="showPage('dash',this);mobileNavClose()"><span class="mnav-icon">📊</span>Дашборд</button>
     <button data-page="kanban" onclick="showPage('kanban',this);mobileNavClose()"><span class="mnav-icon">🗂</span>Сделки</button>
     <button data-page="tasks" onclick="showPage('tasks',this);mobileNavClose()"><span class="mnav-icon">✅</span>Задачи</button>
+    <button data-page="contacts" onclick="showPage('contacts',this);mobileNavClose()"><span class="mnav-icon">👥</span>Контакты</button>
     <button data-page="calendar" onclick="showPage('calendar',this);calInit();mobileNavClose()"><span class="mnav-icon">📅</span>Календарь</button>
     <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this);mobileNavClose()"><span class="mnav-icon">💸</span>Расходы</button>
     <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this);mobileNavClose()"><span class="mnav-icon">🏛️</span>Налог</button>
-    <button data-page="equipment" onclick="showPage('equipment',this);mobileNavClose()"><span class="mnav-icon">🔧</span>Техника</button>
-    <button data-page="services" onclick="showPage('services',this);mobileNavClose()"><span class="mnav-icon">📋</span>Прайс</button>
-    <button data-page="stock" data-role="admin" onclick="showPage('stock',this);mobileNavClose()"><span class="mnav-icon">📦</span>Склад</button>
-    <button data-page="contacts" onclick="showPage('contacts',this);mobileNavClose()"><span class="mnav-icon">👥</span>Контакты</button>
-    <button data-page="files" onclick="showPage('files',this);loadFilesPage();mobileNavClose()"><span class="mnav-icon">📎</span>Файлы</button>
-    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this);mobileNavClose()"><span class="mnav-icon">📈</span>Аналитика</button>
     <button data-page="budget" data-role="admin" onclick="showPage('budget',this);mobileNavClose()"><span class="mnav-icon">💼</span>Бюджет</button>
+    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this);mobileNavClose()"><span class="mnav-icon">📈</span>Аналитика</button>
+    <button data-page="equipment" onclick="showPage('equipment',this);mobileNavClose()"><span class="mnav-icon">🔧</span>Техника</button>
+    <button data-page="stock" data-role="admin" onclick="showPage('stock',this);mobileNavClose()"><span class="mnav-icon">📦</span>Склад</button>
+    <button data-page="files" onclick="showPage('files',this);loadFilesPage();mobileNavClose()"><span class="mnav-icon">📎</span>Файлы</button>
   </div>
 </div>
 
@@ -1320,6 +1337,26 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <div class="repeat-ring-wrap" id="an-repeat-chart"></div>
     </div>
   </div>
+
+  <!-- Row 4: Loss reasons -->
+  <div class="an-2col" style="margin-top:0">
+    <div class="tcard">
+      <div class="tcard-head">
+        <span class="tcard-title">Причины провала сделок</span>
+        <span class="tcard-meta" id="an-loss-count"></span>
+      </div>
+      <div id="an-loss-reasons" style="padding:4px 0">
+        <div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет данных</div>
+      </div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-head"><span class="tcard-title">Источники клиентов</span><span class="tcard-meta" id="an-sources-meta"></span></div>
+      <div id="an-sources" style="padding:4px 0">
+        <div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет данных</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- BUDGET PAGE -->
@@ -1667,14 +1704,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
   </div>
  </div>
   
-<div class="overlay" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
-    <div class="modal" style="max-width: 600px;">
-        <div class="modal-content">
-            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
-            <div class="item-selector-results" id="item-selector-results"></div>
-        </div>
-    </div>
-</div>
+
 
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeContactModal()">
   <div class="modal">
@@ -1953,6 +1983,15 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     </div>
 </div>
 
+<div class="overlay" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-content">
+            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
+            <div class="item-selector-results" id="item-selector-results"></div>
+        </div>
+    </div>
+</div>
+
 <div class="overlay" id="consumable-modal" onclick="if(event.target===this)closeConsumableModal()">
     <div class="modal">
         <div class="modal-title" id="consumable-modal-title">Новый <em>расходник</em></div>
@@ -2078,6 +2117,18 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <hr class="svc-divider">
       <button class="svc-btn danger" onclick="svcClearCache()"><span class="svc-btn-icon">🗑</span> Очистить кэш</button>
       <div class="svc-result" id="svc-cache-result"></div>
+    </div>
+
+
+    <!-- Пользователи -->
+    <div class="svc-card" id="svc-users-card">
+      <div class="svc-card-title" style="justify-content:space-between">
+        <div><span>👥</span> Пользователи системы</div>
+        <button class="svc-btn" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcLoadUsers()">↺ Обновить</button>
+      </div>
+      <div id="svc-users-list" style="margin-top:10px">
+        <div style="font-size:12px;color:var(--ink4)">Загрузка…</div>
+      </div>
     </div>
 
     <!-- Telegram -->
@@ -4035,7 +4086,7 @@ async function checkAuth(){
 }
 
 function showPage(id,btn){
-  if(id==='service'){setTimeout(svcLoad,50);setTimeout(svcLoadLogs,100);}
+  if(id==='service'){setTimeout(svcLoad,50);setTimeout(svcLoadLogs,100);setTimeout(svcLoadUsers,150);}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('#mobile-nav button').forEach(b=>b.classList.remove('active'));
@@ -4275,11 +4326,77 @@ function renderAnalytics(d, expenses) {
           <div style="font-size:10px;color:var(--ink3)">${rep.new_count} сделок · ${fmt(rep.new_revenue)}</div></div>
       </div>
     </div>`;
+
+  // ── ПРИЧИНЫ ПРОВАЛА ───────────────────────────────────────────────────────
+  const lossReasons = d.loss_reasons || [];
+  const lossEl = document.getElementById('an-loss-reasons');
+  const lossCntEl = document.getElementById('an-loss-count');
+  if (lossCntEl) lossCntEl.textContent = lossReasons.length ? `${lossReasons.reduce((s,r)=>s+r.count,0)} провалов` : '';
+  if (lossEl) {
+    if (!lossReasons.length) {
+      lossEl.innerHTML = '<div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет провалённых сделок 🎉</div>';
+    } else {
+      const maxL = lossReasons[0].count;
+      lossEl.innerHTML = lossReasons.map(r => `
+        <div class="loss-reason-bar">
+          <div class="loss-reason-label" title="${esc(r.reason)}">${esc(r.reason)}</div>
+          <div class="loss-reason-track"><div class="loss-reason-fill" style="width:${Math.round(r.count/maxL*100)}%"></div></div>
+          <div class="loss-reason-count">${r.count}</div>
+        </div>`).join('');
+    }
+  }
+
+  // ── ИСТОЧНИКИ КЛИЕНТОВ (из контактов по сделкам) ─────────────────────────
+  // Build sources from funnel won deals — we use contact source if available via deals
+  // We'll count sources from funnel data as a best-effort; full source data requires separate API
+  // For now show placeholder — sources widget populated separately if data available
+  const sourcesEl = document.getElementById('an-sources');
+  const sourcesMeta = document.getElementById('an-sources-meta');
+  if (sourcesEl && d.sources_breakdown) {
+    const srcs = d.sources_breakdown;
+    if (sourcesMeta) sourcesMeta.textContent = `${srcs.length} источников`;
+    const maxS = srcs[0]?.count || 1;
+    sourcesEl.innerHTML = srcs.map(s => `
+      <div class="loss-reason-bar">
+        <div class="loss-reason-label" title="${esc(s.source)}">${esc(s.source)}</div>
+        <div class="loss-reason-track"><div class="loss-reason-fill" style="width:${Math.round(s.count/maxS*100)}%;background:var(--sage)"></div></div>
+        <div class="loss-reason-count">${s.count}</div>
+      </div>`).join('');
+  } else if (sourcesEl) {
+    sourcesEl.innerHTML = '<div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет данных по источникам</div>';
+  }
 }
 
 
-// ════════════════════════════════════════════════════════════════════════
-// БЮДЖЕТ
+// ── SETTINGS: LOAD USERS ──────────────────────────────────────────────────
+async function svcLoadUsers() {
+  const el = document.getElementById('svc-users-list');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--ink4)">Загрузка…</div>';
+  try {
+    const users = await api('/users');
+    if (!users || !users.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--ink4)">Пользователи не найдены</div>';
+      return;
+    }
+    el.innerHTML = users.map(u => {
+      const initials = (u.name || u.username || '?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+      const role = (u.role||'user').toLowerCase();
+      return `<div class="svc-user-row">
+        <div class="svc-user-avatar">${initials}</div>
+        <div class="svc-user-info">
+          <div class="svc-user-name">${esc(u.name || u.username || '—')}</div>
+          <div class="svc-user-email">${esc(u.email || u.id || '')}</div>
+        </div>
+        <div class="svc-user-role ${role === 'admin' ? 'admin' : 'user'}">${role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--red)">Ошибка загрузки</div>';
+  }
+}
+
+
 // ════════════════════════════════════════════════════════════════════════
 let _budgetItems = [];
 let _currentBudgetId = null;

@@ -1071,6 +1071,15 @@ def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(require_
     repeat_rev = sum(d.total or 0 for d in repeat_won)
     new_rev    = sum(d.total or 0 for d in new_won)
 
+    # 6. Loss reasons breakdown
+    from collections import Counter
+    loss_reasons_raw = [d.loss_reason or "Не указана" for d in lost]
+    loss_reason_counts = Counter(loss_reasons_raw)
+    loss_reasons = sorted(
+        [{"reason": k, "count": v} for k, v in loss_reason_counts.items()],
+        key=lambda x: x["count"], reverse=True
+    )
+
     return {
         "total_deals":   len(deals),
         "won_deals":     len(won),
@@ -1083,6 +1092,7 @@ def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(require_
         "monthly":             monthly,
         "top_services":        top_services,
         "expense_by_category": expense_by_category,
+        "loss_reasons":        loss_reasons,
         "repeat": {
             "repeat_count":   len(repeat_won),
             "new_count":      len(new_won),
