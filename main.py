@@ -139,6 +139,9 @@ class DealCreate(BaseModel):
     tax_rate: Optional[float] = 4.0
     tax_included: Optional[bool] = True
     discount: Optional[float] = 0.0
+    work_date: Optional[str] = None
+    work_time: Optional[str] = None
+    address: Optional[str] = None
 
 class DealUpdate(BaseModel): 
     title:Optional[str]=None; 
@@ -150,6 +153,9 @@ class DealUpdate(BaseModel):
     tax_rate: Optional[float] = None
     tax_included: Optional[bool] = None
     discount: Optional[float] = None
+    work_date: Optional[str] = None
+    work_time: Optional[str] = None
+    address: Optional[str] = None
 
 class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
 class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
@@ -357,8 +363,18 @@ def create_deal(deal_data: DealCreate, db: DBSession = Depends(get_db), _=Depend
         total=round(final_total, 2),
         discount=discount_percent,
         tax_rate=tax_rate_percent,
-        tax_included=deal_data.tax_included
+        tax_included=deal_data.tax_included,
+        address=deal_data.address or None
     )
+    # Собираем дату+время выезда из отдельных строк
+    if deal_data.work_date:
+        try:
+            dt_str = deal_data.work_date
+            if deal_data.work_time:
+                dt_str += f"T{deal_data.work_time}"
+            new_deal.deal_date = datetime.fromisoformat(dt_str)
+        except Exception:
+            pass
     db.add(new_deal)
     db.commit()
     _cache.invalidate("deals", "years")
@@ -394,6 +410,8 @@ def get_deal_details(deal_id: int, db: DBSession = Depends(get_db), _=Depends(ge
         "discount": deal.discount,
         "tax_rate": deal.tax_rate,
         "tax_included": deal.tax_included,
+        "deal_date": deal.deal_date.isoformat() if deal.deal_date else None,
+        "address": deal.address or "",
     }
 
 @app.patch("/api/deals/{deal_id}")
@@ -445,6 +463,18 @@ def update_deal(deal_id: int, deal_data: DealUpdate, db: DBSession = Depends(get
     if "title" in update_data: deal.title = update_data["title"]
     if "stage_id" in update_data: deal.stage_id = update_data["stage_id"]
     if "manager" in update_data: deal.manager = update_data["manager"]
+    if "address" in update_data: deal.address = update_data["address"]
+    if "work_date" in update_data or "work_time" in update_data:
+        work_date = update_data.get("work_date") or (deal.deal_date.date().isoformat() if deal.deal_date else None)
+        work_time = update_data.get("work_time") or (deal.deal_date.strftime("%H:%M") if deal.deal_date else None)
+        if work_date:
+            try:
+                dt_str = work_date
+                if work_time:
+                    dt_str += f"T{work_time}"
+                deal.deal_date = datetime.fromisoformat(dt_str)
+            except Exception:
+                pass
 
     db.commit()
     _cache.invalidate("deals", "years")
