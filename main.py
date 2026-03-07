@@ -1303,6 +1303,14 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
     active_deals = db.query(Deal).join(Stage).filter(Stage.is_final == False).count()
     cache_keys = list(_cache._data.keys())
 
+    # Дата последнего бэкапа
+    import glob as _glob
+    backup_files = sorted(_glob.glob("/var/www/crm/GCRM-2/backups/*.sql.gz"))
+    last_backup = None
+    if backup_files:
+        mtime = os.path.getmtime(backup_files[-1])
+        last_backup = datetime.fromtimestamp(mtime).strftime("%d.%m.%Y %H:%M")
+
     return {
         "db": {
             "deals": db.query(Deal).count(),
@@ -1310,6 +1318,7 @@ def service_status(db: DBSession = Depends(get_db), user: dict = Depends(get_cur
             "active_tasks": active_tasks,
             "overdue_tasks": overdue,
             "active_deals": active_deals,
+            "last_backup": last_backup,
         },
         "cache": {"keys": cache_keys, "count": len(cache_keys), "ttl": _cache._ttl},
         "system": system_payload,
@@ -1334,19 +1343,23 @@ async def service_send_report(db: DBSession = Depends(get_db), user: dict = Depe
     active_tasks  = db.query(Task).filter(Task.is_done == False).count()
     overdue_tasks = db.query(Task).filter(Task.is_done == False, Task.due_date < today).count()
     today_tasks   = db.query(Task).filter(Task.is_done == False, Task.due_date == today).count()
-    won_stage_ids = {s.id for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()}
-    revenue_today = db.query(func.sum(Deal.total)).filter(
+    won_stages    = [s for s in db.query(Stage).all() if s.is_final and "успешно" in (s.name or "").lower()]
+    won_stage_ids = {s.id for s in won_stages}
+    # revenue по всем выигранным сделкам за текущий год (closed_at может не ставиться)
+    revenue_total = db.query(func.sum(Deal.total)).filter(
         Deal.stage_id.in_(won_stage_ids),
-        func.date(Deal.closed_at) == today
+        extract("year", func.coalesce(Deal.closed_at, Deal.created_at)) == today.year
     ).scalar() or 0
+    pipeline_total = db.query(func.sum(Deal.total)).join(Stage).filter(Stage.is_final == False).scalar() or 0
     lines = [
-        "<b>📊 Отчёт GrassCRM</b> (отправлен вручную)\n",
+        f"<b>📊 Отчёт GrassCRM</b>\n<i>{today.strftime('%d.%m.%Y')}</i>\n",
         f"🗂 Активных сделок: <b>{active_deals}</b>",
-        f"💰 Закрыто сегодня: <b>{revenue_today:,.0f} ₽</b>",
+        f"💼 В работе (сумма): <b>{pipeline_total:,.0f} ₽</b>",
+        f"✅ Выиграно за год: <b>{revenue_total:,.0f} ₽</b>",
         f"📋 Открытых задач: <b>{active_tasks}</b>",
     ]
     if overdue_tasks:
-        lines.append(f"⚠️ Просрочено: <b>{overdue_tasks}</b>")
+        lines.append(f"⚠️ Просрочено задач: <b>{overdue_tasks}</b>")
     if today_tasks:
         lines.append(f"📅 На сегодня: <b>{today_tasks}</b>")
     text = "\n".join(lines)

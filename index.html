@@ -174,7 +174,7 @@ nav button.active::after{left:13px;right:13px}
   width:3px;border-radius:0 2px 2px 0;background:var(--kpi-accent,var(--sage))
 }
 .kpi-icon{font-size:17px;margin-bottom:14px;display:block;opacity:.55}
-.kpi-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:7px;letter-spacing:-.5px}
+.kpi-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:500;color:var(--ink);line-height:1;margin-bottom:7px;letter-spacing:-.5px;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'lnum' 1,'tnum' 1}
 .kpi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--fern);font-weight:500;margin-bottom:6px}
 .kpi-sub{font-size:11px;color:var(--ink3);font-weight:400}
 
@@ -209,7 +209,7 @@ html[data-theme="dark"] .b-amber{background:#451a03;color:#fb923c}
 html[data-theme="dark"] .b-slate{background:#1e293b;color:#94a3b8}
 html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
 
-.money{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.money{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'lnum' 1,'tnum' 1}
 .m-neg{color:var(--red)}
 .m-pos{color:#16a34a}
 .cat-tag{font-size:10px;color:var(--fern);background:var(--leaf);padding:2px 8px;border-radius:20px;display:inline-block}
@@ -232,7 +232,7 @@ html[data-theme="dark"] .k-col.drag-over{background:var(--surface2);border-color
 .k-card.dragging{opacity:.35;cursor:grabbing;transform:scale(1.03) rotate(1deg);box-shadow:var(--sh-l)}
 .k-placeholder{border:2px dashed var(--sage);border-radius:8px;background:var(--leaf);min-height:72px;transition:min-height .15s}
 html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
-.k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.k-sum{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--c,var(--sage));line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'lnum' 1,'tnum' 1}
 .k-title{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;line-height:1.3}
 .k-client{font-size:11px;color:var(--fern);font-weight:400}
 .k-hr{height:1px;background:var(--border2);margin:8px 0}
@@ -1573,6 +1573,9 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       </div>
       <button class="svc-btn success" onclick="svcDbCheck()"><span class="svc-btn-icon">🔌</span> Проверить соединение</button>
       <div class="svc-result" id="svc-db-result"></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--ink4);display:flex;align-items:center;gap:6px">
+        <span>💾</span><span>Последний бэкап: <span id="svc-last-backup" style="color:var(--ink2);font-weight:500">—</span></span>
+      </div>
     </div>
 
     <!-- Кэш -->
@@ -1590,7 +1593,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
       <div style="margin-bottom:12px;font-size:12px;color:var(--ink3)">
         <span class="svc-status-dot" id="svc-tg-dot"></span><span id="svc-tg-status">проверка…</span>
       </div>
-      <button class="svc-btn success" onclick="svcSendReport()"><span class="svc-btn-icon">📊</span> Отправить отчёт сейчас</button>
+      <button class="svc-btn success" onclick="svcSendReport(this)"><span class="svc-btn-icon">📊</span> Отправить отчёт сейчас</button>
       <div class="svc-result" id="svc-tg-result"></div>
     </div>
 
@@ -3636,6 +3639,8 @@ async function svcLoad() {
     }
     // БД
     document.getElementById('svc-deals').textContent        = d.db.deals;
+    const lb = document.getElementById('svc-last-backup');
+    if (lb) lb.textContent = d.db.last_backup || 'нет данных';
     document.getElementById('svc-contacts').textContent     = d.db.contacts;
     document.getElementById('svc-tasks').textContent        = d.db.active_tasks;
     document.getElementById('svc-active-deals').textContent = d.db.active_deals;
@@ -3683,14 +3688,14 @@ async function svcClearCache() {
   } catch(e) { svcShowResult('svc-cache-result', false, e.message); }
 }
 
-async function svcSendReport() {
-  const btn = event.currentTarget;
-  btn.disabled = true;
+async function svcSendReport(btnEl) {
+  if (!btnEl) btnEl = document.querySelector('[onclick*="svcSendReport"]');
+  if (btnEl) btnEl.disabled = true;
   try {
     const d = await api('/service/bot/report', {method:'POST'});
     svcShowResult('svc-tg-result', true, d.message);
   } catch(e) { svcShowResult('svc-tg-result', false, e.message); }
-  finally { setTimeout(() => btn.disabled = false, 3000); }
+  finally { setTimeout(() => { if(btnEl) btnEl.disabled = false; }, 4000); }
 }
 
 async function svcLoadLogs() {
