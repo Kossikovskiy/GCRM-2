@@ -311,7 +311,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* ── MODAL ─────────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-#maintenance-modal{z-index:550}.item-selector-modal{z-index:700}
+#maintenance-modal{z-index:550}.item-selector-modal{z-index:900}
 .modal{
   background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:32px;
@@ -382,7 +382,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* Двухколоночное тело */
 .ccard-cols{
   flex:1;display:grid;
-  grid-template-columns:340px 1fr;
+  grid-template-columns:1fr 1fr;
   overflow:hidden;
   min-height:0;
 }
@@ -535,21 +535,18 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 
 
 /* ── SETTINGS USERS ─────────────────────────────────────────── */
-.svc-user-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);margin-bottom:8px;background:var(--bg)}
-.svc-user-avatar{width:34px;height:34px;border-radius:50%;background:rgba(122,181,102,.2);border:1px solid rgba(122,181,102,.3);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--sage);flex-shrink:0}
+.svc-user-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);margin-bottom:8px;background:var(--bg)}
+.svc-user-avatar-wrap{flex-shrink:0;width:38px;height:38px;position:relative}
+.svc-user-avatar{width:38px;height:38px;border-radius:50%;background:rgba(122,181,102,.2);border:1px solid rgba(122,181,102,.3);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--sage)}
+.svc-user-avatar-img{width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid rgba(122,181,102,.3);display:block}
 .svc-user-info{flex:1;min-width:0}
 .svc-user-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.svc-user-email{font-size:10px;color:var(--ink4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc-user-email{font-size:10px;color:var(--ink4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.svc-user-lastlogin{font-size:10px;color:var(--ink4)}
 .svc-user-role{font-size:9px;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border-radius:4px;font-weight:600;flex-shrink:0}
 .svc-user-role.admin{background:rgba(122,181,102,.15);color:var(--fern);border:1px solid rgba(122,181,102,.3)}
 .svc-user-role.user{background:var(--surface2);color:var(--ink3);border:1px solid var(--border2)}
 
-/* ── LOSS REASONS ───────────────────────────────────────────── */
-.loss-reason-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.loss-reason-label{font-size:12px;color:var(--ink2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.loss-reason-track{flex:2;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
-.loss-reason-fill{height:100%;border-radius:4px;background:#ef4444;transition:width .5s cubic-bezier(.34,1.1,.64,1)}
-.loss-reason-count{font-size:11px;color:var(--ink3);width:24px;text-align:right;flex-shrink:0}
 
 /* ── ANALYTICS ───────────────────────────────────────────────── */
 .an-2col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
@@ -926,7 +923,14 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
         <button class="hbtn" id="year-refresh" title="Обновить">↺</button>
       </div>
       <button class="hbtn" id="theme-toggle" onclick="toggleTheme()" title="Тема">◑</button>
-      <button class="hbtn" id="service-btn" onclick="showPage('service',this)" title="Настройки">⚙</button>
+      <div id="header-user-chip" style="display:flex;align-items:center;gap:7px;padding:3px 8px 3px 3px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);cursor:pointer" onclick="showPage('service',document.getElementById('service-btn'))" title="Настройки">
+        <div id="header-user-avatar-wrap" style="width:24px;height:24px;border-radius:50%;overflow:hidden;background:rgba(122,181,102,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <img id="header-user-avatar" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;border-radius:50%">
+          <span id="header-user-initials" style="font-size:10px;font-weight:700;color:var(--sage);font-family:'Playfair Display',serif"></span>
+        </div>
+        <span id="header-user-name" style="font-size:10px;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;letter-spacing:.3px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      </div>
+      <button class="hbtn" id="service-btn" onclick="showPage('service',this)" title="Настройки" style="display:none">⚙</button>
       <!-- Hamburger — только на мобиле -->
       <button id="mobile-menu-btn" onclick="mobileNavOpen()" title="Меню">☰</button>
     </div>
@@ -946,6 +950,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
       <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
       <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
+      <button data-page="services" onclick="showPage('services',this)">Прайс</button>
     </nav>
   </div>
 </header>
@@ -957,18 +962,19 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 <div id="mobile-nav">
   <div id="mobile-nav-handle"></div>
   <div id="mobile-nav-grid">
-    <button class="active" data-page="dash" onclick="showPage('dash',this);mobileNavClose()"><span class="mnav-icon">📊</span>Дашборд</button>
-    <button data-page="kanban" onclick="showPage('kanban',this);mobileNavClose()"><span class="mnav-icon">🗂</span>Сделки</button>
-    <button data-page="tasks" onclick="showPage('tasks',this);mobileNavClose()"><span class="mnav-icon">✅</span>Задачи</button>
-    <button data-page="contacts" onclick="showPage('contacts',this);mobileNavClose()"><span class="mnav-icon">👥</span>Контакты</button>
-    <button data-page="calendar" onclick="showPage('calendar',this);calInit();mobileNavClose()"><span class="mnav-icon">📅</span>Календарь</button>
-    <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this);mobileNavClose()"><span class="mnav-icon">💸</span>Расходы</button>
-    <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this);mobileNavClose()"><span class="mnav-icon">🏛️</span>Налог</button>
-    <button data-page="budget" data-role="admin" onclick="showPage('budget',this);mobileNavClose()"><span class="mnav-icon">💼</span>Бюджет</button>
-    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this);mobileNavClose()"><span class="mnav-icon">📈</span>Аналитика</button>
-    <button data-page="equipment" onclick="showPage('equipment',this);mobileNavClose()"><span class="mnav-icon">🔧</span>Техника</button>
-    <button data-page="stock" data-role="admin" onclick="showPage('stock',this);mobileNavClose()"><span class="mnav-icon">📦</span>Склад</button>
-    <button data-page="files" onclick="showPage('files',this);loadFilesPage();mobileNavClose()"><span class="mnav-icon">📎</span>Файлы</button>
+    <button class="active" data-page="dash" onclick="showPage('dash',this);mobileNavClose()">Дашборд</button>
+    <button data-page="kanban" onclick="showPage('kanban',this);mobileNavClose()">Сделки</button>
+    <button data-page="tasks" onclick="showPage('tasks',this);mobileNavClose()">Задачи</button>
+    <button data-page="contacts" onclick="showPage('contacts',this);mobileNavClose()">Контакты</button>
+    <button data-page="calendar" onclick="showPage('calendar',this);calInit();mobileNavClose()">Календарь</button>
+    <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this);mobileNavClose()">Расходы</button>
+    <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this);mobileNavClose()">Налог</button>
+    <button data-page="budget" data-role="admin" onclick="showPage('budget',this);mobileNavClose()">Бюджет</button>
+    <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this);mobileNavClose()">Аналитика</button>
+    <button data-page="equipment" onclick="showPage('equipment',this);mobileNavClose()">Техника</button>
+    <button data-page="stock" data-role="admin" onclick="showPage('stock',this);mobileNavClose()">Склад</button>
+    <button data-page="files" onclick="showPage('files',this);loadFilesPage();mobileNavClose()">Файлы</button>
+    <button data-page="services" onclick="showPage('services',this);mobileNavClose()">Прайс</button>
   </div>
 </div>
 
@@ -1081,7 +1087,6 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     <div class="page-grid">
         <div>
             <div class="kpi-card" style="--kpi-accent:#2a5280">
-                <span class="kpi-icon">🏛️</span>
                 <div class="kpi-val m-neg" id="tax-balance">—</div>
                 <div class="kpi-label">Налог к уплате</div>
                 <div class="kpi-sub" id="tax-sub">Начислено: —, уплачено: —</div>
@@ -1216,7 +1221,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <div class="fupload-zone" id="files-upload-zone" onclick="document.getElementById('files-input').click()"
            ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="filesZoneDrop(event)">
         <input type="file" id="files-input" multiple onchange="filesUpload(this.files)">
-        <div class="fupload-icon">📎</div>
+        <div class="fupload-icon" style="opacity:.35;font-size:22px">↑</div>
         <div class="fupload-label"><strong>Нажмите</strong> или перетащите файлы сюда</div>
         <div class="fupload-hint">PDF, Word, Excel, картинки, ZIP — до 20 МБ</div>
         <div class="fupload-progress" id="files-progress">
@@ -1275,31 +1280,26 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
   <!-- Row 1: 5 KPI -->
   <div class="kpi-strip" id="an-kpi-strip" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
     <div class="kpi-card" style="--kpi-accent:#16a34a">
-      <span class="kpi-icon">🏆</span>
       <div class="kpi-val" id="an-won">—</div>
       <div class="kpi-label">Успешных сделок</div>
       <div class="kpi-sub" id="an-total-deals">из — всего</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#2563eb">
-      <span class="kpi-icon">🎯</span>
       <div class="kpi-val" id="an-winrate">—%</div>
       <div class="kpi-label">Конверсия</div>
       <div class="kpi-sub" id="an-lost">провалено — сделок</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#7c3aed">
-      <span class="kpi-icon">💰</span>
       <div class="kpi-val" id="an-revenue">—</div>
       <div class="kpi-label">Выручка</div>
       <div class="kpi-sub" id="an-expenses-sub">расходы: —</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#b07d2c">
-      <span class="kpi-icon">📊</span>
       <div class="kpi-val" id="an-avg">—</div>
       <div class="kpi-label">Средний чек</div>
       <div class="kpi-sub">по успешным сделкам</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#0e7490">
-      <span class="kpi-icon">🔁</span>
       <div class="kpi-val" id="an-repeat-rate">—%</div>
       <div class="kpi-label">Повторные клиенты</div>
       <div class="kpi-sub" id="an-repeat-sub">— из — сделок</div>
@@ -1372,19 +1372,16 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
   <!-- Budget summary cards -->
   <div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
     <div class="kpi-card" style="--kpi-accent:#16a34a">
-      <span class="kpi-icon">📥</span>
       <div class="kpi-val" id="bud-plan-rev">—</div>
       <div class="kpi-label">Плановая выручка</div>
       <div class="kpi-sub" id="bud-fact-rev">факт: —</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#dc2626">
-      <span class="kpi-icon">📤</span>
       <div class="kpi-val" id="bud-plan-exp">—</div>
       <div class="kpi-label">Плановые расходы</div>
       <div class="kpi-sub" id="bud-fact-exp">факт: —</div>
     </div>
     <div class="kpi-card" style="--kpi-accent:#7c3aed">
-      <span class="kpi-icon">⚖️</span>
       <div class="kpi-val" id="bud-plan-profit">—</div>
       <div class="kpi-label">Плановая прибыль</div>
       <div class="kpi-sub" id="bud-exec">исполнение —%</div>
@@ -1695,7 +1692,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       <div class="fupload-zone" style="padding:14px;margin-bottom:10px" onclick="document.getElementById('deal-file-input').click()"
            ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="dealFileDrop(event)">
         <input type="file" id="deal-file-input" multiple onchange="dealUploadFiles(this.files)">
-        <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
+        <div style="font-size:11px;color:var(--ink3)">Нажмите или перетащите файл</div>
       </div>
       <div class="flist" id="deal-files-list">
         <div class="fempty">Загрузка…</div>
@@ -1717,7 +1714,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
         <!-- phone / source вставляются JS-ом -->
       </div>
       <div class="ccard-header-actions">
-        <button class="ccard-btn-edit" onclick="ccardToggleEdit()">✏ Редактировать</button>
+        <button class="ccard-btn-edit" onclick="ccardToggleEdit()">Редактировать</button>
         <button class="ccard-btn-new" onclick="ccardNewDeal()">＋ Новая сделка</button>
       </div>
     </div>
@@ -1819,7 +1816,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
           <div class="fupload-zone" style="padding:14px" onclick="document.getElementById('ccard-file-input').click()"
                ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="ccardFileDrop(event)">
             <input type="file" id="ccard-file-input" multiple onchange="ccardUploadFiles(this.files)">
-            <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
+            <div style="font-size:11px;color:var(--ink3)">Нажмите или перетащите файл</div>
           </div>
           <div class="flist" id="ccard-files-list" style="margin-top:10px">
             <div class="fempty">Загрузка…</div>
@@ -1983,14 +1980,6 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     </div>
 </div>
 
-<div class="overlay" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
-    <div class="modal" style="max-width: 600px;">
-        <div class="modal-content">
-            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
-            <div class="item-selector-results" id="item-selector-results"></div>
-        </div>
-    </div>
-</div>
 
 <div class="overlay" id="consumable-modal" onclick="if(event.target===this)closeConsumableModal()">
     <div class="modal">
@@ -2071,7 +2060,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 
     <!-- Система -->
     <div class="svc-card" id="svc-system-card">
-      <div class="svc-card-title"><span>🖥</span> Система</div>
+      <div class="svc-card-title">Система</div>
       <div class="svc-stat-grid">
         <div class="svc-stat"><div class="svc-stat-val" id="svc-cpu">—</div><div class="svc-stat-lbl">CPU %</div></div>
         <div class="svc-stat"><div class="svc-stat-val" id="svc-mem">—</div><div class="svc-stat-lbl">RAM %</div></div>
@@ -2093,7 +2082,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 
     <!-- База данных -->
     <div class="svc-card">
-      <div class="svc-card-title"><span>🗄</span> База данных</div>
+      <div class="svc-card-title">База данных</div>
       <div class="svc-stat-grid">
         <div class="svc-stat"><div class="svc-stat-val" id="svc-deals">—</div><div class="svc-stat-lbl">Сделок</div></div>
         <div class="svc-stat"><div class="svc-stat-val" id="svc-contacts">—</div><div class="svc-stat-lbl">Контактов</div></div>
@@ -2103,19 +2092,19 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
         <div class="svc-stat"><div class="svc-stat-val" id="svc-active-deals" style="font-size:16px">—</div><div class="svc-stat-lbl">Активных сделок</div></div>
         <div class="svc-stat"><div class="svc-stat-val" id="svc-overdue" style="font-size:16px;color:#f87171">—</div><div class="svc-stat-lbl">Просрочено</div></div>
       </div>
-      <button class="svc-btn success" onclick="svcDbCheck()"><span class="svc-btn-icon">🔌</span> Проверить соединение</button>
+      <button class="svc-btn success" onclick="svcDbCheck()">Проверить соединение</button>
       <div class="svc-result" id="svc-db-result"></div>
       <div style="margin-top:10px;font-size:11px;color:var(--ink4);display:flex;align-items:center;gap:6px">
-        <span>💾</span><span>Последний бэкап: <span id="svc-last-backup" style="color:var(--ink2);font-weight:500">—</span></span>
+        <span>Последний бэкап: <span id="svc-last-backup" style="color:var(--ink2);font-weight:500">—</span></span>
       </div>
     </div>
 
     <!-- Кэш -->
     <div class="svc-card">
-      <div class="svc-card-title"><span>⚡</span> Кэш <span id="svc-cache-count" style="font-size:11px;font-weight:400;color:var(--ink3)"></span></div>
+      <div class="svc-card-title">Кэш <span id="svc-cache-count" style="font-size:11px;font-weight:400;color:var(--ink3)"></span></div>
       <div class="svc-cache-tags" id="svc-cache-tags"></div>
       <hr class="svc-divider">
-      <button class="svc-btn danger" onclick="svcClearCache()"><span class="svc-btn-icon">🗑</span> Очистить кэш</button>
+      <button class="svc-btn danger" onclick="svcClearCache()">Очистить кэш</button>
       <div class="svc-result" id="svc-cache-result"></div>
     </div>
 
@@ -2123,7 +2112,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
     <!-- Пользователи -->
     <div class="svc-card" id="svc-users-card">
       <div class="svc-card-title" style="justify-content:space-between">
-        <div><span>👥</span> Пользователи системы</div>
+        <div>Пользователи системы</div>
         <button class="svc-btn" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcLoadUsers()">↺ Обновить</button>
       </div>
       <div id="svc-users-list" style="margin-top:10px">
@@ -2133,11 +2122,11 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 
     <!-- Telegram -->
     <div class="svc-card">
-      <div class="svc-card-title"><span>✈️</span> Telegram</div>
+      <div class="svc-card-title">Telegram</div>
       <div style="margin-bottom:12px;font-size:12px;color:var(--ink3)">
         <span class="svc-status-dot" id="svc-tg-dot"></span><span id="svc-tg-status">проверка…</span>
       </div>
-      <button class="svc-btn success" onclick="svcSendReport(this)"><span class="svc-btn-icon">📊</span> Отправить отчёт сейчас</button>
+      <button class="svc-btn success" onclick="svcSendReport(this)">Отправить отчёт сейчас</button>
       <div class="svc-result" id="svc-tg-result"></div>
     </div>
 
@@ -2147,7 +2136,7 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
   <div class="svc-grid full">
     <div class="svc-card">
       <div class="svc-card-title" style="justify-content:space-between">
-        <div><span>📋</span> Журнал сервиса</div>
+        <div>Журнал сервиса</div>
         <div style="display:flex;gap:8px">
           <button class="svc-btn" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcLoadLogs()">↺ Обновить</button>
           <button class="svc-btn danger" style="width:auto;padding:5px 12px;font-size:11px;margin:0" onclick="svcRestart()">⟳ Перезапуск</button>
@@ -2159,11 +2148,20 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 
   <div style="margin-top:8px;text-align:right">
     <button class="svc-btn danger" style="width:auto;padding:9px 20px;display:inline-flex" onclick="window.location='/api/auth/logout'">
-      <span class="svc-btn-icon">⏻</span> Выйти из системы
+      Выйти из системы
     </button>
   </div>
 </div>
 
+
+<div class="overlay" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-content">
+            <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="Поиск..." onkeyup="renderItemSelectorResults()">
+            <div class="item-selector-results" id="item-selector-results"></div>
+        </div>
+    </div>
+</div>
 <script>
 const API_BASE='/api';
 let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
@@ -2715,7 +2713,7 @@ function openContactModal(contact = null) {
         const metaParts = [];
         if (contact.phone) metaParts.push(contact.phone);
         if (contact.source) metaParts.push(contact.source);
-        if (contact.address) metaParts.push('📍 ' + contact.address);
+        if (contact.address) metaParts.push(contact.address);
         if (contact.last_deal_date) metaParts.push('Посл. сделка: ' + new Date(contact.last_deal_date).toLocaleDateString('ru-RU'));
         const metaLine = document.getElementById('ccard-meta-line');
         metaLine.innerHTML = metaParts.map(p =>
@@ -4073,6 +4071,20 @@ async function checkAuth(){
     CURRENT_USER = await api('/me');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
+    // Populate header user chip
+    if (CURRENT_USER) {
+      const nameEl = document.getElementById('header-user-name');
+      const initEl = document.getElementById('header-user-initials');
+      const imgEl  = document.getElementById('header-user-avatar');
+      const firstName = (CURRENT_USER.name || '').split(' ')[0] || '';
+      if (nameEl) nameEl.textContent = firstName;
+      if (initEl) initEl.textContent = (CURRENT_USER.name||'?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
+      if (imgEl && CURRENT_USER.picture) {
+        imgEl.src = CURRENT_USER.picture;
+        imgEl.style.display = 'block';
+        if (initEl) initEl.style.display = 'none';
+      }
+    }
     applyRoleUI();
     await populateYearSelector();
     await loadData(SELECTED_YEAR);
@@ -4327,43 +4339,62 @@ function renderAnalytics(d, expenses) {
       </div>
     </div>`;
 
-  // ── ПРИЧИНЫ ПРОВАЛА ───────────────────────────────────────────────────────
+  // ── ПРИЧИНЫ ПРОВАЛА (funnel-bar style) ──────────────────────────────────
   const lossReasons = d.loss_reasons || [];
   const lossEl = document.getElementById('an-loss-reasons');
   const lossCntEl = document.getElementById('an-loss-count');
   if (lossCntEl) lossCntEl.textContent = lossReasons.length ? `${lossReasons.reduce((s,r)=>s+r.count,0)} провалов` : '';
   if (lossEl) {
     if (!lossReasons.length) {
-      lossEl.innerHTML = '<div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет провалённых сделок 🎉</div>';
+      lossEl.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:12px;color:var(--ink4)">Нет провалённых сделок</div>';
     } else {
       const maxL = lossReasons[0].count;
-      lossEl.innerHTML = lossReasons.map(r => `
-        <div class="loss-reason-bar">
-          <div class="loss-reason-label" title="${esc(r.reason)}">${esc(r.reason)}</div>
-          <div class="loss-reason-track"><div class="loss-reason-fill" style="width:${Math.round(r.count/maxL*100)}%"></div></div>
-          <div class="loss-reason-count">${r.count}</div>
-        </div>`).join('');
+      const totalLost = lossReasons.reduce((s,r)=>s+r.count,0) || 1;
+      lossEl.innerHTML = lossReasons.map(r => {
+        const pct = Math.round(r.count / maxL * 100);
+        const sharePct = Math.round(r.count / totalLost * 100);
+        return `<div class="funnel-bar-wrap">
+          <div class="funnel-bar-label">
+            <span><strong>${esc(r.reason)}</strong></span>
+            <span style="color:var(--ink3)">${r.count} сд. · ${sharePct}%</span>
+          </div>
+          <div class="funnel-bar-track">
+            <div class="funnel-bar-fill" style="width:${pct}%;background:#ef4444">
+              <span>${pct > 12 ? sharePct+'%' : ''}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
     }
   }
 
-  // ── ИСТОЧНИКИ КЛИЕНТОВ (из контактов по сделкам) ─────────────────────────
-  // Build sources from funnel won deals — we use contact source if available via deals
-  // We'll count sources from funnel data as a best-effort; full source data requires separate API
-  // For now show placeholder — sources widget populated separately if data available
+  // ── ИСТОЧНИКИ КЛИЕНТОВ (funnel-bar style) ────────────────────────────────
   const sourcesEl = document.getElementById('an-sources');
   const sourcesMeta = document.getElementById('an-sources-meta');
-  if (sourcesEl && d.sources_breakdown) {
-    const srcs = d.sources_breakdown;
-    if (sourcesMeta) sourcesMeta.textContent = `${srcs.length} источников`;
-    const maxS = srcs[0]?.count || 1;
-    sourcesEl.innerHTML = srcs.map(s => `
-      <div class="loss-reason-bar">
-        <div class="loss-reason-label" title="${esc(s.source)}">${esc(s.source)}</div>
-        <div class="loss-reason-track"><div class="loss-reason-fill" style="width:${Math.round(s.count/maxS*100)}%;background:var(--sage)"></div></div>
-        <div class="loss-reason-count">${s.count}</div>
-      </div>`).join('');
-  } else if (sourcesEl) {
-    sourcesEl.innerHTML = '<div style="font-size:12px;color:var(--ink4);padding:20px 0;text-align:center">Нет данных по источникам</div>';
+  if (sourcesEl) {
+    const srcs = d.sources_breakdown || [];
+    if (sourcesMeta) sourcesMeta.textContent = srcs.length ? `${srcs.length} источн.` : '';
+    if (!srcs.length) {
+      sourcesEl.innerHTML = '<div style="padding:20px 0;text-align:center;font-size:12px;color:var(--ink4)">Нет данных</div>';
+    } else {
+      const maxS = srcs[0].count;
+      const totalS = srcs.reduce((s,r)=>s+r.count,0) || 1;
+      sourcesEl.innerHTML = srcs.map(s => {
+        const pct = Math.round(s.count / maxS * 100);
+        const sharePct = Math.round(s.count / totalS * 100);
+        return `<div class="funnel-bar-wrap">
+          <div class="funnel-bar-label">
+            <span><strong>${esc(s.source)}</strong></span>
+            <span style="color:var(--ink3)">${s.count} кл. · ${sharePct}%</span>
+          </div>
+          <div class="funnel-bar-track">
+            <div class="funnel-bar-fill" style="width:${pct}%;background:#4a7c3f">
+              <span>${pct > 12 ? sharePct+'%' : ''}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 }
 
@@ -4382,11 +4413,19 @@ async function svcLoadUsers() {
     el.innerHTML = users.map(u => {
       const initials = (u.name || u.username || '?').split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');
       const role = (u.role||'user').toLowerCase();
+      const avatarHtml = u.picture
+        ? `<img src="${esc(u.picture)}" class="svc-user-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`+
+          `<div class="svc-user-avatar" style="display:none">${initials}</div>`
+        : `<div class="svc-user-avatar">${initials}</div>`;
+      const lastLogin = u.last_login
+        ? new Date(u.last_login).toLocaleString('ru',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        : '—';
       return `<div class="svc-user-row">
-        <div class="svc-user-avatar">${initials}</div>
+        <div class="svc-user-avatar-wrap">${avatarHtml}</div>
         <div class="svc-user-info">
           <div class="svc-user-name">${esc(u.name || u.username || '—')}</div>
           <div class="svc-user-email">${esc(u.email || u.id || '')}</div>
+          <div class="svc-user-lastlogin">Вход: ${lastLogin}</div>
         </div>
         <div class="svc-user-role ${role === 'admin' ? 'admin' : 'user'}">${role === 'admin' ? 'Админ' : 'Сотрудник'}</div>
       </div>`;

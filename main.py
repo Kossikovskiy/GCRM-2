@@ -67,7 +67,7 @@ Base = declarative_base()
 engine = create_engine(DATABASE_URL, client_encoding='utf8')
 SessionFactory = sessionmaker(bind=engine, autoflush=False)
 
-class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String); role=Column(String, default="User")
+class User(Base): __tablename__ = "users"; id,username,name,email = Column(String, primary_key=True),Column(String),Column(String),Column(String); role=Column(String, default="User"); picture=Column(String); last_login=Column(DateTime)
 class Service(Base): __tablename__ = "services"; id,name,price,unit = Column(Integer,primary_key=True),Column(String(200),nullable=False),Column(Float,default=0.0),Column(String(50),default="шт"); min_volume=Column(Float,default=1.0); notes=Column(Text)
 class DealService(Base): __tablename__ = "deal_services"; id,deal_id,service_id,quantity,price_at_moment = Column(Integer,primary_key=True),Column(Integer,ForeignKey("deals.id",ondelete="CASCADE")),Column(Integer,ForeignKey("services.id",ondelete="RESTRICT")),Column(Float,default=1.0),Column(Float,nullable=False); service = relationship("Service")
 class Stage(Base): __tablename__ = "stages"; id,name,order,type,is_final,color = Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True),Column(Integer,default=0),Column(String(50),default="regular"),Column(Boolean,default=False),Column(String(20),default="#6B7280"); deals = relationship("Deal", back_populates="stage")
@@ -312,8 +312,11 @@ def callback(req:Request, code:str=None, state:str=None, error:str=None):
     user_id=profile.get("sub"); user_name=profile.get("name") or profile.get("nickname") or user_id
     with SessionFactory() as db:
         user=db.query(User).filter(User.id==user_id).first()
-        if not user: db.add(User(id=user_id,name=user_name,email=profile.get("email")))
-        else: user.name,user.email = user_name,profile.get("email")
+        from datetime import datetime as _dt
+        _picture = profile.get("picture")
+        _now = _dt.utcnow()
+        if not user: db.add(User(id=user_id,name=user_name,email=profile.get("email"),picture=_picture,last_login=_now))
+        else: user.name,user.email,user.picture,user.last_login = user_name,profile.get("email"),_picture,_now
         db.commit()
     # Роль берём из БД (задаётся вручную в Supabase: Admin / User)
     with SessionFactory() as _db:
@@ -326,9 +329,17 @@ def logout(req:Request): req.session.clear(); return RedirectResponse(f"https://
 
 # ── 8. ЭНДПОИНТЫ API ──────────────────────────────────────────────────────────
 @app.get("/api/me")
-def get_me(user:dict=Depends(get_current_user)): return user
+def get_me(user:dict=Depends(get_current_user)):
+    with SessionFactory() as _db:
+        _u = _db.query(User).filter(User.id == user.get("sub")).first()
+        if _u and _u.picture:
+            return dict(user, picture=_u.picture)
+    return user
 @app.get("/api/users")
-def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(User).all()
+def get_users(db:DBSession=Depends(get_db),_=Depends(get_current_user)):
+    users = db.query(User).all()
+    return [{"id":u.id,"username":u.username,"name":u.name,"email":u.email,"role":u.role,
+             "picture":u.picture,"last_login":u.last_login.isoformat() if u.last_login else None} for u in users]
 @app.get("/api/stages")
 def get_stages(db:DBSession=Depends(get_db),_=Depends(get_current_user)): return db.query(Stage).order_by(Stage.order).all()
 @app.post("/api/cache/invalidate")
@@ -1080,6 +1091,15 @@ def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(require_
         key=lambda x: x["count"], reverse=True
     )
 
+    # 7. Sources breakdown from won deal contacts
+    from collections import Counter as _Counter2
+    sources_raw = [d.contact.source or "Не указан" for d in deals if d.contact]
+    sources_counts = _Counter2(sources_raw)
+    sources_breakdown = sorted(
+        [{"source": k, "count": v} for k, v in sources_counts.items()],
+        key=lambda x: x["count"], reverse=True
+    )
+
     return {
         "total_deals":   len(deals),
         "won_deals":     len(won),
@@ -1093,6 +1113,7 @@ def get_analytics(year: int, db: DBSession = Depends(get_db), _=Depends(require_
         "top_services":        top_services,
         "expense_by_category": expense_by_category,
         "loss_reasons":        loss_reasons,
+        "sources_breakdown":   sources_breakdown,
         "repeat": {
             "repeat_count":   len(repeat_won),
             "new_count":      len(new_won),
