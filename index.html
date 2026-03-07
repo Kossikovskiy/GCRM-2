@@ -209,6 +209,19 @@ html[data-theme="dark"] .b-amber{background:#451a03;color:#fb923c}
 html[data-theme="dark"] .b-slate{background:#1e293b;color:#94a3b8}
 html[data-theme="dark"] .b-blue{background:#1e3a5f;color:#60a5fa}
 
+/* ── TASKS EXTRAS ───────────────────────────────────────────── */
+.b-red{background:#fee2e2;color:#b91c1c}
+html[data-theme="dark"] .b-red{background:#450a0a;color:#f87171}
+.task-overdue td{color:var(--red) !important}
+.task-overdue td:first-child{border-left:3px solid var(--red)}
+.task-priority-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.p-low{background:#94a3b8}.p-normal{background:#60a5fa}.p-high{background:#fb923c}.p-critical{background:#ef4444}
+.task-quick-done{width:16px;height:16px;cursor:pointer;accent-color:var(--fern);flex-shrink:0}
+.task-link{font-size:10px;color:var(--fern);text-decoration:none;background:var(--leaf);padding:1px 7px;border-radius:10px;margin-left:4px}
+.tasks-filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.tasks-filter-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--ink2);font-family:'DM Sans',sans-serif;cursor:pointer;outline:none}
+.tasks-filter-select:focus{border-color:var(--sage)}
+
 .money{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums lining-nums;font-feature-settings:'lnum' 1,'tnum' 1}
 .m-neg{color:var(--red)}
 .m-pos{color:#16a34a}
@@ -648,6 +661,127 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 .svc-result{font-size:12px;color:var(--ink3);margin-top:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border2);display:none}
 .svc-result.ok{border-color:var(--fern);color:var(--sage)}
 .svc-result.err{border-color:#ef4444;color:#f87171}
+
+/* ── INTERACTIONS ──────────────────────────────────────────── */
+.ccard-interactions-wrap{margin-top:20px}
+.ilog-add{display:flex;gap:8px;margin-bottom:14px;align-items:flex-start}
+.ilog-type{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--ink2);font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;transition:border-color .2s;flex-shrink:0}
+.ilog-type:focus{border-color:var(--sage)}
+.ilog-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--ink);font-family:'DM Sans',sans-serif;resize:none;min-height:36px;max-height:100px;outline:none;transition:border-color .2s}
+.ilog-input:focus{border-color:var(--sage)}
+.ilog-submit{background:var(--fern);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0;transition:background .2s}
+.ilog-submit:hover{background:var(--moss)}
+.ilog-list{display:flex;flex-direction:column;gap:8px}
+.ilog-item{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;position:relative}
+.ilog-item:hover .ilog-del{opacity:1}
+.ilog-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ilog-badge{font-size:9px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+.ilog-badge.call{background:#e8f4fd;color:#2a5280}
+.ilog-badge.email{background:#fdf3e8;color:#8b5e1a}
+.ilog-badge.meeting{background:#edf7ed;color:#2d5426}
+.ilog-badge.note{background:var(--leaf);color:var(--moss)}
+.ilog-date{font-size:10px;color:var(--ink4)}
+.ilog-who{font-size:10px;color:var(--ink3);margin-left:auto}
+.ilog-text{font-size:12px;color:var(--ink2);line-height:1.5}
+.ilog-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--ink4);cursor:pointer;font-size:14px;opacity:0;transition:opacity .15s,color .15s;line-height:1;padding:2px}
+.ilog-del:hover{color:var(--red)}
+.ilog-empty{font-size:12px;color:var(--ink4);text-align:center;padding:16px 0}
+/* ── DEAL COMMENTS ─────────────────────────────────────────── */
+.dcomments-wrap{margin-top:24px;padding-top:20px;border-top:1px solid var(--border2)}
+.dcomments-title{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-bottom:14px}
+.dcomment-list{display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;margin-bottom:12px}
+.dcomment-item{display:flex;gap:10px;align-items:flex-start}
+.dcomment-avatar{width:28px;height:28px;border-radius:50%;background:var(--leaf);color:var(--moss);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;text-transform:uppercase}
+.dcomment-bubble{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 10px;position:relative}
+.dcomment-bubble:hover .dcomment-del{opacity:1}
+.dcomment-meta{font-size:10px;color:var(--ink4);margin-bottom:4px;display:flex;gap:8px}
+.dcomment-who{font-weight:500;color:var(--ink3)}
+.dcomment-text{font-size:12px;color:var(--ink2);line-height:1.5;white-space:pre-wrap}
+.dcomment-del{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--ink4);cursor:pointer;font-size:13px;opacity:0;transition:opacity .15s,color .15s;padding:2px;line-height:1}
+.dcomment-del:hover{color:var(--red)}
+.dcomment-add{display:flex;gap:8px;align-items:flex-end}
+.dcomment-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--ink);font-family:'DM Sans',sans-serif;resize:none;min-height:36px;max-height:80px;outline:none;transition:border-color .2s}
+.dcomment-input:focus{border-color:var(--sage)}
+.dcomment-submit{background:var(--fern);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;flex-shrink:0;transition:background .2s;line-height:1}
+.dcomment-submit:hover{background:var(--moss)}
+.dcomment-empty{font-size:12px;color:var(--ink4);text-align:center;padding:12px 0}
+/* ── CALENDAR ───────────────────────────────────────────────── */
+.cal-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--hh) - 80px);min-height:500px}
+.cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.cal-nav-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink2);cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-nav-btn:hover{border-color:var(--sage);color:var(--fern)}
+.cal-month-label{font-family:'Playfair Display',serif;font-size:20px;font-weight:500;color:var(--ink);min-width:180px;text-align:center}
+.cal-today-btn{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink3);cursor:pointer;transition:all .15s}
+.cal-today-btn:hover{border-color:var(--sage);color:var(--fern)}
+.cal-legend{display:flex;gap:12px;margin-left:auto;flex-wrap:wrap}
+.cal-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--ink3);letter-spacing:.5px;text-transform:uppercase}
+.cal-legend-dot{width:8px;height:8px;border-radius:50%}
+.cal-grid-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.cal-dow-cell{text-align:center;font-size:9px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);padding:4px 0}
+.cal-dow-cell:first-child,.cal-dow-cell:last-child{color:var(--red);opacity:.7}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;flex:1}
+.cal-cell{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:3px;min-height:90px;transition:background .15s,border-color .15s;position:relative;overflow:hidden}
+.cal-cell:hover{border-color:var(--border);background:var(--surface2)}
+.cal-cell.today{border-color:var(--sage);background:rgba(122,181,102,.06)}
+.cal-cell.today .cal-day-num{background:var(--fern);color:#fff;border-radius:50%}
+.cal-cell.other-month{opacity:.4}
+.cal-cell.weekend .cal-day-num{color:var(--red)}
+.cal-cell.drag-over{border-color:var(--sage)!important;background:rgba(122,181,102,.12)!important}
+.cal-day-num{font-size:11px;font-weight:600;color:var(--ink3);width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.cal-event{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s;user-select:none;line-height:1.4}
+.cal-event:hover{opacity:.8}
+.cal-event.ev-task{background:#dbeafe;color:#1d4ed8}
+.cal-event.ev-task.ev-done{background:#dcfce7;color:#16a34a;text-decoration:line-through;opacity:.7}
+.cal-event.ev-task.ev-overdue{background:#fee2e2;color:#b91c1c}
+.cal-event.ev-task.ev-high{background:#fef3c7;color:#b45309}
+.cal-event.ev-task.ev-critical{background:#fee2e2;color:#b91c1c}
+.cal-event.ev-deal{background:rgba(122,181,102,.2);color:var(--moss)}
+.cal-event.dragging{opacity:.4;cursor:grabbing}
+.cal-more{font-size:9px;color:var(--ink4);padding:1px 4px;cursor:pointer;letter-spacing:.3px}
+.cal-more:hover{color:var(--fern)}
+html[data-theme="dark"] .cal-event.ev-task{background:#1e3a5f;color:#60a5fa}
+html[data-theme="dark"] .cal-event.ev-task.ev-done{background:#14532d;color:#4ade80}
+html[data-theme="dark"] .cal-event.ev-task.ev-overdue{background:#450a0a;color:#f87171}
+html[data-theme="dark"] .cal-event.ev-task.ev-high{background:#451a03;color:#fb923c}
+html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:var(--sage)}
+/* month view vs week view toggle */
+.cal-view-btn{font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink3);cursor:pointer;transition:all .15s}
+.cal-view-btn.active{background:var(--fern);color:#fff;border-color:var(--fern)}
+@media(max-width:640px){
+  .cal-event{font-size:9px;padding:1px 4px}
+  .cal-cell{min-height:60px;padding:4px}
+  .cal-legend{display:none}
+}
+/* ── FILES ──────────────────────────────────────────────────── */
+.files-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.files-page-grid{grid-template-columns:1fr}}
+.flist{display:flex;flex-direction:column;gap:6px}
+.fitem{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;transition:border-color .15s;position:relative}
+.fitem:hover{border-color:var(--border)}
+.fitem:hover .fitem-del{opacity:1}
+.ficon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ficon.pdf{background:#fee2e2}.ficon.img{background:#dbeafe}.ficon.doc{background:#ede9fe}
+.ficon.xls{background:#dcfce7}.ficon.zip{background:#fef3c7}.ficon.other{background:var(--leaf)}
+.finfo{flex:1;min-width:0}
+.fname{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmeta{font-size:10px;color:var(--ink4);margin-top:2px}
+.fitem-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--ink4);cursor:pointer;font-size:13px;opacity:0;transition:opacity .15s,color .15s;padding:2px}
+.fitem-del:hover{color:var(--red)}
+.fdownload{background:none;border:1px solid var(--border);border-radius:5px;color:var(--ink3);font-size:10px;padding:3px 8px;cursor:pointer;white-space:nowrap;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.fdownload:hover{border-color:var(--sage);color:var(--fern)}
+.fupload-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface)}
+.fupload-zone:hover,.fupload-zone.drag-active{border-color:var(--sage);background:rgba(122,181,102,.05)}
+.fupload-zone input[type=file]{display:none}
+.fupload-icon{font-size:28px;margin-bottom:8px}
+.fupload-label{font-size:12px;color:var(--ink3);line-height:1.5}
+.fupload-label strong{color:var(--fern)}
+.fupload-hint{font-size:10px;color:var(--ink4);margin-top:4px}
+.fupload-progress{width:100%;height:4px;background:var(--border2);border-radius:2px;margin-top:12px;overflow:hidden;display:none}
+.fupload-progress-bar{height:100%;background:var(--sage);border-radius:2px;transition:width .3s}
+.fsection-hd{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;margin-top:16px}
+.fsection-hd:first-child{margin-top:0}
+.fempty{font-size:12px;color:var(--ink4);text-align:center;padding:14px 0}
 </style>
 </head>
 <body>
@@ -672,12 +806,14 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     <button class="active" data-page="dash" onclick="showPage('dash',this)">Дашборд</button>
     <button data-page="kanban" onclick="showPage('kanban',this)">Сделки</button>
     <button data-page="tasks" onclick="showPage('tasks',this)">Задачи</button>
+    <button data-page="calendar" onclick="showPage('calendar',this);calInit()">Календарь</button>
     <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)">Расходы</button>
     <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)">Налог</button>
     <button data-page="equipment" onclick="showPage('equipment',this)">Техника</button>
     <button data-page="services" onclick="showPage('services',this)">Прайс-лист</button>
     <button data-page="stock" data-role="admin" onclick="showPage('stock',this)">Склад</button>
     <button data-page="contacts" onclick="showPage('contacts',this)">Контакты</button>
+    <button data-page="files" onclick="showPage('files',this);loadFilesPage()">Файлы</button>
     <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)">Аналитика</button>
     <button data-page="budget" data-role="admin" onclick="showPage('budget',this)">Бюджет</button>
   </nav>
@@ -696,12 +832,14 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   <button class="active" data-page="dash" onclick="showPage('dash',this)"><span class="mnav-icon">📊</span>Дашборд</button>
   <button data-page="kanban" onclick="showPage('kanban',this)"><span class="mnav-icon">🗂</span>Сделки</button>
   <button data-page="tasks" onclick="showPage('tasks',this)"><span class="mnav-icon">✅</span>Задачи</button>
+  <button data-page="calendar" onclick="showPage('calendar',this);calInit()"><span class="mnav-icon">📅</span>Календарь</button>
   <button data-page="expenses" data-role="admin" onclick="showPage('expenses',this)"><span class="mnav-icon">💸</span>Расходы</button>
   <button data-page="taxes" data-role="admin" onclick="showPage('taxes',this)"><span class="mnav-icon">🏛️</span>Налог</button>
   <button data-page="equipment" onclick="showPage('equipment',this)"><span class="mnav-icon">🔧</span>Техника</button>
   <button data-page="services" onclick="showPage('services',this)"><span class="mnav-icon">📋</span>Прайс</button>
   <button data-page="stock" data-role="admin" onclick="showPage('stock',this)"><span class="mnav-icon">📦</span>Склад</button>
   <button data-page="contacts" onclick="showPage('contacts',this)"><span class="mnav-icon">👥</span>Контакты</button>
+  <button data-page="files" onclick="showPage('files',this);loadFilesPage()"><span class="mnav-icon">📎</span>Файлы</button>
   <button data-page="analytics" data-role="admin" onclick="showPage('analytics',this)"><span class="mnav-icon">📈</span>Аналитика</button>
   <button data-page="budget" data-role="admin" onclick="showPage('budget',this)"><span class="mnav-icon">💼</span>Бюджет</button>
 </div>
@@ -774,13 +912,22 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
     </div>
     <button class="add-btn" onclick="openTaskModal()">＋&nbsp;Новая задача</button>
   </div>
-  <div class="tabs-row">
-    <button class="tab-btn active" id="btn-tasks-active" onclick="loadTasks(false)">Активные</button>
-    <button class="tab-btn" id="btn-tasks-done" onclick="loadTasks(true)">Завершенные</button>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+    <div class="tabs-row" style="margin-bottom:0">
+      <button class="tab-btn active" id="btn-tasks-active" onclick="loadTasks(false)">Активные</button>
+      <button class="tab-btn" id="btn-tasks-done" onclick="loadTasks(true)">Завершенные</button>
+    </div>
+    <select class="tasks-filter-select" id="tasks-priority-filter" onchange="loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'))">
+      <option value="">Все приоритеты</option>
+      <option value="Критический">🔴 Критический</option>
+      <option value="Высокий">🟠 Высокий</option>
+      <option value="Обычный">🔵 Обычный</option>
+      <option value="Низкий">⚪ Низкий</option>
+    </select>
   </div>
   <div class="tcard">
     <div class="tcard-head"><span class="tcard-title">Список задач</span><span class="tcard-meta" id="tasks-count"></span></div>
-    <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Задача</th><th>Срок</th><th class="col-hide-mobile">Ответственный</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
+    <div class="tcard-scroll"><table><thead><tr><th></th><th>Задача</th><th>Срок</th><th class="col-hide-mobile">Ответственный</th><th class="col-hide-mobile">Привязка</th><th>Статус</th></tr></thead><tbody id="tasks-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -886,6 +1033,88 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <div class="tcard-head"><span class="tcard-title">Остатки</span><span class="tcard-meta" id="consumables-count"></span></div>
         <div class="tcard-scroll"><table><thead><tr><th>#</th><th>Название</th><th>Остаток</th><th>Цена</th><th class="col-hide-mobile">Заметки</th></tr></thead><tbody id="consumables-tbody"></tbody></table></div>
     </div>
+</div>
+
+<div class="page" id="page-calendar">
+  <div class="ph" style="margin-bottom:20px">
+    <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Планирование</span></div>
+    <div class="ph-title">Календарь</div>
+  </div>
+  <div class="cal-wrap">
+    <!-- Тулбар -->
+    <div class="cal-toolbar">
+      <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+      <div class="cal-month-label" id="cal-month-label">—</div>
+      <button class="cal-nav-btn" onclick="calNext()">›</button>
+      <button class="cal-today-btn" onclick="calGoToday()">Сегодня</button>
+      <div style="display:flex;gap:4px;margin-left:8px">
+        <button class="cal-view-btn active" id="cal-view-month" onclick="calSetView('month')">Месяц</button>
+        <button class="cal-view-btn" id="cal-view-week" onclick="calSetView('week')">Неделя</button>
+      </div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#3b82f6"></div>Задача</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#ef4444"></div>Просрочена</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--sage)"></div>Сделка</div>
+      </div>
+    </div>
+    <!-- Дни недели -->
+    <div class="cal-dow" id="cal-dow">
+      <div class="cal-dow-cell">Вс</div>
+      <div class="cal-dow-cell">Пн</div>
+      <div class="cal-dow-cell">Вт</div>
+      <div class="cal-dow-cell">Ср</div>
+      <div class="cal-dow-cell">Чт</div>
+      <div class="cal-dow-cell">Пт</div>
+      <div class="cal-dow-cell">Сб</div>
+    </div>
+    <!-- Сетка -->
+    <div class="cal-grid-wrap">
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-files">
+  <div class="ph" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+    <div>
+      <div class="ph-eyebrow"><div class="ph-line"></div><span class="ph-label">Документы</span></div>
+      <div class="ph-title">Файлы</div>
+    </div>
+  </div>
+  <div class="files-page-grid">
+    <!-- Левая колонка: загрузка -->
+    <div>
+      <div class="fsection-hd">Загрузить файл</div>
+      <div class="fupload-zone" id="files-upload-zone" onclick="document.getElementById('files-input').click()"
+           ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="filesZoneDrop(event)">
+        <input type="file" id="files-input" multiple onchange="filesUpload(this.files)">
+        <div class="fupload-icon">📎</div>
+        <div class="fupload-label"><strong>Нажмите</strong> или перетащите файлы сюда</div>
+        <div class="fupload-hint">PDF, Word, Excel, картинки, ZIP — до 20 МБ</div>
+        <div class="fupload-progress" id="files-progress">
+          <div class="fupload-progress-bar" id="files-progress-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label>ПРИВЯЗАТЬ К КЛИЕНТУ</label>
+          <input list="files-contact-list" id="files-contact-input" placeholder="Имя клиента...">
+          <datalist id="files-contact-list"></datalist>
+        </div>
+        <div class="field">
+          <label>ПРИВЯЗАТЬ К СДЕЛКЕ</label>
+          <select id="files-deal-select"><option value="">Не привязывать</option></select>
+        </div>
+      </div>
+    </div>
+    <!-- Правая колонка: список файлов -->
+    <div>
+      <div class="fsection-hd">Все файлы <span id="files-count" style="font-weight:400;color:var(--ink4)"></span></div>
+      <div class="flist" id="files-list">
+        <div class="fempty">Загрузка…</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="page" id="page-contacts">
@@ -1133,7 +1362,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <!-- MODALS -->
 <div class="overlay" id="task-overlay" onclick="if(event.target===this)closeTaskModal()">
   <div class="modal">
-    <div class="modal-title">Новая <em>задача</em></div>
+    <div class="modal-title" id="t-modal-title">Новая <em>задача</em></div>
     <div class="field full">
       <label>НАЗВАНИЕ</label>
       <input type="text" id="t-title" placeholder="Позвонить клиенту, подготовить КП..." />
@@ -1168,6 +1397,17 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
           <option value="Отложена">Отложена</option>
           <option value="Выполнена">Выполнена</option>
         </select>
+      </div>
+    </div>
+    <div class="modal-grid" style="margin-top:12px">
+      <div class="field">
+        <label>КЛИЕНТ (необязательно)</label>
+        <input list="t-contact-list" id="t-contact-input" placeholder="Начните вводить имя...">
+        <datalist id="t-contact-list"></datalist>
+      </div>
+      <div class="field">
+        <label>СДЕЛКА (необязательно)</label>
+        <select id="t-deal-select"><option value="">Не привязана</option></select>
       </div>
     </div>
     <div class="modal-row">
@@ -1263,10 +1503,36 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         <button class="btn-sec" onclick="closeDealModal()">ОТМЕНА</button>
         <button class="btn-pri" id="btn-deal-save">СОЗДАТЬ</button>
     </div>
-  </div>
-</div>
 
-<div class="overlay item-selector-modal" id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
+    <!-- Комментарии (только для существующей сделки) -->
+    <div class="dcomments-wrap" id="dcomments-wrap" style="display:none">
+      <div class="dcomments-title">Комментарии</div>
+      <div class="dcomment-list" id="dcomment-list">
+        <div class="dcomment-empty">Загрузка…</div>
+      </div>
+      <div class="dcomment-add">
+        <textarea class="dcomment-input" id="dcomment-input" placeholder="Написать комментарий… (Ctrl+Enter — отправить)" rows="1"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addDealComment()"></textarea>
+        <button class="dcomment-submit" onclick="addDealComment()" title="Отправить (Ctrl+Enter)">↑</button>
+      </div>
+    </div>
+
+    <!-- Файлы сделки -->
+    <div id="deal-files-wrap" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border2)">
+      <div class="dcomments-title">Файлы</div>
+      <div class="fupload-zone" style="padding:14px;margin-bottom:10px" onclick="document.getElementById('deal-file-input').click()"
+           ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="dealFileDrop(event)">
+        <input type="file" id="deal-file-input" multiple onchange="dealUploadFiles(this.files)">
+        <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
+      </div>
+      <div class="flist" id="deal-files-list">
+        <div class="fempty">Загрузка…</div>
+      </div>
+    </div>
+
+  </div>
+</div> id="item-selector-modal" onclick="if(event.target===this)closeItemSelectorModal()">
     <div class="modal" style="max-width: 600px;">
         <div class="modal-content">
             <input type="text" class="item-selector-search-input" id="item-selector-search" placeholder="🔍 Поиск..." onkeyup="renderItemSelectorResults()">
@@ -1350,7 +1616,46 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
         </div>
       </div>
 
+      <!-- История взаимодействий -->
+      <div class="ccard-interactions-wrap" id="ccard-interactions-wrap">
+        <div class="ccard-section-hd">
+          <div class="ccard-section-hd-lbl">История взаимодействий</div>
+          <div class="ccard-section-hd-line"></div>
+        </div>
+        <div class="ilog-add">
+          <select class="ilog-type" id="ilog-type">
+            <option value="note">📝 Заметка</option>
+            <option value="call">📞 Звонок</option>
+            <option value="meeting">🤝 Встреча</option>
+            <option value="email">✉️ Email</option>
+          </select>
+          <textarea class="ilog-input" id="ilog-input" placeholder="Заметка, итог звонка, встречи..." rows="1"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addInteraction()"></textarea>
+          <button class="ilog-submit" onclick="addInteraction()" title="Сохранить (Ctrl+Enter)">↑</button>
+        </div>
+        <div class="ilog-list" id="ilog-list">
+          <div class="ilog-empty">Загрузка…</div>
+        </div>
+      </div>
+
     </div><!-- /ccard-body -->
+
+      <!-- Файлы в карточке контакта -->
+      <div id="ccard-files-wrap" style="padding:0 24px 20px">
+        <div class="ccard-section-hd" style="margin-bottom:10px">
+          <div class="ccard-section-hd-lbl">Файлы</div>
+          <div class="ccard-section-hd-line"></div>
+        </div>
+        <div class="fupload-zone" style="padding:14px" onclick="document.getElementById('ccard-file-input').click()"
+             ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="ccardFileDrop(event)">
+          <input type="file" id="ccard-file-input" multiple onchange="ccardUploadFiles(this.files)">
+          <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
+        </div>
+        <div class="flist" id="ccard-files-list" style="margin-top:10px">
+          <div class="fempty">Загрузка…</div>
+        </div>
+      </div>
 
     <!-- Крестик закрытия -->
     <button onclick="closeContactModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">×</button>
@@ -1656,7 +1961,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 <script>
 const API_BASE='/api';
 let STAGES=[],SELECTED_YEAR=new Date().getFullYear(),CURRENT_USER=null;
-let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[], _expenseCategories=[];
+let _contacts=[],_services=[],_equipment=[],_consumables=[],_maintenanceHistory=[], _expenseCategories=[], _allDeals=[];
 let _selectedEquipmentId = null;
 
 function fmt(n, z = '—'){return n != null ? Math.round(n).toLocaleString('ru')+'\u00a0₽' : z}
@@ -1893,6 +2198,7 @@ async function setupDealModal(dealId = null) {
         deleteBtn.style.display = 'block';
         deleteBtn.onclick = () => deleteDeal(dealId);
         saveBtn.onclick = () => saveDeal(dealId);
+        _currentDealId = dealId;
 
         const deal = await api(`/deals/${dealId}`);
         if (!deal) { closeDealModal(); return; }
@@ -1921,6 +2227,13 @@ async function setupDealModal(dealId = null) {
             unit: s.service.unit
         }));
 
+        // Показываем и загружаем комментарии
+        document.getElementById('dcomments-wrap').style.display = 'block';
+        loadDealComments(dealId);
+        // Показываем и загружаем файлы
+        document.getElementById('deal-files-wrap').style.display = 'block';
+        dealLoadFiles(dealId);
+
     } else {
         titleEl.innerHTML = 'Новая <em>сделка</em>';
         saveBtn.textContent = 'Создать';
@@ -1929,6 +2242,9 @@ async function setupDealModal(dealId = null) {
         stageSel.innerHTML = STAGES.filter(s => !s.is_final).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         if (CURRENT_USER?.sub) assigneeSel.value = CURRENT_USER.sub;
         _dealItems = [];
+        _currentDealId = null;
+        document.getElementById('dcomments-wrap').style.display = 'none';
+        document.getElementById('deal-files-wrap').style.display = 'none';
     }
 
     renderDealServices();
@@ -2194,6 +2510,8 @@ function openContactModal(contact = null) {
 
         // Загружаем сделки с сервера (все, без фильтра года)
         ccardLoadDeals(contact.id);
+        loadInteractions(contact.id);
+        ccardLoadFiles(contact.id);
 
     } else {
         // ─── режим создания нового контакта ──────────────────────
@@ -2293,6 +2611,134 @@ async function ccardLoadDeals(contactId) {
     } catch(e) {
         document.getElementById('ccard-deals-list').innerHTML =
             '<div class="cdeal-empty">Не удалось загрузить сделки</div>';
+    }
+}
+
+// ── INTERACTIONS ──────────────────────────────────────────────────────────────
+const ITYPE_LABEL = { call:'Звонок', email:'Email', meeting:'Встреча', note:'Заметка' };
+const ITYPE_CLS   = { call:'call',   email:'email', meeting:'meeting',  note:'note'   };
+
+async function loadInteractions(contactId) {
+    const list = document.getElementById('ilog-list');
+    if (!list) return;
+    list.innerHTML = '<div class="ilog-empty">Загрузка…</div>';
+    try {
+        const data = await api(`/contacts/${contactId}/interactions`);
+        if (!data.length) {
+            list.innerHTML = '<div class="ilog-empty">Взаимодействий пока нет</div>';
+            return;
+        }
+        list.innerHTML = data.map(i => {
+            const dt = new Date(i.created_at);
+            const dateStr = dt.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
+            const cls = ITYPE_CLS[i.type] || 'note';
+            const lbl = ITYPE_LABEL[i.type] || i.type;
+            return `<div class="ilog-item" data-id="${i.id}">
+                <button class="ilog-del" onclick="deleteInteraction(${i.id})" title="Удалить">×</button>
+                <div class="ilog-header">
+                    <span class="ilog-badge ${cls}">${lbl}</span>
+                    <span class="ilog-date">${dateStr}</span>
+                    <span class="ilog-who">${esc(i.user_name)}</span>
+                </div>
+                <div class="ilog-text">${esc(i.text)}</div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = '<div class="ilog-empty">Ошибка загрузки</div>';
+    }
+}
+
+async function addInteraction() {
+    const inp  = document.getElementById('ilog-input');
+    const text = inp ? inp.value.trim() : '';
+    const type = document.getElementById('ilog-type')?.value || 'note';
+    if (!text || !_currentContactId) return;
+    try {
+        await api(`/contacts/${_currentContactId}/interactions`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ type, text })
+        });
+        inp.value = '';
+        inp.style.height = 'auto';
+        await loadInteractions(_currentContactId);
+    } catch(e) {
+        showToast('Ошибка при сохранении', true);
+    }
+}
+
+async function deleteInteraction(id) {
+    if (!confirm('Удалить запись?')) return;
+    try {
+        await api(`/interactions/${id}`, { method: 'DELETE' });
+        await loadInteractions(_currentContactId);
+    } catch(e) {
+        showToast('Ошибка при удалении', true);
+    }
+}
+
+// ── DEAL COMMENTS ─────────────────────────────────────────────────────────────
+let _currentDealId = null;
+
+async function loadDealComments(dealId) {
+    const list = document.getElementById('dcomment-list');
+    if (!list) return;
+    list.innerHTML = '<div class="dcomment-empty">Загрузка…</div>';
+    try {
+        const data = await api(`/deals/${dealId}/comments`);
+        if (!data.length) {
+            list.innerHTML = '<div class="dcomment-empty">Комментариев пока нет</div>';
+            return;
+        }
+        list.innerHTML = data.map(c => {
+            const dt = new Date(c.created_at);
+            const dateStr = dt.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
+            const timeStr = dt.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+            const initials = (c.user_name || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+            return `<div class="dcomment-item" data-id="${c.id}">
+                <div class="dcomment-avatar">${initials}</div>
+                <div class="dcomment-bubble">
+                    <button class="dcomment-del" onclick="deleteDealComment(${c.id})" title="Удалить">×</button>
+                    <div class="dcomment-meta">
+                        <span class="dcomment-who">${esc(c.user_name)}</span>
+                        <span>${dateStr} ${timeStr}</span>
+                    </div>
+                    <div class="dcomment-text">${esc(c.text)}</div>
+                </div>
+            </div>`;
+        }).join('');
+        // Прокрутить вниз к последнему комментарию
+        list.scrollTop = list.scrollHeight;
+    } catch(e) {
+        list.innerHTML = '<div class="dcomment-empty">Ошибка загрузки</div>';
+    }
+}
+
+async function addDealComment() {
+    const inp = document.getElementById('dcomment-input');
+    const text = inp ? inp.value.trim() : '';
+    if (!text || !_currentDealId) return;
+    try {
+        await api(`/deals/${_currentDealId}/comments`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ text })
+        });
+        inp.value = '';
+        inp.style.height = 'auto';
+        await loadDealComments(_currentDealId);
+    } catch(e) {
+        showToast('Ошибка при сохранении', true);
+    }
+}
+
+async function deleteDealComment(id) {
+    if (!confirm('Удалить комментарий?')) return;
+    try {
+        await api(`/deal-comments/${id}`, { method: 'DELETE' });
+        await loadDealComments(_currentDealId);
+    } catch(e) {
+        showToast('Ошибка при удалении', true);
     }
 }
 
@@ -2856,7 +3302,7 @@ async function populateAssignees(selectedId){
   }
 }
 
-async function openTaskModal(taskId = null){
+async function openTaskModal(taskId = null, prefillContactId = null, prefillDealId = null){
     _currentTaskId = taskId;
     const overlay = document.getElementById('task-overlay');
     const titleEl = document.getElementById('t-title');
@@ -2865,17 +3311,41 @@ async function openTaskModal(taskId = null){
     const priorityEl = document.getElementById('t-priority');
     const statusEl = document.getElementById('t-status');
     const deleteBtn = document.getElementById('btn-task-delete');
+    const titleHead = document.getElementById('t-modal-title');
+    const contactInp = document.getElementById('t-contact-input');
+    const dealSel = document.getElementById('t-deal-select');
 
-    titleEl.value = ''; descEl.value = ''; 
+    titleEl.value = ''; descEl.value = ''; contactInp.value = '';
     dateEl.valueAsDate = new Date(Date.now() + 864e5);
     priorityEl.value = 'Обычный'; statusEl.value = 'Открыта';
     titleEl.classList.remove('err');
     deleteBtn.style.display = 'none';
 
+    // Заполняем datalist контактов
+    document.getElementById('t-contact-list').innerHTML =
+        _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
+
+    // Заполняем список сделок
+    dealSel.innerHTML = '<option value="">Не привязана</option>';
+    if (_allDeals && _allDeals.length) {
+        _allDeals.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id; opt.textContent = `№${d.id} ${d.title}`;
+            dealSel.appendChild(opt);
+        });
+    }
+
     if (taskId) {
+        titleHead.innerHTML = `Редактировать <em>задачу</em>`;
         try {
-            const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=false`);
-            const task = (tasks).find(t => t.id === taskId);
+            const isDone = document.getElementById('btn-tasks-done').classList.contains('active');
+            const tasks = await api(`/tasks?is_done=${isDone}`);
+            let task = (tasks).find(t => t.id === taskId);
+            // если не нашли в активных — ищем в выполненных
+            if (!task) {
+                const allTasks = await api(`/tasks?is_done=true`);
+                task = (allTasks).find(t => t.id === taskId);
+            }
             if (task) {
                 titleEl.value = task.title || '';
                 descEl.value = task.description || '';
@@ -2883,12 +3353,22 @@ async function openTaskModal(taskId = null){
                 priorityEl.value = task.priority || 'Обычный';
                 statusEl.value = task.status || 'Открыта';
                 await populateAssignees(task.assignee);
+                // Привязки
+                if (task.contact_name) contactInp.value = task.contact_name;
+                if (task.deal_id) dealSel.value = task.deal_id;
                 deleteBtn.style.display = 'block';
                 deleteBtn.onclick = () => deleteTask(taskId);
             } else { throw new Error('Task not found'); }
         } catch(e) { showToast('❌ Не удалось загрузить задачу'); return; }
     } else {
+        titleHead.innerHTML = `Новая <em>задача</em>`;
         await populateAssignees(CURRENT_USER?.sub);
+        // Предзаполнение из контекста (из карточки клиента/сделки)
+        if (prefillContactId) {
+            const c = _contacts.find(c => c.id === prefillContactId);
+            if (c) contactInp.value = c.name;
+        }
+        if (prefillDealId) dealSel.value = prefillDealId;
     }
 
     overlay.classList.add('open');
@@ -2916,23 +3396,38 @@ async function saveTask(){
   const status=document.getElementById('t-status').value;
   const assignee=document.getElementById('t-assignee').value;
 
+  // Получаем contact_id из datalist
+  const contactVal = document.getElementById('t-contact-input').value.trim();
+  const contactOpt = document.querySelector(`#t-contact-list option[value="${contactVal}"]`);
+  const contact_id = contactOpt ? parseInt(contactOpt.dataset.id) : null;
+  const deal_id = parseInt(document.getElementById('t-deal-select').value) || null;
+
   if(!title){document.getElementById('t-title').classList.add('err');return}
   try{
     const method = _currentTaskId ? 'PATCH' : 'POST';
     const ep = _currentTaskId ? `/tasks/${_currentTaskId}` : '/tasks';
     const is_done = status === 'Выполнена';
-    
-    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status, assignee, is_done})});
+    await api(ep,{method, body:JSON.stringify({title,description,due_date:due_date||null,priority,status,assignee,is_done,contact_id,deal_id})});
     closeTaskModal();
     showToast(_currentTaskId ? '✅ Сохранено' : '✅ Задача добавлена');
     loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
   }catch{}
 }
 
+async function quickDoneTask(id, checked) {
+    try {
+        await api(`/tasks/${id}`, {method:'PATCH', body: JSON.stringify({is_done: checked, status: checked ? 'Выполнена' : 'Открыта'})});
+        loadTasks(document.getElementById('btn-tasks-done').classList.contains('active'));
+    } catch(e) { showToast('Ошибка', true); }
+}
+
 async function loadTasks(isDone){
   document.getElementById('btn-tasks-active').classList.toggle('active', !isDone);
   document.getElementById('btn-tasks-done').classList.toggle('active', isDone);
-  const tasks = await api(`/tasks?year=${SELECTED_YEAR}&is_done=${isDone}`);
+  const priority = document.getElementById('tasks-priority-filter')?.value || '';
+  let url = `/tasks?is_done=${isDone}`;
+  if (priority) url += `&priority=${encodeURIComponent(priority)}`;
+  const tasks = await api(url);
   renderTasks(tasks || []);
 }
 
@@ -2945,7 +3440,35 @@ function renderTasks(tasks=[]){
     if(s==='В работе')return'b-blue';
     return 'b-slate';
   };
-  tb.innerHTML=tasks.length?tasks.map(t=>`<tr onclick="openTaskModal(${t.id})"><td>${t.id}</td><td style="color:var(--ink);font-weight:400" title="${esc(t.description||'')}">${t.title}${t.priority!=='Обычный'?' <small style="color:var(--ink4)">['+t.priority+']</small>':''}</td><td>${fmtDate(t.due_date)}</td><td style="font-size:11px;color:var(--ink3)">${t.assignee_name || '—'}</td><td><span class="badge ${getBadge(t.status)}">${t.status}</span></td></tr>`).join(''):empty(5,'Задач не найдено')
+  const getPriorityDot=(p)=>{
+    if(p==='Критический') return `<span class="task-priority-dot p-critical" title="Критический"></span>`;
+    if(p==='Высокий')     return `<span class="task-priority-dot p-high" title="Высокий"></span>`;
+    if(p==='Низкий')      return `<span class="task-priority-dot p-low" title="Низкий"></span>`;
+    return `<span class="task-priority-dot p-normal" title="Обычный"></span>`;
+  };
+  if (!tasks.length) { tb.innerHTML = empty(6,'Задач не найдено'); return; }
+  tb.innerHTML = tasks.map(t => {
+    const overdue = t.is_overdue ? 'task-overdue' : '';
+    const dateStr = t.is_overdue
+        ? `<span style="color:var(--red);font-weight:500">${fmtDate(t.due_date)} !</span>`
+        : fmtDate(t.due_date);
+    const linkParts = [];
+    if (t.contact_name) linkParts.push(`<span class="task-link" onclick="event.stopPropagation()">${esc(t.contact_name)}</span>`);
+    if (t.deal_title)   linkParts.push(`<span class="task-link" onclick="event.stopPropagation();openDealModal(${t.deal_id})">№${t.deal_id}</span>`);
+    const links = linkParts.join(' ') || '<span style="color:var(--ink4);font-size:11px">—</span>';
+    return `<tr class="${overdue}" onclick="openTaskModal(${t.id})">
+      <td onclick="event.stopPropagation()" style="width:32px;text-align:center">
+        <input type="checkbox" class="task-quick-done" ${t.is_done?'checked':''} onchange="quickDoneTask(${t.id},this.checked)" title="Отметить выполненной">
+      </td>
+      <td style="color:var(--ink);font-weight:400" title="${esc(t.description||'')}">
+        ${getPriorityDot(t.priority)}${esc(t.title)}
+      </td>
+      <td>${dateStr}</td>
+      <td class="col-hide-mobile" style="font-size:11px;color:var(--ink3)">${esc(t.assignee_name||'—')}</td>
+      <td class="col-hide-mobile">${links}</td>
+      <td><span class="badge ${getBadge(t.status)}">${t.status}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function renderExpenses(expenses=[]){
@@ -3238,6 +3761,16 @@ async function loadData(year, force = false){
 
   STAGES=data.stages||[];
   _expenseCategories = data.expense_categories || [];
+  _allDeals = data.deals?.deals || data.deals || [];
+
+  // Синхронизируем данные календаря если он уже открывался
+  if (_calInited) {
+      _calTasks = _allDeals; // tasks грузятся отдельно в calLoadData
+      _calDeals = _allDeals;
+      calLoadData().then(() => {
+          if (document.getElementById('page-calendar').classList.contains('active')) calRender();
+      });
+  }
   
   renderKanban(data.deals?.deals || data.deals || []);
   renderTasks((data.tasks?.tasks || data.tasks) || []);
@@ -3786,6 +4319,492 @@ async function svcRestart() {
     showToast('⟳ Перезапуск…');
     setTimeout(() => location.reload(), 5000);
   } catch(e) { /* тост уже показан */ }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════════════════════
+let _calYear  = new Date().getFullYear();
+let _calMonth = new Date().getMonth(); // 0-based
+let _calView  = 'month'; // 'month' | 'week'
+let _calWeekOffset = 0;  // weeks from today (week view)
+let _calTasks = [];
+let _calDeals = [];
+let _calDragId   = null;
+let _calDragType = null; // 'task' | 'deal'
+let _calInited   = false;
+
+const CAL_MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                       'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const CAL_MONTHS_GEN = ['января','февраля','марта','апреля','мая','июня',
+                        'июля','августа','сентября','октября','ноября','декабря'];
+
+async function calInit() {
+    if (!_calInited) {
+        _calInited = true;
+        await calLoadData();
+    }
+    calRender();
+}
+
+async function calLoadData() {
+    try {
+        const [tasks, dealsResp] = await Promise.all([
+            api(`/tasks?is_done=false`),
+            api(`/deals`)
+        ]);
+        // также грузим выполненные задачи чтобы показывать их зачёркнутыми
+        const doneTasks = await api(`/tasks?is_done=true`).catch(() => []);
+        _calTasks = [...(tasks || []), ...(doneTasks || [])];
+        _calDeals = dealsResp?.deals || dealsResp || [];
+    } catch(e) {
+        console.error('Calendar load error', e);
+    }
+}
+
+function calSetView(v) {
+    _calView = v;
+    document.getElementById('cal-view-month').classList.toggle('active', v === 'month');
+    document.getElementById('cal-view-week').classList.toggle('active', v === 'week');
+    // reset week offset when switching
+    _calWeekOffset = 0;
+    calRender();
+}
+
+function calPrev() {
+    if (_calView === 'month') {
+        _calMonth--;
+        if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+    } else {
+        _calWeekOffset--;
+    }
+    calRender();
+}
+
+function calNext() {
+    if (_calView === 'month') {
+        _calMonth++;
+        if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+    } else {
+        _calWeekOffset++;
+    }
+    calRender();
+}
+
+function calGoToday() {
+    const now = new Date();
+    _calYear = now.getFullYear();
+    _calMonth = now.getMonth();
+    _calWeekOffset = 0;
+    calRender();
+}
+
+function calRender() {
+    if (_calView === 'month') calRenderMonth();
+    else calRenderWeek();
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function calISODate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function calTasksForDate(iso) {
+    return _calTasks.filter(t => {
+        if (!t.due_date) return false;
+        return t.due_date.slice(0,10) === iso;
+    });
+}
+
+function calDealsForDate(iso) {
+    return _calDeals.filter(d => {
+        if (!d.created_at && !d.deal_date) return false;
+        const dt = d.deal_date || d.created_at;
+        return dt && dt.slice(0,10) === iso;
+    });
+}
+
+function calEventClass(t) {
+    if (t.is_done) return 'ev-task ev-done';
+    const today = calISODate(new Date());
+    if (t.due_date && t.due_date.slice(0,10) < today) return 'ev-task ev-overdue';
+    if (t.priority === 'Критический') return 'ev-task ev-critical';
+    if (t.priority === 'Высокий') return 'ev-task ev-high';
+    return 'ev-task';
+}
+
+function calBuildCell(iso, dayNum, isToday, isOtherMonth, isWeekend) {
+    const tasks = calTasksForDate(iso);
+    const deals = calDealsForDate(iso);
+    const allEvents = [
+        ...tasks.map(t => ({ type:'task', id:t.id, label: t.title, cls: calEventClass(t), done: t.is_done })),
+        ...deals.map(d => ({ type:'deal', id:d.id, label: `№${d.id} ${d.title}`, cls:'ev-deal', done:false }))
+    ];
+
+    const MAX_VISIBLE = _calView === 'week' ? 8 : 3;
+    const visible = allEvents.slice(0, MAX_VISIBLE);
+    const hidden  = allEvents.length - MAX_VISIBLE;
+
+    const eventsHtml = visible.map(ev =>
+        `<div class="cal-event ${ev.cls}"
+              draggable="${ev.type==='task'&&!ev.done?'true':'false'}"
+              data-id="${ev.id}" data-type="${ev.type}"
+              ondragstart="calDragStart(event,${ev.id},'${ev.type}')"
+              onclick="event.stopPropagation();${ev.type==='task'?`openTaskModal(${ev.id})`:`openDealModal(${ev.id})`}"
+              title="${esc(ev.label)}">${esc(ev.label)}</div>`
+    ).join('');
+
+    const moreHtml = hidden > 0
+        ? `<div class="cal-more">+${hidden} ещё</div>`
+        : '';
+
+    const classes = [
+        'cal-cell',
+        isToday    ? 'today'       : '',
+        isOtherMonth ? 'other-month' : '',
+        isWeekend  ? 'weekend'     : ''
+    ].filter(Boolean).join(' ');
+
+    return `<div class="${classes}" data-date="${iso}"
+                 ondragover="calDragOver(event)"
+                 ondragleave="calDragLeave(event)"
+                 ondrop="calDrop(event,'${iso}')"
+                 onclick="calCellClick('${iso}')">
+        <div class="cal-day-num">${dayNum}</div>
+        ${eventsHtml}${moreHtml}
+    </div>`;
+}
+
+// ── Month view ────────────────────────────────────────────────
+function calRenderMonth() {
+    const label = document.getElementById('cal-month-label');
+    label.textContent = `${CAL_MONTHS_RU[_calMonth]} ${_calYear}`;
+
+    // reset dow to Sun-Sat
+    const dow = document.getElementById('cal-dow');
+    dow.style.display = '';
+    dow.innerHTML = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб']
+        .map((d,i) => `<div class="cal-dow-cell" style="${i===0||i===6?'color:var(--red);opacity:.7':''}">${d}</div>`)
+        .join('');
+
+    const firstDay = new Date(_calYear, _calMonth, 1);
+    const lastDay  = new Date(_calYear, _calMonth+1, 0);
+    const startDow = firstDay.getDay(); // 0=Sun
+
+    const today = calISODate(new Date());
+    const cells = [];
+
+    // Pad from previous month
+    for (let i = 0; i < startDow; i++) {
+        const d = new Date(_calYear, _calMonth, 1 - (startDow - i));
+        const iso = calISODate(d);
+        cells.push(calBuildCell(iso, d.getDate(), iso===today, true, d.getDay()===0||d.getDay()===6));
+    }
+
+    // Current month
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const date = new Date(_calYear, _calMonth, d);
+        const iso = calISODate(date);
+        const dow_ = date.getDay();
+        cells.push(calBuildCell(iso, d, iso===today, false, dow_===0||dow_===6));
+    }
+
+    // Pad to fill last row
+    const remaining = (7 - (cells.length % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+        const d = new Date(_calYear, _calMonth+1, i);
+        const iso = calISODate(d);
+        cells.push(calBuildCell(iso, d.getDate(), iso===today, true, d.getDay()===0||d.getDay()===6));
+    }
+
+    // Adjust grid rows
+    const rows = cells.length / 7;
+    const grid = document.getElementById('cal-grid');
+    grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    grid.innerHTML = cells.join('');
+}
+
+// ── Week view ─────────────────────────────────────────────────
+function calRenderWeek() {
+    const today = new Date();
+    // Start of current week (Monday)
+    const startOfWeek = new Date(today);
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const diffToMon = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    startOfWeek.setDate(today.getDate() + diffToMon + _calWeekOffset * 7);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    // Label
+    const label = document.getElementById('cal-month-label');
+    const s = startOfWeek, e = endOfWeek;
+    label.textContent = `${s.getDate()} ${CAL_MONTHS_GEN[s.getMonth()]} — ${e.getDate()} ${CAL_MONTHS_GEN[e.getMonth()]} ${e.getFullYear()}`;
+
+    // DOW header with actual dates
+    const dow = document.getElementById('cal-dow');
+    dow.style.display = '';
+    const DOW_NAMES = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const todayISO = calISODate(new Date());
+    dow.innerHTML = DOW_NAMES.map((name, i) => {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        const iso = calISODate(d);
+        const isToday = iso === todayISO;
+        const isWeekend = i >= 5;
+        return `<div class="cal-dow-cell" style="${isWeekend?'color:var(--red);opacity:.7':''}${isToday?';font-weight:700;color:var(--fern)':''}">${name} ${d.getDate()}</div>`;
+    }).join('');
+
+    // 7 cells Mon-Sun
+    const cells = DOW_NAMES.map((_, i) => {
+        const d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
+        const iso = calISODate(d);
+        return calBuildCell(iso, d.getDate(), iso===todayISO, false, i>=5);
+    });
+
+    const grid = document.getElementById('cal-grid');
+    grid.style.gridTemplateRows = '1fr';
+    grid.innerHTML = cells.join('');
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────
+function calDragStart(e, id, type) {
+    _calDragId   = id;
+    _calDragType = type;
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.classList.add('dragging');
+    setTimeout(() => e.currentTarget && e.currentTarget.classList.remove('dragging'), 0);
+}
+
+function calDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+}
+
+function calDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+async function calDrop(e, iso) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (!_calDragId || _calDragType !== 'task') return;
+
+    const taskId = _calDragId;
+    _calDragId = null;
+
+    try {
+        await api(`/tasks/${taskId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ due_date: iso })
+        });
+        // Обновляем локальный массив сразу (оптимистично)
+        const t = _calTasks.find(t => t.id === taskId);
+        if (t) t.due_date = iso;
+        calRender();
+        showToast('✅ Задача перенесена');
+    } catch(err) {
+        showToast('❌ Ошибка переноса');
+        await calLoadData();
+        calRender();
+    }
+}
+
+// ── Click on empty cell → create task ────────────────────────
+function calCellClick(iso) {
+    // Открываем модалку задачи с предзаполненной датой
+    openTaskModal(null).then(() => {
+        const dateEl = document.getElementById('t-date');
+        if (dateEl) dateEl.value = iso;
+    }).catch(() => {});
+}
+
+// Периодическое обновление данных пока открыт календарь
+async function calRefresh() {
+    await calLoadData();
+    if (document.getElementById('page-calendar').classList.contains('active')) {
+        calRender();
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILES
+// ══════════════════════════════════════════════════════════════
+
+// ── Helpers ──────────────────────────────────────────────────
+function fileIcon(mime, name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    if (mime?.includes('pdf') || ext === 'pdf') return {icon:'📄', cls:'pdf'};
+    if (mime?.includes('image') || ['jpg','jpeg','png','gif','webp'].includes(ext)) return {icon:'🖼️', cls:'img'};
+    if (['doc','docx'].includes(ext)) return {icon:'📝', cls:'doc'};
+    if (['xls','xlsx','csv'].includes(ext)) return {icon:'📊', cls:'xls'};
+    if (['zip','rar'].includes(ext)) return {icon:'📦', cls:'zip'};
+    return {icon:'📎', cls:'other'};
+}
+
+function renderFileItem(f, onDelete) {
+    const {icon, cls} = fileIcon(f.mime_type, f.filename);
+    const date = f.created_at ? new Date(f.created_at).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '';
+    const who = f.uploaded_by_name || '—';
+    const extra = f.contact_name ? ` · ${esc(f.contact_name)}` : f.deal_title ? ` · №${f.deal_id}` : '';
+    return `<div class="fitem" data-id="${f.id}">
+        <div class="ficon ${cls}">${icon}</div>
+        <div class="finfo">
+            <div class="fname" title="${esc(f.filename)}">${esc(f.filename)}</div>
+            <div class="fmeta">${f.size_fmt} · ${date} · ${esc(who)}${extra}</div>
+        </div>
+        <a class="fdownload" href="/api/files/${f.id}/download" download="${esc(f.filename)}" onclick="event.stopPropagation()">↓ Скачать</a>
+        <button class="fitem-del" onclick="${onDelete}" title="Удалить">×</button>
+    </div>`;
+}
+
+// ── Zone drag helpers (shared) ────────────────────────────────
+function filesZoneDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-active'); }
+function filesZoneDragLeave(e) { e.currentTarget.classList.remove('drag-active'); }
+
+// ── Upload helper ─────────────────────────────────────────────
+async function filesDoUpload(files, contactId, dealId, onDone) {
+    if (!files || !files.length) return;
+    for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        if (contactId) fd.append('contact_id', contactId);
+        if (dealId)    fd.append('deal_id', dealId);
+        try {
+            const resp = await fetch('/api/files', {
+                method: 'POST', credentials: 'same-origin', body: fd
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                showToast('❌ ' + (err.detail || 'Ошибка загрузки'));
+                continue;
+            }
+            showToast(`✅ ${file.name} загружен`);
+        } catch(e) {
+            showToast('❌ Ошибка: ' + e.message);
+        }
+    }
+    if (onDone) await onDone();
+}
+
+async function filesDoDelete(fileId, onDone) {
+    if (!confirm('Удалить файл?')) return;
+    try {
+        await api(`/files/${fileId}`, { method: 'DELETE' });
+        showToast('🗑️ Файл удалён');
+        if (onDone) await onDone();
+    } catch(e) { showToast('❌ Ошибка удаления'); }
+}
+
+// ── FILES PAGE ────────────────────────────────────────────────
+async function loadFilesPage() {
+    // Заполняем datalist контактов и список сделок
+    document.getElementById('files-contact-list').innerHTML =
+        _contacts.map(c => `<option data-id="${c.id}" value="${esc(c.name)}"></option>`).join('');
+    const dealSel = document.getElementById('files-deal-select');
+    dealSel.innerHTML = '<option value="">Не привязывать</option>' +
+        _allDeals.map(d => `<option value="${d.id}">№${d.id} ${esc(d.title)}</option>`).join('');
+
+    const list = document.getElementById('files-list');
+    list.innerHTML = '<div class="fempty">Загрузка…</div>';
+    try {
+        const files = await api('/files');
+        const cnt = document.getElementById('files-count');
+        if (cnt) cnt.textContent = files.length ? `(${files.length})` : '';
+        list.innerHTML = files.length
+            ? files.map(f => renderFileItem(f, `filesPageDelete(${f.id})`)).join('')
+            : '<div class="fempty">Файлов нет</div>';
+    } catch(e) {
+        list.innerHTML = '<div class="fempty">Ошибка загрузки</div>';
+    }
+}
+
+async function filesUpload(files) {
+    const contactVal = document.getElementById('files-contact-input').value.trim();
+    const opt = document.querySelector(`#files-contact-list option[value="${contactVal}"]`);
+    const contactId = opt ? parseInt(opt.dataset.id) : null;
+    const dealId = parseInt(document.getElementById('files-deal-select').value) || null;
+
+    const prog = document.getElementById('files-progress');
+    const bar  = document.getElementById('files-progress-bar');
+    prog.style.display = 'block'; bar.style.width = '30%';
+
+    await filesDoUpload(files, contactId, dealId, loadFilesPage);
+    bar.style.width = '100%';
+    setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0%'; }, 600);
+    document.getElementById('files-input').value = '';
+}
+
+function filesZoneDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-active');
+    filesUpload(e.dataTransfer.files);
+}
+
+async function filesPageDelete(id) {
+    await filesDoDelete(id, loadFilesPage);
+}
+
+// ── FILES IN CONTACT CARD ─────────────────────────────────────
+async function ccardLoadFiles(contactId) {
+    const list = document.getElementById('ccard-files-list');
+    if (!list) return;
+    list.innerHTML = '<div class="fempty">Загрузка…</div>';
+    try {
+        const files = await api(`/files?contact_id=${contactId}`);
+        list.innerHTML = files.length
+            ? files.map(f => renderFileItem(f, `ccardDeleteFile(${f.id})`)).join('')
+            : '<div class="fempty">Файлов нет</div>';
+    } catch(e) {
+        list.innerHTML = '<div class="fempty">Ошибка загрузки</div>';
+    }
+}
+
+async function ccardUploadFiles(files) {
+    await filesDoUpload(files, _currentContactId, null, () => ccardLoadFiles(_currentContactId));
+    document.getElementById('ccard-file-input').value = '';
+}
+
+function ccardFileDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-active');
+    ccardUploadFiles(e.dataTransfer.files);
+}
+
+async function ccardDeleteFile(id) {
+    await filesDoDelete(id, () => ccardLoadFiles(_currentContactId));
+}
+
+// ── FILES IN DEAL MODAL ───────────────────────────────────────
+async function dealLoadFiles(dealId) {
+    const list = document.getElementById('deal-files-list');
+    if (!list) return;
+    list.innerHTML = '<div class="fempty">Загрузка…</div>';
+    try {
+        const files = await api(`/files?deal_id=${dealId}`);
+        list.innerHTML = files.length
+            ? files.map(f => renderFileItem(f, `dealDeleteFile(${f.id})`)).join('')
+            : '<div class="fempty">Файлов нет</div>';
+    } catch(e) {
+        list.innerHTML = '<div class="fempty">Ошибка загрузки</div>';
+    }
+}
+
+async function dealUploadFiles(files) {
+    await filesDoUpload(files, null, _currentDealId, () => dealLoadFiles(_currentDealId));
+    document.getElementById('deal-file-input').value = '';
+}
+
+function dealFileDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-active');
+    dealUploadFiles(e.dataTransfer.files);
+}
+
+async function dealDeleteFile(id) {
+    await filesDoDelete(id, () => dealLoadFiles(_currentDealId));
 }
 
 </script>

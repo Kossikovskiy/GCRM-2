@@ -6,12 +6,14 @@ import os
 import secrets
 import threading
 import time as _time
+import shutil
+from pathlib import Path
 from datetime import datetime, date, timedelta
 from contextlib import asynccontextmanager
 from typing import Optional, List
 from functools import lru_cache
 
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Header
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Header, UploadFile, File as FastAPIFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -37,6 +39,9 @@ INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 ROLE_CLAIM     = "https://grass-crm/role"
 CACHE_TTL      = 300
 TAX_RATE       = float(os.getenv("TAX_RATE", "0.04")) # 4% УСН "Доходы" для самозанятых
+UPLOAD_DIR     = Path(os.getenv("UPLOAD_DIR", "/var/www/crm/GCRM-2/uploads"))
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+MAX_FILE_SIZE  = 20 * 1024 * 1024  # 20 MB
 
 # ── 2. КЭШ И УТИЛИТЫ ──────────────────────────────────────────────────────────
 class _Cache:
@@ -89,7 +94,44 @@ class Deal(Base):
     stage=relationship("Stage",back_populates="deals")
     services=relationship("DealService",cascade="all, delete-orphan",passive_deletes=True)
 
-class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта")
+class Task(Base): __tablename__="tasks"; id,title,description,is_done=Column(Integer,primary_key=True),Column(String,nullable=False),Column(Text),Column(Boolean,default=False); due_date,assignee,priority,status=Column(Date),Column(String),Column(String,default="Обычный"),Column(String,default="Открыта"); contact_id=Column(Integer,ForeignKey("contacts.id",ondelete="SET NULL"),nullable=True); deal_id=Column(Integer,ForeignKey("deals.id",ondelete="SET NULL"),nullable=True); contact=relationship("Contact"); deal=relationship("Deal")
+
+class Interaction(Base):
+    __tablename__ = "interactions"
+    id = Column(Integer, primary_key=True)
+    contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(50), nullable=False, default="note")  # call, email, meeting, note
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(String)
+    user_name = Column(String)
+    contact = relationship("Contact")
+
+class DealComment(Base):
+    __tablename__ = "deal_comments"
+    id = Column(Integer, primary_key=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(String)
+    user_name = Column(String)
+    deal = relationship("Deal")
+
+class CRMFile(Base):
+    __tablename__ = "crm_files"
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(300), nullable=False)       # оригинальное имя файла
+    stored_name = Column(String(300), nullable=False)    # имя на диске (уникальное)
+    size = Column(Integer, default=0)                    # байты
+    mime_type = Column(String(100))
+    contact_id = Column(Integer, ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="SET NULL"), nullable=True)
+    uploaded_by = Column(String)
+    uploaded_by_name = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    contact = relationship("Contact")
+    deal = relationship("Deal")
+
 class ExpenseCategory(Base): __tablename__="expense_categories"; id,name=Column(Integer,primary_key=True),Column(String(100),nullable=False,unique=True); expenses=relationship("Expense",back_populates="category")
 class Consumable(Base): __tablename__="consumables"; id,name,unit=Column(Integer,primary_key=True),Column(String(200),nullable=False,unique=True),Column(String(50),default="шт"); stock_quantity,notes,price=Column(Float,default=0.0),Column(Text),Column(Float,default=0.0)
 class MaintenanceConsumable(Base): __tablename__="maintenance_consumables"; id=Column(Integer,primary_key=True); maintenance_id=Column(Integer,ForeignKey("equipment_maintenance.id",ondelete="CASCADE"),nullable=False); consumable_id=Column(Integer,ForeignKey("consumables.id",ondelete="RESTRICT"),nullable=False); quantity=Column(Float,nullable=False); price_at_moment=Column(Float,nullable=False); consumable=relationship("Consumable"); maintenance_record=relationship("EquipmentMaintenance",back_populates="consumables_used")
@@ -157,8 +199,8 @@ class DealUpdate(BaseModel):
     work_time: Optional[str] = None
     address: Optional[str] = None
 
-class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None
-class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None
+class TaskCreate(BaseModel): title: str; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]="Обычный"; status: Optional[str]="Открыта"; assignee: Optional[str]=None; contact_id: Optional[int]=None; deal_id: Optional[int]=None
+class TaskUpdate(BaseModel): title: Optional[str]=None; description: Optional[str]=None; due_date: Optional[date]=None; priority: Optional[str]=None; status: Optional[str]=None; assignee: Optional[str]=None; is_done: Optional[bool]=None; contact_id: Optional[int]=None; deal_id: Optional[int]=None
 class ContactCreate(BaseModel): name: str = Field(..., min_length=1); phone: Optional[str] = None; source: Optional[str] = None
 class ContactUpdate(BaseModel): name: Optional[str] = Field(None, min_length=1); phone: Optional[str] = None; source: Optional[str] = None
 class ServiceCreate(BaseModel): name: str = Field(...,min_length=1); price: float; unit: str; min_volume: Optional[float]=1.0; notes: Optional[str]=None
@@ -173,6 +215,8 @@ class MaintenanceUpdate(BaseModel): date: Optional[date]=None; work_description:
 class ExpenseCreate(BaseModel): name: str; amount: float; date: date; category: str
 class ExpenseUpdate(BaseModel): name: Optional[str] = None; amount: Optional[float] = None; date: Optional[date] = None; category: Optional[str] = None
 class TaxPaymentCreate(BaseModel): amount: float; date: date; note: Optional[str] = None; year: int
+class InteractionCreate(BaseModel): type: str = "note"; text: str = Field(..., min_length=1)
+class DealCommentCreate(BaseModel): text: str = Field(..., min_length=1)
 
 
 # --- Response Models to prevent serialization cycles ---
@@ -768,22 +812,35 @@ def get_years(db: DBSession=Depends(get_db),_=Depends(get_current_user)):
     _cache.set("years", years); return years
 
 @app.get("/api/tasks")
-def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    q = db.query(Task).order_by(Task.due_date.asc())
+def get_tasks(year: Optional[int] = None, is_done: Optional[bool] = None, priority: Optional[str] = None, contact_id: Optional[int] = None, deal_id: Optional[int] = None, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    q = db.query(Task).options(joinedload(Task.contact), joinedload(Task.deal)).order_by(Task.due_date.asc())
     if year: q = q.filter(extract("year", Task.due_date) == year)
     if is_done is not None: q = q.filter(Task.is_done == is_done)
-    if not is_admin(user): q = q.filter(Task.assignee == user["sub"])  # свои задачи
+    if priority: q = q.filter(Task.priority == priority)
+    if contact_id: q = q.filter(Task.contact_id == contact_id)
+    if deal_id: q = q.filter(Task.deal_id == deal_id)
+    if not is_admin(user): q = q.filter(Task.assignee == user["sub"])
     users = {u.id: u.name for u in db.query(User).all()}
+    today = date.today()
     tasks_with_names = []
     for t in q.all():
         task_dict = {c.name: getattr(t, c.name) for c in t.__table__.columns}
         task_dict["assignee_name"] = users.get(t.assignee, "Не назначен")
+        task_dict["contact_name"] = t.contact.name if t.contact else None
+        task_dict["deal_title"] = t.deal.title if t.deal else None
+        task_dict["is_overdue"] = bool(t.due_date and t.due_date < today and not t.is_done)
         tasks_with_names.append(task_dict)
     return tasks_with_names
 
 @app.post("/api/tasks", status_code=201)
 def create_task(task: TaskCreate, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    new_task = Task(title=task.title, description=task.description, due_date=task.due_date or (date.today() + timedelta(days=1)), priority=task.priority, status=task.status, assignee=task.assignee or user['sub'])
+    new_task = Task(
+        title=task.title, description=task.description,
+        due_date=task.due_date or (date.today() + timedelta(days=1)),
+        priority=task.priority, status=task.status,
+        assignee=task.assignee or user['sub'],
+        contact_id=task.contact_id, deal_id=task.deal_id
+    )
     db.add(new_task); db.commit(); db.refresh(new_task)
     _cache.invalidate("tasks"); return new_task
 
@@ -1298,6 +1355,215 @@ def export_pdf(year: int, db: DBSession = Depends(get_db), _=Depends(require_adm
     headers = {"Content-Disposition": f'attachment; filename="grasscrm_{year}.pdf"'}
     return StreamingResponse(buf, media_type="application/pdf", headers=headers)
 
+
+# ── INTERACTIONS ───────────────────────────────────────────────────────────────
+
+@app.get("/api/contacts/{contact_id}/interactions")
+def get_interactions(contact_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    items = db.query(Interaction).filter(
+        Interaction.contact_id == contact_id
+    ).order_by(Interaction.created_at.desc()).all()
+    return [
+        {
+            "id": i.id,
+            "type": i.type,
+            "text": i.text,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+            "user_name": i.user_name or "—"
+        }
+        for i in items
+    ]
+
+@app.post("/api/contacts/{contact_id}/interactions", status_code=201)
+def create_interaction(
+    contact_id: int,
+    data: InteractionCreate,
+    db: DBSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(404, "Контакт не найден")
+    item = Interaction(
+        contact_id=contact_id,
+        type=data.type,
+        text=data.text,
+        user_id=user.get("sub"),
+        user_name=user.get("name")
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {
+        "id": item.id,
+        "type": item.type,
+        "text": item.text,
+        "created_at": item.created_at.isoformat(),
+        "user_name": item.user_name or "—"
+    }
+
+@app.delete("/api/interactions/{interaction_id}", status_code=204)
+def delete_interaction(
+    interaction_id: int,
+    db: DBSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    item = db.query(Interaction).filter(Interaction.id == interaction_id).first()
+    if not item:
+        raise HTTPException(404, "Запись не найдена")
+    if item.user_id != user.get("sub") and not is_admin(user):
+        raise HTTPException(403, "Нет доступа")
+    db.delete(item)
+    db.commit()
+    return None
+
+
+# ── DEAL COMMENTS ──────────────────────────────────────────────────────────────
+
+@app.get("/api/deals/{deal_id}/comments")
+def get_deal_comments(deal_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    items = db.query(DealComment).filter(
+        DealComment.deal_id == deal_id
+    ).order_by(DealComment.created_at.asc()).all()
+    return [
+        {
+            "id": i.id,
+            "text": i.text,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+            "user_name": i.user_name or "—",
+            "user_id": i.user_id
+        }
+        for i in items
+    ]
+
+@app.post("/api/deals/{deal_id}/comments", status_code=201)
+def create_deal_comment(
+    deal_id: int,
+    data: DealCommentCreate,
+    db: DBSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(404, "Сделка не найдена")
+    item = DealComment(
+        deal_id=deal_id,
+        text=data.text,
+        user_id=user.get("sub"),
+        user_name=user.get("name")
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {
+        "id": item.id,
+        "text": item.text,
+        "created_at": item.created_at.isoformat(),
+        "user_name": item.user_name or "—",
+        "user_id": item.user_id
+    }
+
+@app.delete("/api/deal-comments/{comment_id}", status_code=204)
+def delete_deal_comment(
+    comment_id: int,
+    db: DBSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    item = db.query(DealComment).filter(DealComment.id == comment_id).first()
+    if not item:
+        raise HTTPException(404, "Комментарий не найден")
+    if item.user_id != user.get("sub") and not is_admin(user):
+        raise HTTPException(403, "Нет доступа")
+    db.delete(item)
+    db.commit()
+    return None
+
+
+# ── FILES ──────────────────────────────────────────────────────────────────────
+
+ALLOWED_EXTENSIONS = {
+    '.pdf','.doc','.docx','.xls','.xlsx','.ppt','.pptx',
+    '.jpg','.jpeg','.png','.gif','.webp',
+    '.txt','.csv','.zip','.rar',
+    '.mp4','.mov','.avi'
+}
+
+def _fmt_size(b: int) -> str:
+    if b < 1024: return f"{b} Б"
+    if b < 1024**2: return f"{b/1024:.1f} КБ"
+    return f"{b/1024**2:.1f} МБ"
+
+@app.get("/api/files")
+def get_files(contact_id: Optional[int] = None, deal_id: Optional[int] = None,
+              db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    q = db.query(CRMFile).order_by(CRMFile.created_at.desc())
+    if contact_id: q = q.filter(CRMFile.contact_id == contact_id)
+    if deal_id:    q = q.filter(CRMFile.deal_id == deal_id)
+    return [{
+        "id": f.id, "filename": f.filename, "size": f.size,
+        "size_fmt": _fmt_size(f.size), "mime_type": f.mime_type,
+        "contact_id": f.contact_id, "deal_id": f.deal_id,
+        "uploaded_by_name": f.uploaded_by_name or "—",
+        "created_at": f.created_at.isoformat() if f.created_at else None,
+        "contact_name": f.contact.name if f.contact else None,
+        "deal_title": f.deal.title if f.deal else None,
+    } for f in q.all()]
+
+@app.post("/api/files", status_code=201)
+async def upload_file(
+    file: UploadFile = FastAPIFile(...),
+    contact_id: Optional[int] = Form(None),
+    deal_id: Optional[int] = Form(None),
+    db: DBSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Тип файла не разрешён: {ext}")
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(400, "Файл слишком большой (макс. 20 МБ)")
+
+    stored_name = f"{secrets.token_hex(12)}{ext}"
+    dest = UPLOAD_DIR / stored_name
+    dest.write_bytes(content)
+
+    rec = CRMFile(
+        filename=file.filename,
+        stored_name=stored_name,
+        size=len(content),
+        mime_type=file.content_type,
+        contact_id=contact_id,
+        deal_id=deal_id,
+        uploaded_by=user.get("sub"),
+        uploaded_by_name=user.get("name"),
+    )
+    db.add(rec); db.commit(); db.refresh(rec)
+    return {
+        "id": rec.id, "filename": rec.filename, "size": rec.size,
+        "size_fmt": _fmt_size(rec.size), "mime_type": rec.mime_type,
+    }
+
+@app.get("/api/files/{file_id}/download")
+def download_file(file_id: int, db: DBSession = Depends(get_db), _=Depends(get_current_user)):
+    from fastapi.responses import FileResponse as FR
+    rec = db.query(CRMFile).filter(CRMFile.id == file_id).first()
+    if not rec: raise HTTPException(404, "Файл не найден")
+    path = UPLOAD_DIR / rec.stored_name
+    if not path.exists(): raise HTTPException(404, "Файл удалён с диска")
+    return FR(str(path), filename=rec.filename, media_type=rec.mime_type or "application/octet-stream")
+
+@app.delete("/api/files/{file_id}", status_code=204)
+def delete_file(file_id: int, db: DBSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    rec = db.query(CRMFile).filter(CRMFile.id == file_id).first()
+    if not rec: raise HTTPException(404, "Файл не найден")
+    if rec.uploaded_by != user.get("sub") and not is_admin(user):
+        raise HTTPException(403, "Нет доступа")
+    path = UPLOAD_DIR / rec.stored_name
+    if path.exists(): path.unlink()
+    db.delete(rec); db.commit()
+    return None
 
 
 # ── SERVICE PANEL ─────────────────────────────────────────────────────────────
