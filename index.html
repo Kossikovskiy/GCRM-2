@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GrassCRM · Система управления</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231b3a1b'/%3E%3Cpath d='M16 5 C9 9 8 17 8 20 C8 24 11.5 26.5 16 27 C20.5 26.5 24 24 24 20 C24 17 23 9 16 5Z' fill='%2376c442'/%3E%3Cline x1='16' y1='13' x2='16' y2='28' stroke='%231b3a1b' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='16' y1='19' x2='12' y2='16' stroke='%231b3a1b' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='16' y1='22' x2='20' y2='19' stroke='%231b3a1b' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>GrassCRM · Система управления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -310,7 +311,7 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* ── MODAL ─────────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;z-index:500;background:rgba(14,26,12,.5);backdrop-filter:blur(5px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:all}
-.item-selector-modal{z-index:600}
+#maintenance-modal{z-index:550}.item-selector-modal{z-index:620}
 .modal{
   background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:32px;
@@ -372,12 +373,34 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
 /* Overlay: выезжает справа, а не снизу */
 #contact-overlay{align-items:stretch;justify-content:flex-end}
 #contact-overlay .modal{
-  max-width:460px;width:100%;border-radius:16px 0 0 16px;
+  max-width:860px;width:100%;border-radius:16px 0 0 16px;
   padding:0;max-height:100vh;height:100%;
   display:flex;flex-direction:column;overflow:hidden;
-  transform:translateX(32px) scale(1);
+  transform:translateX(40px) scale(1);
 }
 #contact-overlay.open .modal{transform:translateX(0) scale(1)}
+/* Двухколоночное тело */
+.ccard-cols{
+  flex:1;display:grid;
+  grid-template-columns:340px 1fr;
+  overflow:hidden;
+  min-height:0;
+}
+.ccard-col-left{
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  border-right:1px solid rgba(255,255,255,.06);
+}
+.ccard-col-right{
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  background:var(--bg);
+  padding:24px 26px 32px;
+}
+.ccard-col-right-hd{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:16px;flex-shrink:0;
+}
 /* Шапка — тёмно-зелёная */
 .ccard-header{
   background:var(--forest);padding:28px 28px 22px;flex-shrink:0;
@@ -502,6 +525,9 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   }
   #contact-overlay.open .modal{transform:none}
   .ccard-header{padding:20px 18px 18px}
+  .ccard-cols{grid-template-columns:1fr;overflow:visible}
+  .ccard-col-left{border-right:none;overflow:visible}
+  .ccard-col-right{padding:16px 18px 28px}
   .ccard-body{padding:18px 18px 28px}
   .ccard-kpi-val{font-size:18px}
 }
@@ -826,6 +852,33 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
 .fsection-hd{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;margin-top:16px}
 .fsection-hd:first-child{margin-top:0}
 .fempty{font-size:12px;color:var(--ink4);text-align:center;padding:14px 0}
+
+/* ── LOSS REASON POPUP ──────────────────────────────────── */
+#loss-popup{
+  position:fixed;inset:0;z-index:700;display:flex;
+  align-items:center;justify-content:center;
+  background:rgba(10,22,10,.6);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#loss-popup.open{opacity:1;pointer-events:all}
+.losspop-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:28px 26px 22px;
+  max-width:340px;width:calc(100% - 32px);
+  box-shadow:0 8px 40px rgba(0,0,0,.35);
+  transform:translateY(14px) scale(.97);
+  transition:transform .22s cubic-bezier(.34,1.2,.64,1);
+}
+#loss-popup.open .losspop-box{transform:none}
+.losspop-title{
+  font-family:'Playfair Display',serif;font-size:19px;
+  color:var(--ink);margin-bottom:4px;
+}
+.losspop-title em{font-style:italic;color:#ef4444}
+.losspop-sub{font-size:10px;letter-spacing:1px;color:var(--ink4);
+  text-transform:uppercase;margin-bottom:18px}
+.losspop-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+
 </style>
 </head>
 <body>
@@ -1660,96 +1713,104 @@ html[data-theme="dark"] .cal-event.ev-deal{background:rgba(74,124,63,.3);color:v
       </div>
     </div>
 
-    <!-- ТЕЛО: форма редактирования / создания + история сделок -->
-    <div class="ccard-body">
+    <!-- ДВУХКОЛОНОЧНОЕ ТЕЛО -->
+    <div class="ccard-cols">
 
-      <!-- Форма редактирования (скрыта по умолч.) -->
-      <div class="ccard-edit-form" id="ccard-edit-form">
-        <div class="field" style="margin-bottom:12px">
-          <label>ИМЯ КЛИЕНТА</label>
-          <input type="text" id="c-name" placeholder="Иван Петров" />
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="field" style="margin-bottom:0">
-            <label>ТЕЛЕФОН</label>
-            <input type="tel" id="c-phone" placeholder="+7 (999) 123-45-67" />
-          </div>
-          <div class="field" style="margin-bottom:0">
-            <label>ИСТОЧНИК</label>
-            <select id="c-source">
-              <option value="">— Не указан —</option>
-              <option>Авито Основной</option>
-              <option>Авито Лера</option>
-              <option>Авито Второй</option>
-              <option>Чат СНТ</option>
-              <option>По рекомендации</option>
-              <option>Сайт</option>
-            </select>
-          </div>
-        </div>
-        <div class="field" style="margin-top:12px;margin-bottom:0">
-          <label>АДРЕС</label>
-          <input type="text" id="c-address" placeholder="ул. Ленина 10, СНТ Рябинка" />
-        </div>
-        <div class="ccard-edit-actions">
-          <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;font-size:10px;padding:7px 14px" onclick="deleteContact(_currentContactId)">УДАЛИТЬ</button>
-          <button class="btn-sec" style="font-size:10px;padding:7px 14px" onclick="ccardToggleEdit()">ОТМЕНА</button>
-          <button class="btn-pri" id="btn-contact-save" style="font-size:10px;padding:7px 18px">СОХРАНИТЬ</button>
-        </div>
-      </div>
+      <!-- ─── ЛЕВАЯ КОЛОНКА: форма + взаимодействия + файлы ─── -->
+      <div class="ccard-col-left">
+        <div class="ccard-body">
 
-      <!-- История сделок -->
-      <div id="ccard-deals-wrap">
-        <div class="ccard-section-hd">
+          <!-- Форма редактирования (скрыта по умолч.) -->
+          <div class="ccard-edit-form" id="ccard-edit-form">
+            <div class="field" style="margin-bottom:12px">
+              <label>ИМЯ КЛИЕНТА</label>
+              <input type="text" id="c-name" placeholder="Иван Петров" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="field" style="margin-bottom:0">
+                <label>ТЕЛЕФОН</label>
+                <input type="tel" id="c-phone" placeholder="+7 (999) 123-45-67" />
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>ИСТОЧНИК</label>
+                <select id="c-source">
+                  <option value="">— Не указан —</option>
+                  <option>Авито Основной</option>
+                  <option>Авито Лера</option>
+                  <option>Авито Второй</option>
+                  <option>Чат СНТ</option>
+                  <option>По рекомендации</option>
+                  <option>Сайт</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-top:12px;margin-bottom:0">
+              <label>АДРЕС</label>
+              <input type="text" id="c-address" placeholder="ул. Ленина 10, СНТ Рябинка" />
+            </div>
+            <div class="ccard-edit-actions">
+              <button class="btn-sec btn-del-modal" id="btn-contact-delete" style="display:none;font-size:10px;padding:7px 14px" onclick="deleteContact(_currentContactId)">УДАЛИТЬ</button>
+              <button class="btn-sec" style="font-size:10px;padding:7px 14px" onclick="ccardToggleEdit()">ОТМЕНА</button>
+              <button class="btn-pri" id="btn-contact-save" style="font-size:10px;padding:7px 18px">СОХРАНИТЬ</button>
+            </div>
+          </div>
+
+          <!-- История взаимодействий -->
+          <div class="ccard-interactions-wrap" id="ccard-interactions-wrap">
+            <div class="ccard-section-hd">
+              <div class="ccard-section-hd-lbl">История взаимодействий</div>
+              <div class="ccard-section-hd-line"></div>
+            </div>
+            <div class="ilog-add">
+              <select class="ilog-type" id="ilog-type">
+                <option value="note">📝 Заметка</option>
+                <option value="call">📞 Звонок</option>
+                <option value="meeting">🤝 Встреча</option>
+                <option value="email">✉️ Email</option>
+              </select>
+              <textarea class="ilog-input" id="ilog-input" placeholder="Заметка, итог звонка, встречи..." rows="1"
+                oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addInteraction()"></textarea>
+              <button class="ilog-submit" onclick="addInteraction()" title="Сохранить (Ctrl+Enter)">↑</button>
+            </div>
+            <div class="ilog-list" id="ilog-list">
+              <div class="ilog-empty">Загрузка…</div>
+            </div>
+          </div>
+
+        </div><!-- /ccard-body -->
+
+        <!-- Файлы -->
+        <div id="ccard-files-wrap" style="padding:0 24px 20px">
+          <div class="ccard-section-hd" style="margin-bottom:10px">
+            <div class="ccard-section-hd-lbl">Файлы</div>
+            <div class="ccard-section-hd-line"></div>
+          </div>
+          <div class="fupload-zone" style="padding:14px" onclick="document.getElementById('ccard-file-input').click()"
+               ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="ccardFileDrop(event)">
+            <input type="file" id="ccard-file-input" multiple onchange="ccardUploadFiles(this.files)">
+            <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
+          </div>
+          <div class="flist" id="ccard-files-list" style="margin-top:10px">
+            <div class="fempty">Загрузка…</div>
+          </div>
+        </div>
+
+      </div><!-- /ccard-col-left -->
+
+      <!-- ─── ПРАВАЯ КОЛОНКА: история сделок ─── -->
+      <div class="ccard-col-right" id="ccard-col-right">
+        <div class="ccard-col-right-hd">
           <div class="ccard-section-hd-lbl">История сделок</div>
           <div class="ccard-section-hd-line"></div>
-          <span id="ccard-deals-count" style="font-size:10px;color:var(--ink4)"></span>
+          <span id="ccard-deals-count" style="font-size:10px;color:var(--ink4);flex-shrink:0"></span>
         </div>
         <div id="ccard-deals-list">
           <div class="cdeal-empty">Загрузка…</div>
         </div>
-      </div>
+      </div><!-- /ccard-col-right -->
 
-      <!-- История взаимодействий -->
-      <div class="ccard-interactions-wrap" id="ccard-interactions-wrap">
-        <div class="ccard-section-hd">
-          <div class="ccard-section-hd-lbl">История взаимодействий</div>
-          <div class="ccard-section-hd-line"></div>
-        </div>
-        <div class="ilog-add">
-          <select class="ilog-type" id="ilog-type">
-            <option value="note">📝 Заметка</option>
-            <option value="call">📞 Звонок</option>
-            <option value="meeting">🤝 Встреча</option>
-            <option value="email">✉️ Email</option>
-          </select>
-          <textarea class="ilog-input" id="ilog-input" placeholder="Заметка, итог звонка, встречи..." rows="1"
-            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-            onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addInteraction()"></textarea>
-          <button class="ilog-submit" onclick="addInteraction()" title="Сохранить (Ctrl+Enter)">↑</button>
-        </div>
-        <div class="ilog-list" id="ilog-list">
-          <div class="ilog-empty">Загрузка…</div>
-        </div>
-      </div>
-
-    </div><!-- /ccard-body -->
-
-      <!-- Файлы в карточке контакта -->
-      <div id="ccard-files-wrap" style="padding:0 24px 20px">
-        <div class="ccard-section-hd" style="margin-bottom:10px">
-          <div class="ccard-section-hd-lbl">Файлы</div>
-          <div class="ccard-section-hd-line"></div>
-        </div>
-        <div class="fupload-zone" style="padding:14px" onclick="document.getElementById('ccard-file-input').click()"
-             ondragover="filesZoneDragOver(event)" ondragleave="filesZoneDragLeave(event)" ondrop="ccardFileDrop(event)">
-          <input type="file" id="ccard-file-input" multiple onchange="ccardUploadFiles(this.files)">
-          <div style="font-size:11px;color:var(--ink3)">📎 Нажмите или перетащите файл</div>
-        </div>
-        <div class="flist" id="ccard-files-list" style="margin-top:10px">
-          <div class="fempty">Загрузка…</div>
-        </div>
-      </div>
+    </div><!-- /ccard-cols -->
 
     <!-- Крестик закрытия -->
     <button onclick="closeContactModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.12);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">×</button>
@@ -2153,11 +2214,7 @@ function initDrag(){
       const stage=STAGES.find(s=>s.name===newStageName);
       if(!stage)return;
       const oldStageName=deal.stage;
-      deal.stage=newStageName;
-      renderKanban(_deals);
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id:stage.id})})
-        .then(()=>{showToast('✅ → '+newStageName);if(stage.is_final)loadData(SELECTED_YEAR,true);})
-        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+      kanbanMoveDeal(deal, stage, oldStageName);
     });
   });
 
@@ -2246,11 +2303,7 @@ function initDrag(){
       const stage=STAGES.find(s=>s.name===newStageName);
       if(!stage)return;
       const oldStageName=deal.stage;
-      deal.stage=newStageName;
-      renderKanban(_deals);
-      api(`/deals/${deal.id}`,{method:'PATCH',body:JSON.stringify({stage_id:stage.id})})
-        .then(()=>{showToast('✅ → '+newStageName);if(stage.is_final)loadData(SELECTED_YEAR,true);})
-        .catch(()=>{deal.stage=oldStageName;renderKanban(_deals);showToast('❌ Не удалось изменить этап')});
+      kanbanMoveDeal(deal, stage, oldStageName);
     },{passive:true});
 
     el.addEventListener('touchcancel',()=>{
@@ -2586,7 +2639,7 @@ function openContactModal(contact = null) {
     const hdrNew  = document.getElementById('ccard-header-new');
     const kpi     = document.getElementById('ccard-kpi');
     const editForm= document.getElementById('ccard-edit-form');
-    const dealsWrap=document.getElementById('ccard-deals-wrap');
+    const dealsWrap=document.getElementById('ccard-col-right');
     const delBtn  = document.getElementById('btn-contact-delete');
     const saveBtn = document.getElementById('btn-contact-save');
 
@@ -4006,6 +4059,54 @@ function mobileNavClose(){
   setTimeout(()=>{if(!ov.classList.contains('open'))ov.style.display='none';},280);
 }
 
+// ── KANBAN MOVE + LOSS-REASON POPUP ─────────────────────────
+let _lossPending = null; // {deal, stage, oldStage}
+
+function kanbanMoveDeal(deal, stage, oldStageName) {
+  const isLost = stage.is_final && !stage.name.toLowerCase().includes('успешно');
+  if (isLost) {
+    _lossPending = {deal, stage, oldStageName};
+    document.getElementById('loss-popup-sel').value = '';
+    document.getElementById('loss-popup-sel').classList.remove('err');
+    document.getElementById('loss-popup').classList.add('open');
+  } else {
+    _doKanbanPatch(deal, stage, oldStageName, null);
+  }
+}
+
+function lossPopupCancel() {
+  document.getElementById('loss-popup').classList.remove('open');
+  if (_lossPending) {
+    _lossPending.deal.stage = _lossPending.oldStageName;
+    renderKanban(_deals);
+    _lossPending = null;
+  }
+}
+
+function lossPopupConfirm() {
+  const reason = document.getElementById('loss-popup-sel').value;
+  if (!reason) {
+    document.getElementById('loss-popup-sel').classList.add('err');
+    return;
+  }
+  document.getElementById('loss-popup').classList.remove('open');
+  if (_lossPending) {
+    _doKanbanPatch(_lossPending.deal, _lossPending.stage, _lossPending.oldStageName, reason);
+    _lossPending = null;
+  }
+}
+
+function _doKanbanPatch(deal, stage, oldStageName, lossReason) {
+  const newStageName = stage.name;
+  deal.stage = newStageName;
+  renderKanban(_deals);
+  const body = {stage_id: stage.id};
+  if (lossReason) body.loss_reason = lossReason;
+  api(`/deals/${deal.id}`, {method:'PATCH', body:JSON.stringify(body)})
+    .then(()=>{showToast('✅ → ' + newStageName); if(stage.is_final) loadData(SELECTED_YEAR, true);})
+    .catch(()=>{deal.stage=oldStageName; renderKanban(_deals); showToast('❌ Не удалось изменить этап');});
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
@@ -4947,5 +5048,31 @@ async function dealDeleteFile(id) {
 }
 
 </script>
+
+<!-- ── LOSS-REASON POPUP ── -->
+<div id="loss-popup">
+  <div class="losspop-box">
+    <div class="losspop-title">Причина <em>провала</em></div>
+    <div class="losspop-sub">Укажите причину — обязательно</div>
+    <div class="field" style="margin-bottom:0">
+      <label>ПРИЧИНА</label>
+      <select id="loss-popup-sel">
+        <option value="">— Выберите причину —</option>
+        <option>Дорого</option>
+        <option>Нашли другого подрядчика</option>
+        <option>Передумали</option>
+        <option>Не выходили на связь</option>
+        <option>Не наш регион</option>
+        <option>Не устроили сроки</option>
+        <option>Другое</option>
+      </select>
+    </div>
+    <div class="losspop-actions">
+      <button class="btn-sec" onclick="lossPopupCancel()">Отмена</button>
+      <button class="btn-pri" onclick="lossPopupConfirm()">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
