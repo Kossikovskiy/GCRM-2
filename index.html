@@ -746,11 +746,11 @@ html[data-theme="dark"] .k-placeholder{background:var(--surface2)}
   <div class="dash-activity-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px">
     <div class="tcard">
       <div class="tcard-head"><span class="tcard-title">Активные задачи</span><span class="tcard-meta" id="dash-tasks-count"></span></div>
-      <table><thead><tr><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="dash-tasks-tbody"></tbody></table>
+      <table style="font-size:13px"><colgroup><col style="min-width:180px;width:55%"><col style="min-width:90px;width:20%"><col style="min-width:90px"></colgroup><thead><tr><th>Задача</th><th>Срок</th><th>Статус</th></tr></thead><tbody id="dash-tasks-tbody"></tbody></table>
     </div>
     <div class="tcard">
       <div class="tcard-head"><span class="tcard-title">Сделки в работе</span><span class="tcard-meta" id="dash-deals-count"></span></div>
-      <table><thead><tr><th>Сделка</th><th>Клиент</th><th>Сумма</th></tr></thead><tbody id="dash-deals-tbody"></tbody></table>
+      <table style="font-size:13px"><colgroup><col style="min-width:160px;width:45%"><col style="min-width:120px;width:30%"><col style="min-width:100px"></colgroup><thead><tr><th>Сделка</th><th>Клиент</th><th>Сумма</th></tr></thead><tbody id="dash-deals-tbody"></tbody></table>
     </div>
   </div>
 </div>
@@ -3000,7 +3000,7 @@ function renderDashTasks(tasks=[]) {
   tbody.innerHTML = active.length ? active.map(t => `
     <tr onclick="openTaskModal(${t.id})" style="cursor:pointer">
       <td style="color:var(--ink);font-weight:400">${t.title}</td>
-      <td style="font-size:11px;white-space:nowrap">${fmtDate(t.due_date)}</td>
+      <td style="font-size:12px;white-space:nowrap">${fmtDate(t.due_date)}</td>
       <td><span class="badge ${getBadge(t.status)}">${t.status}</span></td>
     </tr>
   `).join('') : empty(3, 'Нет активных задач');
@@ -3084,7 +3084,7 @@ function buildDash(deals, expenses, equipment, taxSummary){
     const color = stageObj ? stageObj.color : '#7ab566';
     return `<tr onclick="openDealModal(${d.id})" style="cursor:pointer">
       <td style="color:var(--ink);font-weight:400">${d.title}</td>
-      <td style="font-size:11px;color:var(--ink3)">${d.client || '—'}</td>
+      <td style="font-size:12px;color:var(--ink3)">${d.client || '—'}</td>
       <td><span class="money">${fmt(d.total)}</span></td>
     </tr>`;
   }).join('') : empty(3, 'Нет активных сделок');
